@@ -79,6 +79,19 @@ unique_name_in_owner = true
 text = "Retreat"
 size_flags_horizontal = 3
 
+[node name="ActionRow" type="HBoxContainer" parent="BattleMargin/BattleLayout"]
+theme_override_constants/separation = 6
+
+[node name="ReloadButton" type="Button" parent="BattleMargin/BattleLayout/ActionRow"]
+unique_name_in_owner = true
+text = "Reload"
+size_flags_horizontal = 3
+
+[node name="EngageButton" type="MenuButton" parent="BattleMargin/BattleLayout/ActionRow"]
+unique_name_in_owner = true
+text = "Engage ▼"
+size_flags_horizontal = 3
+
 [node name="BattleStatus" type="Label" parent="BattleMargin/BattleLayout"]
 unique_name_in_owner = true
 text = ""

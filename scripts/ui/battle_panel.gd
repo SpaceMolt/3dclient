@@ -10,6 +10,8 @@ const BATTLE_POLL_INTERVAL := 5.0
 @onready var retreat_button: Button = %RetreatButton
 @onready var zone_label: Label = %ZoneLabel
 @onready var stance_label: Label = %StanceLabel
+@onready var reload_button: Button = %ReloadButton
+@onready var engage_button: MenuButton = %EngageButton
 @onready var battle_status: Label = %BattleStatus
 @onready var participants_list: VBoxContainer = %ParticipantsList
 
@@ -26,6 +28,7 @@ func _ready() -> void:
 	stance_flee.pressed.connect(func(): _set_stance("flee"))
 	advance_button.pressed.connect(_on_advance)
 	retreat_button.pressed.connect(_on_retreat)
+	reload_button.pressed.connect(_on_reload)
 
 	NetworkManager.request_started.connect(_lock)
 	NetworkManager.request_completed.connect(_unlock)
@@ -76,6 +79,35 @@ func _on_retreat() -> void:
 	)
 
 
+func _on_reload() -> void:
+	battle_status.text = "Reloading..."
+	NetworkManager.send_battle_command("reload", {}, func(content: Dictionary) -> void:
+		StateManager.update_battle(content)
+		battle_status.text = "Reloaded."
+	)
+
+
+func _setup_engage_menu() -> void:
+	var popup := engage_button.get_popup()
+	popup.clear()
+	for c in popup.id_pressed.get_connections():
+		popup.id_pressed.disconnect(c["callable"])
+
+	for side in StateManager.get_battle_sides():
+		popup.add_item(side.get("name", "Unknown Side"))
+		popup.set_item_metadata(popup.item_count - 1, side.get("side_id", ""))
+
+	popup.id_pressed.connect(func(id: int):
+		var side_id: String = popup.get_item_metadata(id)
+		var side_name: String = popup.get_item_text(id)
+		battle_status.text = "Engaging %s..." % side_name
+		NetworkManager.send_battle_command("engage", {"side_id": side_id}, func(content: Dictionary) -> void:
+			StateManager.update_battle(content)
+			battle_status.text = "Engaged %s." % side_name
+		)
+	)
+
+
 func _refresh() -> void:
 	var me := StateManager.get_my_participant()
 	if me.is_empty():
@@ -96,6 +128,7 @@ func _refresh() -> void:
 			"flee": stance_flee.modulate = Color.ORANGE
 
 	_refresh_participants()
+	_setup_engage_menu()
 
 
 func _refresh_participants() -> void:
@@ -128,6 +161,8 @@ func _lock() -> void:
 		btn.disabled = true
 	advance_button.disabled = true
 	retreat_button.disabled = true
+	reload_button.disabled = true
+	engage_button.disabled = true
 
 
 func _unlock() -> void:
@@ -135,3 +170,5 @@ func _unlock() -> void:
 		btn.disabled = false
 	advance_button.disabled = false
 	retreat_button.disabled = false
+	reload_button.disabled = false
+	engage_button.disabled = false
