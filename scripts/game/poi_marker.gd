@@ -1,16 +1,21 @@
 extends Node3D
 
+signal selected(marker: Node3D)
+
 var poi_id: String = ""
 var poi_name: String = ""
 var poi_type: String = ""
+var is_selected: bool = false
 
 @onready var name_label: Label3D = $NameLabel
 @onready var mesh_instance: MeshInstance3D = $MeshInstance3D
+@onready var click_area: Area3D = $ClickArea
 
 
 func _ready() -> void:
 	name_label.text = poi_name
 	_apply_appearance()
+	click_area.input_event.connect(_on_input_event)
 
 
 func setup(id: String, pname: String, ptype: String, pos: Vector3) -> void:
@@ -18,6 +23,19 @@ func setup(id: String, pname: String, ptype: String, pos: Vector3) -> void:
 	poi_name = pname
 	poi_type = ptype
 	global_position = pos
+
+
+func set_selected(val: bool) -> void:
+	is_selected = val
+	if is_selected:
+		name_label.modulate = Color(1.0, 1.0, 0.4, 1.0)
+	else:
+		name_label.modulate = Color(0.8, 0.9, 1.0, 1.0)
+
+
+func _on_input_event(_camera: Node, event: InputEvent, _position: Vector3, _normal: Vector3, _shape_idx: int) -> void:
+	if event is InputEventMouseButton and event.pressed and event.button_index == MOUSE_BUTTON_LEFT:
+		selected.emit(self)
 
 
 func _apply_appearance() -> void:

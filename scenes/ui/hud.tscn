@@ -60,6 +60,40 @@ theme_override_constants/separation = 0
 [node name="GameArea" type="Control" parent="Layout/MidRow"]
 size_flags_horizontal = 3
 
+[node name="TargetPanel" type="PanelContainer" parent="Layout/MidRow/GameArea"]
+unique_name_in_owner = true
+visible = false
+anchor_left = 0.5
+anchor_right = 0.5
+offset_left = -120.0
+offset_right = 120.0
+offset_bottom = 60.0
+
+[node name="TargetMargin" type="MarginContainer" parent="Layout/MidRow/GameArea/TargetPanel"]
+theme_override_constants/margin_left = 12
+theme_override_constants/margin_right = 12
+theme_override_constants/margin_top = 6
+theme_override_constants/margin_bottom = 6
+
+[node name="TargetRow" type="HBoxContainer" parent="Layout/MidRow/GameArea/TargetPanel/TargetMargin"]
+theme_override_constants/separation = 12
+
+[node name="TargetLabel" type="Label" parent="Layout/MidRow/GameArea/TargetPanel/TargetMargin/TargetRow"]
+unique_name_in_owner = true
+text = "Selected: —"
+size_flags_horizontal = 3
+theme_override_font_sizes/font_size = 13
+
+[node name="TargetTravelButton" type="Button" parent="Layout/MidRow/GameArea/TargetPanel/TargetMargin/TargetRow"]
+unique_name_in_owner = true
+text = "Go"
+theme_override_font_sizes/font_size = 12
+
+[node name="TargetDockButton" type="Button" parent="Layout/MidRow/GameArea/TargetPanel/TargetMargin/TargetRow"]
+unique_name_in_owner = true
+text = "Dock"
+theme_override_font_sizes/font_size = 12
+
 [node name="EventLogPanel" type="PanelContainer" parent="Layout/MidRow"]
 script = ExtResource("3")
 custom_minimum_size = Vector2(280, 0)

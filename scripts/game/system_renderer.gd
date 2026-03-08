@@ -4,8 +4,12 @@ const SCALE := 30.0  # Godot units per AU
 const SHIP_SCENE := preload("res://scenes/game/ship.tscn")
 const POI_MARKER_SCENE := preload("res://scenes/game/poi_marker.tscn")
 
+signal poi_selected(poi_id: String, poi_name: String, poi_type: String)
+signal poi_deselected
+
 var _ships: Dictionary = {}  # player_id -> ShipController node
 var _poi_markers: Dictionary = {}  # poi_id -> POIMarker node
+var _selected_poi_id: String = ""
 
 
 func _ready() -> void:
@@ -116,6 +120,7 @@ func _sync_poi_markers() -> void:
 		var marker := POI_MARKER_SCENE.instantiate() as Node3D
 		add_child(marker)
 		marker.setup(id, poi.get("name", "Unknown"), poi.get("type", ""), pos)
+		marker.selected.connect(_on_poi_marker_selected)
 		_poi_markers[id] = marker
 
 	# Remove markers for POIs no longer in the system
@@ -123,6 +128,32 @@ func _sync_poi_markers() -> void:
 		if id not in seen_ids:
 			_poi_markers[id].queue_free()
 			_poi_markers.erase(id)
+
+
+func _on_poi_marker_selected(marker: Node3D) -> void:
+	# Deselect previous
+	if _selected_poi_id and _poi_markers.has(_selected_poi_id):
+		_poi_markers[_selected_poi_id].set_selected(false)
+
+	if marker.poi_id == _selected_poi_id:
+		# Toggle off
+		_selected_poi_id = ""
+		poi_deselected.emit()
+	else:
+		_selected_poi_id = marker.poi_id
+		marker.set_selected(true)
+		poi_selected.emit(marker.poi_id, marker.poi_name, marker.poi_type)
+
+
+func deselect_poi() -> void:
+	if _selected_poi_id and _poi_markers.has(_selected_poi_id):
+		_poi_markers[_selected_poi_id].set_selected(false)
+	_selected_poi_id = ""
+	poi_deselected.emit()
+
+
+func get_selected_poi_id() -> String:
+	return _selected_poi_id
 
 
 func _get_player_world_pos() -> Vector3:

@@ -16,10 +16,17 @@ const TRADE_PANEL_SCENE := preload("res://scenes/ui/trade_panel.tscn")
 @onready var cargo_label: Label = %CargoLabel
 @onready var mid_row: HBoxContainer = $Layout/MidRow
 @onready var logout_button: Button = %LogoutButton
+@onready var target_panel: PanelContainer = %TargetPanel
+@onready var target_label: Label = %TargetLabel
+@onready var target_travel_button: Button = %TargetTravelButton
+@onready var target_dock_button: Button = %TargetDockButton
 
 var _battle_panel: PanelContainer = null
 var _trade_panel: PanelContainer = null
 var _was_docked: bool = false
+var _selected_poi_id: String = ""
+var _selected_poi_name: String = ""
+var _system_renderer: Node3D = null
 
 
 func _ready() -> void:
@@ -28,7 +35,21 @@ func _ready() -> void:
 	StateManager.combat_started.connect(_show_battle_panel)
 	StateManager.combat_ended.connect(_hide_battle_panel)
 	logout_button.pressed.connect(_on_logout)
+	target_travel_button.pressed.connect(_on_target_travel)
+	target_dock_button.pressed.connect(_on_target_dock)
+	target_panel.hide()
 	_refresh()
+
+	# Find the system renderer to listen for POI selection
+	_connect_system_renderer.call_deferred()
+
+
+func _connect_system_renderer() -> void:
+	var game_view := get_tree().get_root().find_child("Ships", true, false)
+	if game_view and game_view.has_signal("poi_selected"):
+		_system_renderer = game_view
+		game_view.poi_selected.connect(_on_poi_selected)
+		game_view.poi_deselected.connect(_on_poi_deselected)
 
 
 func _on_logout() -> void:
@@ -133,6 +154,42 @@ func _hide_battle_panel() -> void:
 	if _battle_panel:
 		_battle_panel.queue_free()
 		_battle_panel = null
+
+
+func _on_poi_selected(poi_id: String, poi_name: String, poi_type: String) -> void:
+	_selected_poi_id = poi_id
+	_selected_poi_name = poi_name
+	target_label.text = "%s (%s)" % [poi_name, poi_type]
+	target_dock_button.visible = poi_type == "station"
+	target_panel.show()
+
+
+func _on_poi_deselected() -> void:
+	_selected_poi_id = ""
+	_selected_poi_name = ""
+	target_panel.hide()
+
+
+func _on_target_travel() -> void:
+	if _selected_poi_id.is_empty():
+		return
+	NetworkManager.send_command("travel", {"id": _selected_poi_id}, func(_c):
+		pass
+	)
+	if _system_renderer:
+		_system_renderer.deselect_poi()
+	_on_poi_deselected()
+
+
+func _on_target_dock() -> void:
+	if _selected_poi_id.is_empty():
+		return
+	NetworkManager.send_command("dock", {"id": _selected_poi_id}, func(_c):
+		pass
+	)
+	if _system_renderer:
+		_system_renderer.deselect_poi()
+	_on_poi_deselected()
 
 
 func _format_number(n: int) -> String:
