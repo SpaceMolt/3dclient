@@ -14,6 +14,8 @@ func before_test() -> void:
 	StateManager.current_system = {}
 	StateManager.nearby_players = []
 	StateManager.nearby_pirates = []
+	StateManager.in_combat = false
+	StateManager.battle = {}
 
 
 # --- Percentage helpers ---
@@ -163,3 +165,63 @@ func test_update_nearby_clears_previous_data() -> void:
 	StateManager.nearby_players = [{"player_id": "old"}]
 	StateManager.update_nearby({"nearby": [], "pirates": []})
 	assert_int(StateManager.nearby_players.size()).is_equal(0)
+
+
+# --- Battle state ---
+
+func test_update_battle_sets_in_combat() -> void:
+	StateManager.update_battle({"is_participant": true, "battle_id": "b1"})
+	assert_bool(StateManager.in_combat).is_true()
+	assert_str(StateManager.battle.get("battle_id")).is_equal("b1")
+
+
+func test_update_battle_clears_combat_when_not_participant() -> void:
+	StateManager.in_combat = true
+	StateManager.update_battle({"is_participant": false})
+	assert_bool(StateManager.in_combat).is_false()
+
+
+func test_update_battle_emits_combat_started() -> void:
+	var monitor := monitor_signals(StateManager, false)
+	StateManager.update_battle({"is_participant": true})
+	await assert_signal(monitor).is_emitted("combat_started")
+
+
+func test_update_battle_emits_combat_ended() -> void:
+	StateManager.in_combat = true
+	var monitor := monitor_signals(StateManager, false)
+	StateManager.update_battle({"is_participant": false})
+	await assert_signal(monitor).is_emitted("combat_ended")
+
+
+func test_update_battle_emits_battle_updated() -> void:
+	var monitor := monitor_signals(StateManager, false)
+	StateManager.update_battle({"is_participant": true})
+	await assert_signal(monitor).is_emitted("battle_updated")
+
+
+func test_get_my_participant_returns_matching_entry() -> void:
+	StateManager.player = {"id": "p1"}
+	StateManager.battle = {
+		"participants": [
+			{"player_id": "p1", "stance": "fire", "zone": "2"},
+			{"player_id": "p2", "stance": "evade", "zone": "3"},
+		]
+	}
+	var me := StateManager.get_my_participant()
+	assert_str(me.get("stance")).is_equal("fire")
+
+
+func test_get_my_participant_returns_empty_when_not_found() -> void:
+	StateManager.player = {"id": "p1"}
+	StateManager.battle = {"participants": []}
+	var me := StateManager.get_my_participant()
+	assert_bool(me.is_empty()).is_true()
+
+
+func test_clear_battle_resets_state() -> void:
+	StateManager.in_combat = true
+	StateManager.battle = {"battle_id": "b1"}
+	StateManager.clear_battle()
+	assert_bool(StateManager.in_combat).is_false()
+	assert_bool(StateManager.battle.is_empty()).is_true()

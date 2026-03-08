@@ -38,17 +38,21 @@ func _ready() -> void:
 		_setup_attack_menu()
 	)
 	StateManager.nearby_updated.connect(_setup_attack_menu)
+	StateManager.combat_started.connect(_refresh_visibility)
+	StateManager.combat_ended.connect(_refresh_visibility)
 
 
 func _refresh_visibility() -> void:
 	var docked := StateManager.is_docked()
-	travel_button.visible = not docked
-	attack_button.visible = not docked
-	mine_button.visible = not docked
-	dock_button.visible = not docked
-	undock_button.visible = docked
-	repair_button.visible = docked
-	refuel_button.visible = docked
+	var in_combat := StateManager.in_combat
+	# Hide most actions during combat
+	travel_button.visible = not docked and not in_combat
+	attack_button.visible = not docked and not in_combat
+	mine_button.visible = not docked and not in_combat
+	dock_button.visible = not docked and not in_combat
+	undock_button.visible = docked and not in_combat
+	repair_button.visible = docked and not in_combat
+	refuel_button.visible = docked and not in_combat
 	pending_label.hide()
 
 

@@ -1,0 +1,101 @@
+[gd_scene load_steps=2 format=3]
+
+[ext_resource type="Script" path="res://scripts/ui/battle_panel.gd" id="1"]
+
+[node name="BattlePanel" type="PanelContainer"]
+script = ExtResource("1")
+custom_minimum_size = Vector2(320, 0)
+size_flags_vertical = 3
+
+[node name="BattleMargin" type="MarginContainer" parent="."]
+theme_override_constants/margin_left = 12
+theme_override_constants/margin_right = 12
+theme_override_constants/margin_top = 8
+theme_override_constants/margin_bottom = 8
+
+[node name="BattleLayout" type="VBoxContainer" parent="BattleMargin"]
+theme_override_constants/separation = 8
+
+[node name="TitleLabel" type="Label" parent="BattleMargin/BattleLayout"]
+text = "⚔ COMBAT"
+horizontal_alignment = 1
+theme_override_font_sizes/font_size = 16
+modulate = Color(1, 0.3, 0.3, 1)
+
+[node name="InfoRow" type="HBoxContainer" parent="BattleMargin/BattleLayout"]
+theme_override_constants/separation = 16
+
+[node name="ZoneLabel" type="Label" parent="BattleMargin/BattleLayout/InfoRow"]
+unique_name_in_owner = true
+text = "Zone: —"
+theme_override_font_sizes/font_size = 13
+
+[node name="StanceLabel" type="Label" parent="BattleMargin/BattleLayout/InfoRow"]
+unique_name_in_owner = true
+text = "Stance: —"
+theme_override_font_sizes/font_size = 13
+
+[node name="StanceRow" type="HBoxContainer" parent="BattleMargin/BattleLayout"]
+theme_override_constants/separation = 6
+
+[node name="StanceTitleLabel" type="Label" parent="BattleMargin/BattleLayout/StanceRow"]
+text = "Stance:"
+theme_override_font_sizes/font_size = 12
+
+[node name="StanceFire" type="Button" parent="BattleMargin/BattleLayout/StanceRow"]
+unique_name_in_owner = true
+text = "Fire"
+size_flags_horizontal = 3
+
+[node name="StanceEvade" type="Button" parent="BattleMargin/BattleLayout/StanceRow"]
+unique_name_in_owner = true
+text = "Evade"
+size_flags_horizontal = 3
+
+[node name="StanceBrace" type="Button" parent="BattleMargin/BattleLayout/StanceRow"]
+unique_name_in_owner = true
+text = "Brace"
+size_flags_horizontal = 3
+
+[node name="StanceFlee" type="Button" parent="BattleMargin/BattleLayout/StanceRow"]
+unique_name_in_owner = true
+text = "Flee"
+size_flags_horizontal = 3
+
+[node name="ZoneRow" type="HBoxContainer" parent="BattleMargin/BattleLayout"]
+theme_override_constants/separation = 6
+
+[node name="ZoneTitleLabel" type="Label" parent="BattleMargin/BattleLayout/ZoneRow"]
+text = "Move:"
+theme_override_font_sizes/font_size = 12
+
+[node name="AdvanceButton" type="Button" parent="BattleMargin/BattleLayout/ZoneRow"]
+unique_name_in_owner = true
+text = "Advance"
+size_flags_horizontal = 3
+
+[node name="RetreatButton" type="Button" parent="BattleMargin/BattleLayout/ZoneRow"]
+unique_name_in_owner = true
+text = "Retreat"
+size_flags_horizontal = 3
+
+[node name="BattleStatus" type="Label" parent="BattleMargin/BattleLayout"]
+unique_name_in_owner = true
+text = ""
+theme_override_font_sizes/font_size = 11
+modulate = Color(0.7, 0.7, 0.7, 1)
+
+[node name="SepLabel" type="Label" parent="BattleMargin/BattleLayout"]
+text = "— Participants —"
+horizontal_alignment = 1
+theme_override_font_sizes/font_size = 11
+modulate = Color(0.6, 0.6, 0.6, 1)
+
+[node name="ParticipantScroll" type="ScrollContainer" parent="BattleMargin/BattleLayout"]
+size_flags_vertical = 3
+custom_minimum_size = Vector2(0, 100)
+
+[node name="ParticipantsList" type="VBoxContainer" parent="BattleMargin/BattleLayout/ParticipantScroll"]
+unique_name_in_owner = true
+size_flags_horizontal = 3
+theme_override_constants/separation = 4

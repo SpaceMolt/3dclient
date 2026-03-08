@@ -1,5 +1,7 @@
 extends CanvasLayer
 
+const BATTLE_PANEL_SCENE := preload("res://scenes/ui/battle_panel.tscn")
+
 @onready var system_label: Label = %SystemLabel
 @onready var credits_label: Label = %CreditsLabel
 @onready var hull_bar: ProgressBar = %HullBar
@@ -10,11 +12,16 @@ extends CanvasLayer
 @onready var shield_label: Label = %ShieldLabel
 @onready var fuel_label: Label = %FuelLabel
 @onready var cargo_label: Label = %CargoLabel
+@onready var mid_row: HBoxContainer = $Layout/MidRow
+
+var _battle_panel: PanelContainer = null
 
 
 func _ready() -> void:
 	StateManager.state_updated.connect(_refresh)
 	StateManager.ship_updated.connect(_refresh_ship)
+	StateManager.combat_started.connect(_show_battle_panel)
+	StateManager.combat_ended.connect(_hide_battle_panel)
 	_refresh()
 
 
@@ -73,6 +80,21 @@ func _refresh_ship() -> void:
 		hull_bar.modulate = Color.ORANGE
 	else:
 		hull_bar.modulate = Color.WHITE
+
+
+func _show_battle_panel() -> void:
+	if _battle_panel:
+		return
+	_battle_panel = BATTLE_PANEL_SCENE.instantiate()
+	# Insert before the event log panel (index 1 in MidRow)
+	mid_row.add_child(_battle_panel)
+	mid_row.move_child(_battle_panel, 0)
+
+
+func _hide_battle_panel() -> void:
+	if _battle_panel:
+		_battle_panel.queue_free()
+		_battle_panel = null
 
 
 func _format_number(n: int) -> String:

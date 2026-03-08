@@ -15,10 +15,17 @@ var current_system: Dictionary = {}
 var nearby_players: Array = []
 var nearby_pirates: Array = []
 
+# Battle state — loaded via spacemolt_battle/get_status
+var in_combat: bool = false
+var battle: Dictionary = {}
+
 signal state_updated
 signal ship_updated
 signal location_changed(old_poi_id: String, new_poi_id: String)
 signal nearby_updated
+signal battle_updated
+signal combat_started
+signal combat_ended
 
 
 func set_initial_state(data: Dictionary) -> void:
@@ -74,6 +81,44 @@ func update_nearby(data: Dictionary) -> void:
 func update_system(data: Dictionary) -> void:
 	if data.has("system"):
 		current_system = data["system"]
+
+
+func update_battle(data: Dictionary) -> void:
+	battle = data
+	var was_in_combat := in_combat
+	in_combat = data.get("is_participant", false)
+
+	if in_combat and not was_in_combat:
+		combat_started.emit()
+	elif not in_combat and was_in_combat:
+		combat_ended.emit()
+
+	battle_updated.emit()
+
+
+func clear_battle() -> void:
+	battle = {}
+	var was_in_combat := in_combat
+	in_combat = false
+	if was_in_combat:
+		combat_ended.emit()
+	battle_updated.emit()
+
+
+func get_my_participant() -> Dictionary:
+	var my_id: String = player.get("id", "")
+	for p in battle.get("participants", []):
+		if p.get("player_id", "") == my_id:
+			return p
+	return {}
+
+
+func get_battle_participants() -> Array:
+	return battle.get("participants", [])
+
+
+func get_battle_sides() -> Array:
+	return battle.get("sides", [])
 
 
 # --- Convenience helpers ---
