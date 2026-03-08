@@ -11,6 +11,7 @@ signal request_started
 signal request_completed
 signal authenticated(initial_state: Dictionary)
 signal auth_error(message: String)
+signal session_expired
 
 
 func _ready() -> void:
@@ -53,6 +54,15 @@ func register(username: String, empire: String, code: String) -> void:
 	)
 
 
+func logout() -> void:
+	if session_id.is_empty():
+		return
+	api_post("/api/v2/spacemolt_auth/logout", {}, func(_content: Dictionary) -> void:
+		pass
+	)
+	_clear_session()
+
+
 func send_command(action: String, params: Dictionary, on_complete: Callable = Callable()) -> void:
 	api_post("/api/v2/spacemolt/" + action, params, func(content: Dictionary) -> void:
 		StateManager.update_state(content)
@@ -64,6 +74,14 @@ func send_command(action: String, params: Dictionary, on_complete: Callable = Ca
 
 func send_battle_command(action: String, params: Dictionary, on_complete: Callable = Callable()) -> void:
 	api_post("/api/v2/spacemolt_battle/" + action, params, func(content: Dictionary) -> void:
+		if on_complete.is_valid():
+			on_complete.call(content)
+		_reset_poll()
+	)
+
+
+func send_market_command(action: String, params: Dictionary, on_complete: Callable = Callable()) -> void:
+	api_post("/api/v2/spacemolt_market/" + action, params, func(content: Dictionary) -> void:
 		if on_complete.is_valid():
 			on_complete.call(content)
 		_reset_poll()
@@ -98,8 +116,13 @@ func api_post(path: String, body: Dictionary, on_success: Callable) -> void:
 			if data.has("notifications") and data["notifications"] is Array:
 				_handle_notifications(data["notifications"])
 
+			# Show the narrative result text in event log (if present and non-empty)
+			var result_text: String = data.get("result", "")
+			if not result_text.is_empty():
+				UIManager.add_event({"msg_type": "result", "message": result_text})
+
 			if data.has("error") and data["error"] != null:
-				UIManager.show_error(data["error"].get("message", "Unknown error"))
+				_handle_error(data["error"])
 				return
 
 			on_success.call(data.get("structuredContent", {}))
@@ -110,6 +133,36 @@ func api_post(path: String, body: Dictionary, on_success: Callable) -> void:
 		"X-Session-Id: " + session_id,
 	])
 	http.request(BASE_URL + path, headers, HTTPClient.METHOD_POST, JSON.stringify(body))
+
+
+func _handle_error(error: Dictionary) -> void:
+	var code: String = error.get("code", "")
+	var message: String = error.get("message", "Unknown error")
+
+	match code:
+		"session_expired", "not_authenticated":
+			UIManager.show_error("Session expired. Please log in again.")
+			_clear_session()
+			session_expired.emit()
+		"rate_limited":
+			var retry_after: float = error.get("retry_after", 5.0)
+			UIManager.show_error("Rate limited. Try again in %ds." % int(retry_after))
+		"in_combat":
+			UIManager.show_error("Cannot do that during combat.")
+		"not_in_combat":
+			UIManager.show_error("Not in combat.")
+		"insufficient_fuel":
+			UIManager.show_error("Not enough fuel.")
+		"already_docked":
+			UIManager.show_info("Already docked.")
+		"invalid_target":
+			UIManager.show_error("Invalid target. Refreshing...")
+			# Refresh nearby data since our target list is stale
+			send_command("get_nearby", {}, func(content: Dictionary) -> void:
+				StateManager.update_nearby(content)
+			)
+		_:
+			UIManager.show_error(message)
 
 
 func _raw_post(path: String, body: Dictionary, callback: Callable) -> void:
@@ -159,3 +212,15 @@ func _reset_poll() -> void:
 	if timer:
 		timer.stop()
 		timer.start()
+
+
+func _stop_poll() -> void:
+	var timer := get_node_or_null("PollTimer") as Timer
+	if timer:
+		timer.stop()
+
+
+func _clear_session() -> void:
+	is_authenticated = false
+	session_id = ""
+	_stop_poll()
