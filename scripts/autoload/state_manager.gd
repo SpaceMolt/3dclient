@@ -22,6 +22,7 @@ var battle: Dictionary = {}
 signal state_updated
 signal ship_updated
 signal location_changed(old_poi_id: String, new_poi_id: String)
+signal cargo_changed
 signal nearby_updated
 signal battle_updated
 signal combat_started
@@ -87,6 +88,7 @@ func update_state(data: Dictionary) -> void:
 			location_changed.emit(old_poi, new_poi)
 	if data.has("cargo"):
 		cargo = data["cargo"]
+		cargo_changed.emit()
 	if data.has("modules"):
 		modules = data["modules"]
 	if data.has("skills"):

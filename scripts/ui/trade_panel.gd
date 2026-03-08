@@ -104,8 +104,7 @@ func _buy_item(item_id: String, item_name: String) -> void:
 	status_label.text = "Buying %s..." % item_name
 	NetworkManager.send_market_command("buy", {"id": item_id, "quantity": 1}, func(content: Dictionary) -> void:
 		status_label.text = "Bought %s." % item_name
-		# Refresh market and state
-		_fetch_market()
+		_refresh_state_after_trade()
 	)
 
 
@@ -113,6 +112,13 @@ func _sell_item(item_id: String, item_name: String, quantity: int) -> void:
 	status_label.text = "Selling %s..." % item_name
 	NetworkManager.send_market_command("sell", {"id": item_id, "quantity": quantity}, func(content: Dictionary) -> void:
 		status_label.text = "Sold %s." % item_name
+		_refresh_state_after_trade()
+	)
+
+
+func _refresh_state_after_trade() -> void:
+	# Refresh full game state so cargo/credits update in HUD
+	NetworkManager.send_command("get_status", {}, func(_content: Dictionary) -> void:
 		_fetch_market()
 	)
 
