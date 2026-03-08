@@ -83,12 +83,12 @@ func _setup_attack_menu() -> void:
 		popup.id_pressed.disconnect(c["callable"])
 
 	for p in StateManager.nearby_players:
-		popup.add_item(p.get("username", "Unknown Player"))
+		popup.add_item(p.get("player_name", "Unknown Player"))
 		popup.set_item_metadata(popup.item_count - 1, {"id": p.get("player_id", ""), "type": "player"})
 
 	for pirate in StateManager.nearby_pirates:
 		popup.add_item("⚠ " + pirate.get("name", "Unknown Pirate"))
-		popup.set_item_metadata(popup.item_count - 1, {"id": pirate.get("pirate_id", ""), "type": "pirate"})
+		popup.set_item_metadata(popup.item_count - 1, {"id": pirate.get("id", ""), "type": "pirate"})
 
 	popup.id_pressed.connect(func(id: int):
 		var meta: Dictionary = popup.get_item_metadata(id)

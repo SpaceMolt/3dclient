@@ -83,19 +83,19 @@ func is_docked() -> bool:
 
 
 func hull_pct() -> float:
-	return _safe_pct(ship.get("hull", 0), ship.get("max_hull", 1))
+	return _safe_pct(ship.get("hull", 0), ship.get("hull_max", 1))
 
 
 func shield_pct() -> float:
-	return _safe_pct(ship.get("shield", 0), ship.get("max_shield", 1))
+	return _safe_pct(ship.get("shield", 0), ship.get("shield_max", 1))
 
 
 func fuel_pct() -> float:
-	return _safe_pct(ship.get("fuel", 0), ship.get("max_fuel", 1))
+	return _safe_pct(ship.get("fuel", 0), ship.get("fuel_max", 1))
 
 
 func cargo_pct() -> float:
-	return _safe_pct(ship.get("cargo_used", 0), ship.get("cargo_capacity", 1))
+	return _safe_pct(ship.get("cargo_used", 0), ship.get("cargo_max", 1))
 
 
 func _safe_pct(value, maximum) -> float:

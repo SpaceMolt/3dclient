@@ -48,13 +48,13 @@ func _refresh_player() -> void:
 func _refresh_ship() -> void:
 	var s := StateManager.ship
 	var hull: int = s.get("hull", 0)
-	var max_hull: int = s.get("max_hull", 1)
+	var max_hull: int = s.get("hull_max", 1)
 	var shield: int = s.get("shield", 0)
-	var max_shield: int = s.get("max_shield", 1)
+	var max_shield: int = s.get("shield_max", 1)
 	var fuel: int = s.get("fuel", 0)
-	var max_fuel: int = s.get("max_fuel", 1)
+	var max_fuel: int = s.get("fuel_max", 1)
 	var cargo_used: int = s.get("cargo_used", 0)
-	var cargo_cap: int = s.get("cargo_capacity", 1)
+	var cargo_cap: int = s.get("cargo_max", 1)
 
 	hull_bar.value = StateManager.hull_pct() * 100.0
 	shield_bar.value = StateManager.shield_pct() * 100.0

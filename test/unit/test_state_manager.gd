@@ -19,37 +19,37 @@ func before_test() -> void:
 # --- Percentage helpers ---
 
 func test_hull_pct_full_health() -> void:
-	StateManager.ship = {"hull": 100, "max_hull": 100}
+	StateManager.ship = {"hull": 100, "hull_max": 100}
 	assert_float(StateManager.hull_pct()).is_equal_approx(1.0, 0.001)
 
 
 func test_hull_pct_half_health() -> void:
-	StateManager.ship = {"hull": 50, "max_hull": 100}
+	StateManager.ship = {"hull": 50, "hull_max": 100}
 	assert_float(StateManager.hull_pct()).is_equal_approx(0.5, 0.001)
 
 
 func test_hull_pct_zero_health() -> void:
-	StateManager.ship = {"hull": 0, "max_hull": 100}
+	StateManager.ship = {"hull": 0, "hull_max": 100}
 	assert_float(StateManager.hull_pct()).is_equal_approx(0.0, 0.001)
 
 
 func test_hull_pct_zero_max_does_not_divide_by_zero() -> void:
-	StateManager.ship = {"hull": 0, "max_hull": 0}
+	StateManager.ship = {"hull": 0, "hull_max": 0}
 	assert_float(StateManager.hull_pct()).is_equal_approx(0.0, 0.001)
 
 
 func test_shield_pct() -> void:
-	StateManager.ship = {"shield": 30, "max_shield": 50}
+	StateManager.ship = {"shield": 30, "shield_max": 50}
 	assert_float(StateManager.shield_pct()).is_equal_approx(0.6, 0.001)
 
 
 func test_fuel_pct() -> void:
-	StateManager.ship = {"fuel": 25, "max_fuel": 100}
+	StateManager.ship = {"fuel": 25, "fuel_max": 100}
 	assert_float(StateManager.fuel_pct()).is_equal_approx(0.25, 0.001)
 
 
 func test_cargo_pct() -> void:
-	StateManager.ship = {"cargo_used": 10, "cargo_capacity": 40}
+	StateManager.ship = {"cargo_used": 10, "cargo_max": 40}
 	assert_float(StateManager.cargo_pct()).is_equal_approx(0.25, 0.001)
 
 
@@ -74,13 +74,13 @@ func test_is_docked_when_docked_at_missing() -> void:
 
 func test_update_state_updates_ship() -> void:
 	StateManager.update_state({
-		"ship": {"hull": 80, "max_hull": 100, "shield": 50, "max_shield": 50}
+		"ship": {"hull": 80, "hull_max": 100, "shield": 50, "shield_max": 50}
 	})
 	assert_int(StateManager.ship.get("hull")).is_equal(80)
 
 
 func test_update_state_ignores_empty_dict() -> void:
-	StateManager.ship = {"hull": 100, "max_hull": 100}
+	StateManager.ship = {"hull": 100, "hull_max": 100}
 	StateManager.update_state({})
 	assert_int(StateManager.ship.get("hull")).is_equal(100)
 
@@ -99,13 +99,13 @@ func test_update_state_updates_cargo() -> void:
 
 func test_update_state_emits_state_updated() -> void:
 	var monitor := monitor_signals(StateManager, false)
-	StateManager.update_state({"ship": {"hull": 50, "max_hull": 100}})
+	StateManager.update_state({"ship": {"hull": 50, "hull_max": 100}})
 	await assert_signal(monitor).is_emitted("state_updated")
 
 
 func test_update_state_emits_ship_updated_when_ship_changes() -> void:
 	var monitor := monitor_signals(StateManager, false)
-	StateManager.update_state({"ship": {"hull": 50, "max_hull": 100}})
+	StateManager.update_state({"ship": {"hull": 50, "hull_max": 100}})
 	await assert_signal(monitor).is_emitted("ship_updated")
 
 
@@ -127,12 +127,12 @@ func test_update_state_does_not_emit_location_changed_for_same_poi() -> void:
 
 func test_set_initial_state_populates_player_and_ship() -> void:
 	StateManager.set_initial_state({
-		"player": {"id": "p1", "username": "TestPilot"},
-		"ship": {"hull": 100, "max_hull": 100},
+		"player": {"id": "p1", "name": "TestPilot"},
+		"ship": {"hull": 100, "hull_max": 100},
 		"system": {"id": "sys_001", "name": "Sol"},
 		"poi": {"id": "poi_001", "name": "Earth Station"},
 	})
-	assert_str(StateManager.player.get("username")).is_equal("TestPilot")
+	assert_str(StateManager.player.get("name")).is_equal("TestPilot")
 	assert_str(StateManager.current_system.get("name")).is_equal("Sol")
 
 
@@ -146,8 +146,8 @@ func test_set_initial_state_emits_state_updated() -> void:
 
 func test_update_nearby_populates_players_and_pirates() -> void:
 	StateManager.update_nearby({
-		"nearby": [{"player_id": "p2", "username": "OtherPilot"}],
-		"pirates": [{"pirate_id": "x1", "name": "Raider"}],
+		"nearby": [{"player_id": "p2", "player_name": "OtherPilot"}],
+		"pirates": [{"id": "x1", "name": "Raider"}],
 	})
 	assert_int(StateManager.nearby_players.size()).is_equal(1)
 	assert_int(StateManager.nearby_pirates.size()).is_equal(1)

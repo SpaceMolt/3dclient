@@ -43,7 +43,7 @@ func _update_player_ship() -> void:
 	else:
 		var ship := SHIP_SCENE.instantiate() as Node3D
 		add_child(ship)
-		ship.setup(pid, StateManager.player.get("username", "You"), pos, true)
+		ship.setup(pid, StateManager.player.get("name", "You"), pos, true)
 		_ships[pid] = ship
 
 		# Tell camera to follow player ship
@@ -68,12 +68,12 @@ func _sync_nearby_ships() -> void:
 		else:
 			var ship := SHIP_SCENE.instantiate() as Node3D
 			add_child(ship)
-			ship.setup(pid, p.get("username", "Unknown"), pos)
+			ship.setup(pid, p.get("player_name", "Unknown"), pos)
 			_ships[pid] = ship
 
 	# Update or create pirate ships
 	for pirate in StateManager.nearby_pirates:
-		var pid: String = "pirate_" + pirate.get("pirate_id", "")
+		var pid: String = "pirate_" + pirate.get("id", "")
 		seen_ids.append(pid)
 
 		var pos: Vector3 = _poi_position_to_world(pirate.get("position", {}))
