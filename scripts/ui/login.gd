@@ -19,6 +19,9 @@ func _ready() -> void:
 			_on_login_pressed()
 	)
 
+	# Pre-fill username from saved session if available
+	_prefill_username()
+
 
 func _on_login_pressed() -> void:
 	var username := username_field.text.strip_edges()
@@ -44,6 +47,15 @@ func _on_request_started() -> void:
 
 func _on_request_completed() -> void:
 	login_button.disabled = false
+
+
+func _prefill_username() -> void:
+	var cfg := ConfigFile.new()
+	if cfg.load(NetworkManager.SESSION_PATH) == OK:
+		var saved_user: String = cfg.get_value("auth", "username", "")
+		if not saved_user.is_empty():
+			username_field.text = saved_user
+			password_field.grab_focus()
 
 
 func _set_status(text: String, is_error: bool = false) -> void:
