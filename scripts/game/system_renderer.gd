@@ -2,8 +2,10 @@ extends Node3D
 
 const SCALE := 30.0  # Godot units per AU
 const SHIP_SCENE := preload("res://scenes/game/ship.tscn")
+const POI_MARKER_SCENE := preload("res://scenes/game/poi_marker.tscn")
 
 var _ships: Dictionary = {}  # player_id -> ShipController node
+var _poi_markers: Dictionary = {}  # poi_id -> POIMarker node
 
 
 func _ready() -> void:
@@ -14,6 +16,7 @@ func _ready() -> void:
 
 func _on_state_updated() -> void:
 	_update_player_ship()
+	_sync_poi_markers()
 
 
 func _on_nearby_updated() -> void:
@@ -26,9 +29,12 @@ func _on_location_changed(_old_poi: String, _new_poi: String) -> void:
 		ship.queue_free()
 	_ships.clear()
 
-	# Fetch fresh nearby data
+	# Fetch fresh nearby data and system data
 	NetworkManager.send_command("get_nearby", {}, func(content):
 		StateManager.update_nearby(content)
+	)
+	NetworkManager.send_command("get_system", {}, func(content):
+		StateManager.update_system(content)
 	)
 
 
@@ -91,6 +97,32 @@ func _sync_nearby_ships() -> void:
 		if pid != own_id and pid not in seen_ids:
 			_ships[pid].queue_free()
 			_ships.erase(pid)
+
+
+func _sync_poi_markers() -> void:
+	var pois: Array = StateManager.current_system.get("pois", [])
+	var seen_ids: Array = []
+
+	for poi in pois:
+		var id: String = poi.get("id", "")
+		if id.is_empty():
+			continue
+		seen_ids.append(id)
+
+		if _poi_markers.has(id):
+			continue  # POI markers don't move
+
+		var pos: Vector3 = _poi_position_to_world(poi.get("position", {}))
+		var marker := POI_MARKER_SCENE.instantiate() as Node3D
+		add_child(marker)
+		marker.setup(id, poi.get("name", "Unknown"), poi.get("type", ""), pos)
+		_poi_markers[id] = marker
+
+	# Remove markers for POIs no longer in the system
+	for id in _poi_markers.keys():
+		if id not in seen_ids:
+			_poi_markers[id].queue_free()
+			_poi_markers.erase(id)
 
 
 func _poi_to_world(poi: Dictionary) -> Vector3:

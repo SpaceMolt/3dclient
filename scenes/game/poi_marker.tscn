@@ -1,0 +1,15 @@
+[gd_scene load_steps=2 format=3]
+
+[ext_resource type="Script" path="res://scripts/game/poi_marker.gd" id="1"]
+
+[node name="POIMarker" type="Node3D"]
+script = ExtResource("1")
+
+[node name="MeshInstance3D" type="MeshInstance3D" parent="."]
+
+[node name="NameLabel" type="Label3D" parent="."]
+position = Vector3(0, 2.5, 0)
+billboard = 1
+font_size = 48
+outline_size = 8
+modulate = Color(0.8, 0.9, 1.0, 1)
