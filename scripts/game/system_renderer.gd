@@ -43,7 +43,7 @@ func _update_player_ship() -> void:
 	if pid.is_empty():
 		return
 
-	var pos: Vector3 = _poi_to_world(StateManager.location)
+	var pos: Vector3 = _get_player_world_pos()
 	if _ships.has(pid):
 		_ships[pid].move_to(pos)
 	else:
@@ -125,9 +125,19 @@ func _sync_poi_markers() -> void:
 			_poi_markers.erase(id)
 
 
-func _poi_to_world(poi: Dictionary) -> Vector3:
-	var pos: Dictionary = poi.get("position", {})
-	return _poi_position_to_world(pos)
+func _get_player_world_pos() -> Vector3:
+	# First try direct position from location (set during initial state)
+	var pos: Dictionary = StateManager.location.get("position", {})
+	if not pos.is_empty():
+		return _poi_position_to_world(pos)
+
+	# Otherwise look up the POI position from system data
+	var poi_id: String = StateManager.location.get("poi_id", "")
+	for poi in StateManager.current_system.get("pois", []):
+		if poi.get("id", "") == poi_id:
+			return _poi_position_to_world(poi.get("position", {}))
+
+	return Vector3.ZERO
 
 
 func _poi_position_to_world(pos: Dictionary) -> Vector3:

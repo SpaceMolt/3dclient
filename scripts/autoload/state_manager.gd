@@ -37,7 +37,18 @@ func set_initial_state(data: Dictionary) -> void:
 	if data.has("system"):
 		current_system = data["system"]
 	if data.has("poi"):
-		location = data["poi"]
+		# LoginResponse gives a full POI object; normalize to the same format
+		# that get_status returns so the rest of the code can use one format.
+		var poi: Dictionary = data["poi"]
+		location = {
+			"system_id": data.get("system", {}).get("id", ""),
+			"poi_id": poi.get("id", ""),
+			"docked_at": "",
+			# Keep the extra POI fields (name, type, position) for convenience
+			"name": poi.get("name", ""),
+			"type": poi.get("type", ""),
+			"position": poi.get("position", {}),
+		}
 	state_updated.emit()
 
 
@@ -125,6 +136,19 @@ func get_battle_sides() -> Array:
 
 func is_docked() -> bool:
 	return not location.get("docked_at", "").is_empty()
+
+
+func get_current_poi_name() -> String:
+	# Try direct name from location (set during initial state)
+	var name_val: String = location.get("name", "")
+	if not name_val.is_empty():
+		return name_val
+	# Look up from system POI data
+	var poi_id: String = location.get("poi_id", "")
+	for poi in current_system.get("pois", []):
+		if poi.get("id", "") == poi_id:
+			return poi.get("name", "")
+	return ""
 
 
 func hull_pct() -> float:

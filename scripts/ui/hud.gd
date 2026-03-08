@@ -43,7 +43,7 @@ func _refresh() -> void:
 
 func _refresh_location() -> void:
 	var sys_name: String = StateManager.current_system.get("name", "")
-	var poi_name: String = StateManager.location.get("name", "")
+	var poi_name: String = StateManager.get_current_poi_name()
 	var docked := StateManager.is_docked()
 
 	var parts: Array = []

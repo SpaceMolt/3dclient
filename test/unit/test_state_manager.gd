@@ -225,3 +225,47 @@ func test_clear_battle_resets_state() -> void:
 	StateManager.clear_battle()
 	assert_bool(StateManager.in_combat).is_false()
 	assert_bool(StateManager.battle.is_empty()).is_true()
+
+
+# --- set_initial_state location normalization ---
+
+func test_set_initial_state_normalizes_poi_to_location() -> void:
+	StateManager.set_initial_state({
+		"player": {"id": "p1"},
+		"system": {"id": "sys_001", "name": "Sol"},
+		"poi": {"id": "poi_001", "name": "Earth Station", "type": "station", "position": {"x": 1.0, "y": 2.0}},
+	})
+	assert_str(StateManager.location.get("poi_id")).is_equal("poi_001")
+	assert_str(StateManager.location.get("system_id")).is_equal("sys_001")
+	assert_str(StateManager.location.get("name")).is_equal("Earth Station")
+
+
+func test_set_initial_state_is_docked_false_initially() -> void:
+	StateManager.set_initial_state({
+		"poi": {"id": "poi_001", "name": "Station"},
+	})
+	assert_bool(StateManager.is_docked()).is_false()
+
+
+# --- get_current_poi_name ---
+
+func test_get_current_poi_name_from_location() -> void:
+	StateManager.location = {"name": "Mars Base", "poi_id": "poi_002"}
+	assert_str(StateManager.get_current_poi_name()).is_equal("Mars Base")
+
+
+func test_get_current_poi_name_from_system_pois() -> void:
+	StateManager.location = {"poi_id": "poi_003"}
+	StateManager.current_system = {
+		"pois": [
+			{"id": "poi_003", "name": "Asteroid Belt"},
+			{"id": "poi_004", "name": "Wormhole"},
+		]
+	}
+	assert_str(StateManager.get_current_poi_name()).is_equal("Asteroid Belt")
+
+
+func test_get_current_poi_name_returns_empty_when_not_found() -> void:
+	StateManager.location = {"poi_id": "poi_999"}
+	StateManager.current_system = {"pois": []}
+	assert_str(StateManager.get_current_poi_name()).is_empty()
