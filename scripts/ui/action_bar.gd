@@ -53,7 +53,9 @@ func _refresh_visibility() -> void:
 	undock_button.visible = docked and not in_combat
 	repair_button.visible = docked and not in_combat
 	refuel_button.visible = docked and not in_combat
-	pending_label.hide()
+
+	# Show pending indicator for server-side pending actions
+	pending_label.visible = StateManager.has_pending
 
 
 func _setup_travel_menu() -> void:

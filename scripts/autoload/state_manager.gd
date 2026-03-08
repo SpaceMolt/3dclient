@@ -15,6 +15,9 @@ var current_system: Dictionary = {}
 var nearby_players: Array = []
 var nearby_pirates: Array = []
 
+# Server-side pending actions
+var has_pending: bool = false
+
 # Battle state — loaded via spacemolt_battle/get_status
 var in_combat: bool = false
 var battle: Dictionary = {}
@@ -38,6 +41,7 @@ func reset() -> void:
 	skills = {}
 	missions = {}
 	hints = []
+	has_pending = false
 	current_system = {}
 	nearby_players = []
 	nearby_pirates = []
@@ -97,6 +101,8 @@ func update_state(data: Dictionary) -> void:
 		missions = data["missions"]
 	if data.has("hints"):
 		hints = data["hints"]
+	if data.has("queue"):
+		has_pending = data["queue"].get("has_pending", false)
 
 	state_updated.emit()
 
