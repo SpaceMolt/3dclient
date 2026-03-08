@@ -269,3 +269,27 @@ func test_get_current_poi_name_returns_empty_when_not_found() -> void:
 	StateManager.location = {"poi_id": "poi_999"}
 	StateManager.current_system = {"pois": []}
 	assert_str(StateManager.get_current_poi_name()).is_empty()
+
+
+# --- reset ---
+
+func test_reset_clears_all_state() -> void:
+	StateManager.player = {"id": "p1", "name": "Test"}
+	StateManager.ship = {"hull": 50, "hull_max": 100}
+	StateManager.location = {"poi_id": "poi_001"}
+	StateManager.cargo = [{"item": "ore"}]
+	StateManager.in_combat = true
+	StateManager.battle = {"battle_id": "b1"}
+	StateManager.current_system = {"name": "Sol"}
+	StateManager.nearby_players = [{"player_id": "p2"}]
+
+	StateManager.reset()
+
+	assert_bool(StateManager.player.is_empty()).is_true()
+	assert_bool(StateManager.ship.is_empty()).is_true()
+	assert_bool(StateManager.location.is_empty()).is_true()
+	assert_int(StateManager.cargo.size()).is_equal(0)
+	assert_bool(StateManager.in_combat).is_false()
+	assert_bool(StateManager.battle.is_empty()).is_true()
+	assert_bool(StateManager.current_system.is_empty()).is_true()
+	assert_int(StateManager.nearby_players.size()).is_equal(0)

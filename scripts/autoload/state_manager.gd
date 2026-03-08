@@ -28,6 +28,22 @@ signal combat_started
 signal combat_ended
 
 
+func reset() -> void:
+	player = {}
+	ship = {}
+	location = {}
+	cargo = []
+	modules = []
+	skills = {}
+	missions = {}
+	hints = []
+	current_system = {}
+	nearby_players = []
+	nearby_pirates = []
+	in_combat = false
+	battle = {}
+
+
 func set_initial_state(data: Dictionary) -> void:
 	# Called with LoginResponse or RegisterResponse structuredContent
 	if data.has("player"):

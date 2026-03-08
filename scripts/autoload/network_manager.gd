@@ -69,6 +69,8 @@ func logout() -> void:
 	)
 	_clear_session()
 	_delete_saved_session()
+	StateManager.reset()
+	session_expired.emit()
 
 
 func try_restore_session(on_success: Callable, on_failure: Callable) -> void:
