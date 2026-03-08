@@ -1,0 +1,95 @@
+[gd_scene load_steps=2 format=3]
+
+[ext_resource type="Script" path="res://scripts/ui/register.gd" id="1"]
+
+[node name="Register" type="CanvasLayer"]
+script = ExtResource("1")
+
+[node name="Background" type="ColorRect" parent="."]
+anchor_right = 1.0
+anchor_bottom = 1.0
+color = Color(0.04, 0.04, 0.08, 1)
+
+[node name="Center" type="CenterContainer" parent="."]
+anchor_right = 1.0
+anchor_bottom = 1.0
+
+[node name="Panel" type="PanelContainer" parent="Center"]
+custom_minimum_size = Vector2(380, 0)
+
+[node name="Margin" type="MarginContainer" parent="Center/Panel"]
+theme_override_constants/margin_left = 32
+theme_override_constants/margin_right = 32
+theme_override_constants/margin_top = 32
+theme_override_constants/margin_bottom = 32
+
+[node name="VBox" type="VBoxContainer" parent="Center/Panel/Margin"]
+theme_override_constants/separation = 14
+
+[node name="Title" type="Label" parent="Center/Panel/Margin/VBox"]
+text = "CREATE ACCOUNT"
+horizontal_alignment = 1
+theme_override_font_sizes/font_size = 22
+
+[node name="Note" type="Label" parent="Center/Panel/Margin/VBox"]
+text = "Registration code from spacemolt.com/dashboard"
+horizontal_alignment = 1
+autowrap_mode = 3
+theme_override_font_sizes/font_size = 11
+modulate = Color(0.7, 0.7, 0.7, 1)
+
+[node name="Username" type="LineEdit" parent="Center/Panel/Margin/VBox"]
+unique_name_in_owner = true
+placeholder_text = "Username"
+custom_minimum_size = Vector2(0, 36)
+
+[node name="EmpireLabel" type="Label" parent="Center/Panel/Margin/VBox"]
+text = "Empire"
+
+[node name="EmpireOption" type="OptionButton" parent="Center/Panel/Margin/VBox"]
+unique_name_in_owner = true
+custom_minimum_size = Vector2(0, 36)
+
+[node name="RegistrationCode" type="LineEdit" parent="Center/Panel/Margin/VBox"]
+unique_name_in_owner = true
+placeholder_text = "Registration Code"
+custom_minimum_size = Vector2(0, 36)
+
+[node name="RegisterButton" type="Button" parent="Center/Panel/Margin/VBox"]
+unique_name_in_owner = true
+text = "Register"
+custom_minimum_size = Vector2(0, 40)
+
+[node name="StatusLabel" type="Label" parent="Center/Panel/Margin/VBox"]
+unique_name_in_owner = true
+text = ""
+horizontal_alignment = 1
+autowrap_mode = 3
+
+[node name="PasswordPanel" type="PanelContainer" parent="Center/Panel/Margin/VBox"]
+unique_name_in_owner = true
+visible = false
+
+[node name="PasswordMargin" type="MarginContainer" parent="Center/Panel/Margin/VBox/PasswordPanel"]
+theme_override_constants/margin_left = 12
+theme_override_constants/margin_right = 12
+theme_override_constants/margin_top = 12
+theme_override_constants/margin_bottom = 12
+
+[node name="PasswordVBox" type="VBoxContainer" parent="Center/Panel/Margin/VBox/PasswordPanel/PasswordMargin"]
+
+[node name="PasswordTitle" type="Label" parent="Center/Panel/Margin/VBox/PasswordPanel/PasswordMargin/PasswordVBox"]
+text = "⚠ SAVE YOUR PASSWORD — it will not be shown again:"
+modulate = Color(1, 0.8, 0, 1)
+autowrap_mode = 3
+
+[node name="PasswordDisplay" type="Label" parent="Center/Panel/Margin/VBox/PasswordPanel/PasswordMargin/PasswordVBox"]
+unique_name_in_owner = true
+text = ""
+theme_override_font_sizes/font_size = 16
+horizontal_alignment = 1
+
+[node name="BackToLogin" type="Button" parent="Center/Panel/Margin/VBox"]
+unique_name_in_owner = true
+text = "Back to Login"
+flat = true

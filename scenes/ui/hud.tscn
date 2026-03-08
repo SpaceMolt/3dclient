@@ -1,0 +1,231 @@
+[gd_scene load_steps=4 format=3]
+
+[ext_resource type="Script" path="res://scripts/ui/hud.gd" id="1"]
+[ext_resource type="Script" path="res://scripts/ui/action_bar.gd" id="2"]
+[ext_resource type="Script" path="res://scripts/ui/event_log.gd" id="3"]
+
+[node name="HUD" type="CanvasLayer"]
+script = ExtResource("1")
+
+[node name="Layout" type="VBoxContainer" parent="."]
+anchor_right = 1.0
+anchor_bottom = 1.0
+theme_override_constants/separation = 0
+
+[node name="TopBar" type="HBoxContainer" parent="Layout"]
+custom_minimum_size = Vector2(0, 36)
+
+[node name="TopBarBG" type="ColorRect" parent="Layout/TopBar"]
+anchor_right = 1.0
+anchor_bottom = 1.0
+color = Color(0.06, 0.06, 0.1, 0.9)
+show_behind_parent = true
+
+[node name="TopMargin" type="MarginContainer" parent="Layout/TopBar"]
+layout_mode = 2
+size_flags_horizontal = 3
+theme_override_constants/margin_left = 12
+theme_override_constants/margin_right = 12
+theme_override_constants/margin_top = 4
+theme_override_constants/margin_bottom = 4
+
+[node name="TopInner" type="HBoxContainer" parent="Layout/TopBar/TopMargin"]
+theme_override_constants/separation = 24
+
+[node name="SystemLabel" type="Label" parent="Layout/TopBar/TopMargin/TopInner"]
+unique_name_in_owner = true
+text = "—"
+size_flags_horizontal = 3
+
+[node name="CreditsLabel" type="Label" parent="Layout/TopBar/TopMargin/TopInner"]
+unique_name_in_owner = true
+text = "¢0"
+horizontal_alignment = 2
+
+[node name="MidRow" type="HBoxContainer" parent="Layout"]
+size_flags_vertical = 3
+theme_override_constants/separation = 0
+
+[node name="GameArea" type="Control" parent="Layout/MidRow"]
+size_flags_horizontal = 3
+
+[node name="EventLogPanel" type="PanelContainer" parent="Layout/MidRow"]
+script = ExtResource("3")
+custom_minimum_size = Vector2(280, 0)
+size_flags_vertical = 3
+
+[node name="EventLogMargin" type="MarginContainer" parent="Layout/MidRow/EventLogPanel"]
+theme_override_constants/margin_left = 8
+theme_override_constants/margin_right = 8
+theme_override_constants/margin_top = 8
+theme_override_constants/margin_bottom = 8
+
+[node name="LogText" type="RichTextLabel" parent="Layout/MidRow/EventLogPanel/EventLogMargin"]
+unique_name_in_owner = true
+size_flags_vertical = 3
+bbcode_enabled = true
+scroll_following = true
+text = "[color=gray]— Event Log —[/color]"
+
+[node name="BottomBar" type="VBoxContainer" parent="Layout"]
+theme_override_constants/separation = 0
+
+[node name="BottomBarBG" type="ColorRect" parent="Layout/BottomBar"]
+anchor_right = 1.0
+anchor_bottom = 1.0
+color = Color(0.06, 0.06, 0.1, 0.9)
+show_behind_parent = true
+
+[node name="ShipStatusMargin" type="MarginContainer" parent="Layout/BottomBar"]
+theme_override_constants/margin_left = 12
+theme_override_constants/margin_right = 12
+theme_override_constants/margin_top = 8
+theme_override_constants/margin_bottom = 4
+
+[node name="ShipStatusRow" type="HBoxContainer" parent="Layout/BottomBar/ShipStatusMargin"]
+theme_override_constants/separation = 20
+
+[node name="HullGroup" type="VBoxContainer" parent="Layout/BottomBar/ShipStatusMargin/ShipStatusRow"]
+size_flags_horizontal = 3
+
+[node name="HullHeader" type="HBoxContainer" parent="Layout/BottomBar/ShipStatusMargin/ShipStatusRow/HullGroup"]
+
+[node name="HullTitle" type="Label" parent="Layout/BottomBar/ShipStatusMargin/ShipStatusRow/HullGroup/HullHeader"]
+text = "Hull"
+size_flags_horizontal = 3
+theme_override_font_sizes/font_size = 11
+
+[node name="HullLabel" type="Label" parent="Layout/BottomBar/ShipStatusMargin/ShipStatusRow/HullGroup/HullHeader"]
+unique_name_in_owner = true
+text = "—"
+horizontal_alignment = 2
+theme_override_font_sizes/font_size = 11
+
+[node name="HullBar" type="ProgressBar" parent="Layout/BottomBar/ShipStatusMargin/ShipStatusRow/HullGroup"]
+unique_name_in_owner = true
+custom_minimum_size = Vector2(0, 14)
+size_flags_horizontal = 3
+show_percentage = false
+
+[node name="ShieldGroup" type="VBoxContainer" parent="Layout/BottomBar/ShipStatusMargin/ShipStatusRow"]
+size_flags_horizontal = 3
+
+[node name="ShieldHeader" type="HBoxContainer" parent="Layout/BottomBar/ShipStatusMargin/ShipStatusRow/ShieldGroup"]
+
+[node name="ShieldTitle" type="Label" parent="Layout/BottomBar/ShipStatusMargin/ShipStatusRow/ShieldGroup/ShieldHeader"]
+text = "Shield"
+size_flags_horizontal = 3
+theme_override_font_sizes/font_size = 11
+
+[node name="ShieldLabel" type="Label" parent="Layout/BottomBar/ShipStatusMargin/ShipStatusRow/ShieldGroup/ShieldHeader"]
+unique_name_in_owner = true
+text = "—"
+horizontal_alignment = 2
+theme_override_font_sizes/font_size = 11
+
+[node name="ShieldBar" type="ProgressBar" parent="Layout/BottomBar/ShipStatusMargin/ShipStatusRow/ShieldGroup"]
+unique_name_in_owner = true
+custom_minimum_size = Vector2(0, 14)
+size_flags_horizontal = 3
+show_percentage = false
+
+[node name="FuelGroup" type="VBoxContainer" parent="Layout/BottomBar/ShipStatusMargin/ShipStatusRow"]
+size_flags_horizontal = 3
+
+[node name="FuelHeader" type="HBoxContainer" parent="Layout/BottomBar/ShipStatusMargin/ShipStatusRow/FuelGroup"]
+
+[node name="FuelTitle" type="Label" parent="Layout/BottomBar/ShipStatusMargin/ShipStatusRow/FuelGroup/FuelHeader"]
+text = "Fuel"
+size_flags_horizontal = 3
+theme_override_font_sizes/font_size = 11
+
+[node name="FuelLabel" type="Label" parent="Layout/BottomBar/ShipStatusMargin/ShipStatusRow/FuelGroup/FuelHeader"]
+unique_name_in_owner = true
+text = "—"
+horizontal_alignment = 2
+theme_override_font_sizes/font_size = 11
+
+[node name="FuelBar" type="ProgressBar" parent="Layout/BottomBar/ShipStatusMargin/ShipStatusRow/FuelGroup"]
+unique_name_in_owner = true
+custom_minimum_size = Vector2(0, 14)
+size_flags_horizontal = 3
+show_percentage = false
+
+[node name="CargoGroup" type="VBoxContainer" parent="Layout/BottomBar/ShipStatusMargin/ShipStatusRow"]
+size_flags_horizontal = 3
+
+[node name="CargoHeader" type="HBoxContainer" parent="Layout/BottomBar/ShipStatusMargin/ShipStatusRow/CargoGroup"]
+
+[node name="CargoTitle" type="Label" parent="Layout/BottomBar/ShipStatusMargin/ShipStatusRow/CargoGroup/CargoHeader"]
+text = "Cargo"
+size_flags_horizontal = 3
+theme_override_font_sizes/font_size = 11
+
+[node name="CargoLabel" type="Label" parent="Layout/BottomBar/ShipStatusMargin/ShipStatusRow/CargoGroup/CargoHeader"]
+unique_name_in_owner = true
+text = "—"
+horizontal_alignment = 2
+theme_override_font_sizes/font_size = 11
+
+[node name="CargoBar" type="ProgressBar" parent="Layout/BottomBar/ShipStatusMargin/ShipStatusRow/CargoGroup"]
+unique_name_in_owner = true
+custom_minimum_size = Vector2(0, 14)
+size_flags_horizontal = 3
+show_percentage = false
+
+[node name="ActionBarContainer" type="PanelContainer" parent="Layout/BottomBar"]
+script = ExtResource("2")
+
+[node name="ActionMargin" type="MarginContainer" parent="Layout/BottomBar/ActionBarContainer"]
+theme_override_constants/margin_left = 12
+theme_override_constants/margin_right = 12
+theme_override_constants/margin_top = 8
+theme_override_constants/margin_bottom = 8
+
+[node name="ActionRow" type="HBoxContainer" parent="Layout/BottomBar/ActionBarContainer/ActionMargin"]
+theme_override_constants/separation = 8
+
+[node name="TravelButton" type="MenuButton" parent="Layout/BottomBar/ActionBarContainer/ActionMargin/ActionRow"]
+unique_name_in_owner = true
+text = "Travel ▼"
+
+[node name="AttackButton" type="MenuButton" parent="Layout/BottomBar/ActionBarContainer/ActionMargin/ActionRow"]
+unique_name_in_owner = true
+text = "Attack ▼"
+
+[node name="MineButton" type="Button" parent="Layout/BottomBar/ActionBarContainer/ActionMargin/ActionRow"]
+unique_name_in_owner = true
+text = "Mine"
+
+[node name="DockButton" type="Button" parent="Layout/BottomBar/ActionBarContainer/ActionMargin/ActionRow"]
+unique_name_in_owner = true
+text = "Dock"
+
+[node name="UndockButton" type="Button" parent="Layout/BottomBar/ActionBarContainer/ActionMargin/ActionRow"]
+unique_name_in_owner = true
+text = "Undock"
+visible = false
+
+[node name="RepairButton" type="Button" parent="Layout/BottomBar/ActionBarContainer/ActionMargin/ActionRow"]
+unique_name_in_owner = true
+text = "Repair"
+visible = false
+
+[node name="RefuelButton" type="Button" parent="Layout/BottomBar/ActionBarContainer/ActionMargin/ActionRow"]
+unique_name_in_owner = true
+text = "Refuel"
+visible = false
+
+[node name="Spacer" type="Control" parent="Layout/BottomBar/ActionBarContainer/ActionMargin/ActionRow"]
+size_flags_horizontal = 3
+
+[node name="PendingLabel" type="Label" parent="Layout/BottomBar/ActionBarContainer/ActionMargin/ActionRow"]
+unique_name_in_owner = true
+text = "⏳ Waiting..."
+visible = false
+modulate = Color(1, 0.8, 0, 1)
+
+[node name="ActionStatusLabel" type="Label" parent="Layout/BottomBar/ActionBarContainer/ActionMargin/ActionRow"]
+unique_name_in_owner = true
+text = ""
+modulate = Color(0.8, 0.8, 0.8, 1)

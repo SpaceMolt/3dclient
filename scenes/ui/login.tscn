@@ -1,0 +1,62 @@
+[gd_scene load_steps=2 format=3]
+
+[ext_resource type="Script" path="res://scripts/ui/login.gd" id="1"]
+
+[node name="Login" type="CanvasLayer"]
+script = ExtResource("1")
+
+[node name="Background" type="ColorRect" parent="."]
+anchor_right = 1.0
+anchor_bottom = 1.0
+color = Color(0.04, 0.04, 0.08, 1)
+
+[node name="Center" type="CenterContainer" parent="."]
+anchor_right = 1.0
+anchor_bottom = 1.0
+
+[node name="Panel" type="PanelContainer" parent="Center"]
+custom_minimum_size = Vector2(340, 0)
+
+[node name="Margin" type="MarginContainer" parent="Center/Panel"]
+theme_override_constants/margin_left = 32
+theme_override_constants/margin_right = 32
+theme_override_constants/margin_top = 32
+theme_override_constants/margin_bottom = 32
+
+[node name="VBox" type="VBoxContainer" parent="Center/Panel/Margin"]
+theme_override_constants/separation = 16
+
+[node name="Title" type="Label" parent="Center/Panel/Margin/VBox"]
+text = "SPACEMOLT"
+horizontal_alignment = 1
+theme_override_font_sizes/font_size = 28
+
+[node name="Spacer" type="Control" parent="Center/Panel/Margin/VBox"]
+custom_minimum_size = Vector2(0, 8)
+
+[node name="Username" type="LineEdit" parent="Center/Panel/Margin/VBox"]
+unique_name_in_owner = true
+placeholder_text = "Username"
+custom_minimum_size = Vector2(0, 36)
+
+[node name="Password" type="LineEdit" parent="Center/Panel/Margin/VBox"]
+unique_name_in_owner = true
+placeholder_text = "Password"
+secret = true
+custom_minimum_size = Vector2(0, 36)
+
+[node name="LoginButton" type="Button" parent="Center/Panel/Margin/VBox"]
+unique_name_in_owner = true
+text = "Login"
+custom_minimum_size = Vector2(0, 40)
+
+[node name="StatusLabel" type="Label" parent="Center/Panel/Margin/VBox"]
+unique_name_in_owner = true
+text = ""
+horizontal_alignment = 1
+autowrap_mode = 3
+
+[node name="RegisterLink" type="Button" parent="Center/Panel/Margin/VBox"]
+unique_name_in_owner = true
+text = "No account? Register"
+flat = true

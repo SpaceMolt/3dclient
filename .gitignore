@@ -1,0 +1,18 @@
+# Godot 4 generated files
+.godot/
+
+# Export builds
+builds/
+*.apk
+*.aab
+*.ipa
+*.exe
+*.x86_64
+*.arm64
+
+# Import cache
+*.import
+
+# OS
+.DS_Store
+Thumbs.db

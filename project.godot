@@ -1,0 +1,28 @@
+; Engine configuration file.
+; It's best edited using the editor UI and not directly,
+; since the changes are not always compatible between versions.
+
+[application]
+
+config/name="SpaceMolt"
+run/main_scene="res://scenes/main.tscn"
+config/features=PackedStringArray("4.3", "Forward Plus")
+boot_splash/bg_color=Color(0, 0, 0, 1)
+
+[autoload]
+
+NetworkManager="*res://scripts/autoload/network_manager.gd"
+StateManager="*res://scripts/autoload/state_manager.gd"
+UIManager="*res://scripts/autoload/ui_manager.gd"
+AssetLoader="*res://scripts/autoload/asset_loader.gd"
+
+[display]
+
+window/size/viewport_width=1280
+window/size/viewport_height=720
+window/size/resizable=true
+
+[rendering]
+
+renderer/rendering_method="forward_plus"
+environment/defaults/default_clear_color=Color(0, 0, 0, 1)
