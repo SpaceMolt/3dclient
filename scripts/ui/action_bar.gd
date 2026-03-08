@@ -127,8 +127,9 @@ func _on_undock() -> void:
 
 
 func _on_mine() -> void:
+	var poi_id: String = StateManager.location.get("poi_id", "")
 	_set_status("Mining...")
-	NetworkManager.send_command("mine", {}, func(_c): _set_status("Mining complete."))
+	NetworkManager.send_command("mine", {"id": poi_id}, func(_c): _set_status("Mining complete."))
 
 
 func _on_repair() -> void:
