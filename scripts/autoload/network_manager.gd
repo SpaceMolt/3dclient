@@ -2,6 +2,7 @@ extends Node
 
 const BASE_URL = "https://game.spacemolt.com"
 const POLL_INTERVAL = 10.0
+const SESSION_PATH = "user://session.cfg"
 
 var session_id: String = ""
 var is_authenticated: bool = false
@@ -38,6 +39,7 @@ func login(username: String, password: String) -> void:
 		{"username": username, "password": password},
 		func(content: Dictionary) -> void:
 			is_authenticated = true
+			_save_session(username, password)
 			_start_poll()
 			authenticated.emit(content)
 	)
@@ -49,6 +51,11 @@ func register(username: String, empire: String, code: String) -> void:
 		{"username": username, "empire": empire, "registration_code": code},
 		func(content: Dictionary) -> void:
 			is_authenticated = true
+			# Save the generated password from the response for future logins
+			var password: String = content.get("password", "")
+			var uname: String = content.get("player", {}).get("name", "")
+			if not password.is_empty() and not uname.is_empty():
+				_save_session(uname, password)
 			_start_poll()
 			authenticated.emit(content)
 	)
@@ -61,6 +68,37 @@ func logout() -> void:
 		pass
 	)
 	_clear_session()
+	_delete_saved_session()
+
+
+func try_restore_session(on_success: Callable, on_failure: Callable) -> void:
+	var cfg := ConfigFile.new()
+	if cfg.load(SESSION_PATH) != OK:
+		on_failure.call()
+		return
+
+	var username: String = cfg.get_value("auth", "username", "")
+	var password: String = cfg.get_value("auth", "password", "")
+	if username.is_empty() or password.is_empty():
+		on_failure.call()
+		return
+
+	# Create a new session then try to login with saved credentials
+	create_session(func():
+		api_post(
+			"/api/v2/spacemolt_auth/login",
+			{"username": username, "password": password},
+			func(content: Dictionary) -> void:
+				is_authenticated = true
+				_save_session(username, password)
+				_start_poll()
+				on_success.call(content)
+		)
+	)
+
+
+func has_saved_session() -> bool:
+	return FileAccess.file_exists(SESSION_PATH)
 
 
 func send_command(action: String, params: Dictionary, on_complete: Callable = Callable()) -> void:
@@ -224,3 +262,15 @@ func _clear_session() -> void:
 	is_authenticated = false
 	session_id = ""
 	_stop_poll()
+
+
+func _save_session(username: String, password: String) -> void:
+	var cfg := ConfigFile.new()
+	cfg.set_value("auth", "username", username)
+	cfg.set_value("auth", "password", password)
+	cfg.save(SESSION_PATH)
+
+
+func _delete_saved_session() -> void:
+	if FileAccess.file_exists(SESSION_PATH):
+		DirAccess.remove_absolute(ProjectSettings.globalize_path(SESSION_PATH))

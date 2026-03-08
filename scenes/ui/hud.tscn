@@ -42,6 +42,11 @@ unique_name_in_owner = true
 text = "¢0"
 horizontal_alignment = 2
 
+[node name="LogoutButton" type="Button" parent="Layout/TopBar/TopMargin/TopInner"]
+unique_name_in_owner = true
+text = "Logout"
+theme_override_font_sizes/font_size = 11
+
 [node name="MidRow" type="HBoxContainer" parent="Layout"]
 size_flags_vertical = 3
 theme_override_constants/separation = 0

@@ -43,3 +43,49 @@ func test_api_post_requires_session_id() -> void:
 	NetworkManager.api_post("/test", {}, func(_c): pass)
 
 	NetworkManager.session_id = original_session
+
+
+func test_save_and_has_saved_session() -> void:
+	# Clean up any leftover session file
+	_cleanup_session_file()
+
+	assert_bool(NetworkManager.has_saved_session()).is_false()
+
+	NetworkManager._save_session("testuser", "testpass")
+	assert_bool(NetworkManager.has_saved_session()).is_true()
+
+	# Clean up
+	_cleanup_session_file()
+
+
+func test_save_session_writes_credentials() -> void:
+	_cleanup_session_file()
+
+	NetworkManager._save_session("alice", "secret123")
+
+	var cfg := ConfigFile.new()
+	assert_int(cfg.load(NetworkManager.SESSION_PATH)).is_equal(OK)
+	assert_str(cfg.get_value("auth", "username", "")).is_equal("alice")
+	assert_str(cfg.get_value("auth", "password", "")).is_equal("secret123")
+
+	_cleanup_session_file()
+
+
+func test_delete_saved_session_removes_file() -> void:
+	NetworkManager._save_session("testuser", "testpass")
+	assert_bool(NetworkManager.has_saved_session()).is_true()
+
+	NetworkManager._delete_saved_session()
+	assert_bool(NetworkManager.has_saved_session()).is_false()
+
+
+func test_has_saved_session_false_when_no_file() -> void:
+	_cleanup_session_file()
+	assert_bool(NetworkManager.has_saved_session()).is_false()
+
+
+func _cleanup_session_file() -> void:
+	if FileAccess.file_exists(NetworkManager.SESSION_PATH):
+		DirAccess.remove_absolute(
+			ProjectSettings.globalize_path(NetworkManager.SESSION_PATH)
+		)

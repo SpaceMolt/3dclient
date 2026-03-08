@@ -14,6 +14,7 @@ const TRADE_PANEL_SCENE := preload("res://scenes/ui/trade_panel.tscn")
 @onready var fuel_label: Label = %FuelLabel
 @onready var cargo_label: Label = %CargoLabel
 @onready var mid_row: HBoxContainer = $Layout/MidRow
+@onready var logout_button: Button = %LogoutButton
 
 var _battle_panel: PanelContainer = null
 var _trade_panel: PanelContainer = null
@@ -25,7 +26,12 @@ func _ready() -> void:
 	StateManager.ship_updated.connect(_refresh_ship)
 	StateManager.combat_started.connect(_show_battle_panel)
 	StateManager.combat_ended.connect(_hide_battle_panel)
+	logout_button.pressed.connect(_on_logout)
 	_refresh()
+
+
+func _on_logout() -> void:
+	NetworkManager.logout()
 
 
 func _refresh() -> void:
