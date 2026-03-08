@@ -60,6 +60,17 @@ func _on_logout() -> void:
 	NetworkManager.logout()
 
 
+func _unhandled_key_input(event: InputEvent) -> void:
+	if event is InputEventKey and event.pressed and event.keycode == KEY_ESCAPE:
+		if target_panel.visible:
+			if _system_renderer:
+				_system_renderer.deselect_poi()
+				_system_renderer.deselect_ship()
+			_on_poi_deselected()
+			_on_ship_deselected()
+			get_viewport().set_input_as_handled()
+
+
 func _refresh() -> void:
 	_refresh_location()
 	_refresh_player()
