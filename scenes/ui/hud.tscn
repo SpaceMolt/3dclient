@@ -32,6 +32,12 @@ theme_override_constants/margin_bottom = 4
 [node name="TopInner" type="HBoxContainer" parent="Layout/TopBar/TopMargin"]
 theme_override_constants/separation = 24
 
+[node name="PlayerNameLabel" type="Label" parent="Layout/TopBar/TopMargin/TopInner"]
+unique_name_in_owner = true
+text = ""
+theme_override_font_sizes/font_size = 13
+modulate = Color(0.4, 0.8, 1.0, 1)
+
 [node name="SystemLabel" type="Label" parent="Layout/TopBar/TopMargin/TopInner"]
 unique_name_in_owner = true
 text = "—"

@@ -3,6 +3,7 @@ extends CanvasLayer
 const BATTLE_PANEL_SCENE := preload("res://scenes/ui/battle_panel.tscn")
 const TRADE_PANEL_SCENE := preload("res://scenes/ui/trade_panel.tscn")
 
+@onready var player_name_label: Label = %PlayerNameLabel
 @onready var system_label: Label = %SystemLabel
 @onready var credits_label: Label = %CreditsLabel
 @onready var hull_bar: ProgressBar = %HullBar
@@ -58,6 +59,10 @@ func _refresh_location() -> void:
 
 
 func _refresh_player() -> void:
+	var pname: String = StateManager.player.get("name", "")
+	var empire: String = StateManager.player.get("empire", "")
+	player_name_label.text = pname + (" [%s]" % empire if empire else "")
+
 	var credits: int = StateManager.player.get("credits", 0)
 	credits_label.text = "¢%s" % _format_number(credits)
 
