@@ -11,16 +11,16 @@ func _ready() -> void:
 	NetworkManager.authenticated.connect(_on_authenticated)
 	NetworkManager.session_expired.connect(_on_session_expired)
 
-	# Try to restore a saved session before showing login
+	# Always show login screen first; auto-login replaces it on success
+	_switch_to(LOGIN_SCENE.instantiate())
+
 	if NetworkManager.has_saved_session():
 		NetworkManager.try_restore_session(
 			func(content: Dictionary) -> void:
 				_on_authenticated(content),
 			func() -> void:
-				_switch_to(LOGIN_SCENE.instantiate())
+				pass  # Already showing login screen
 		)
-	else:
-		_switch_to(LOGIN_SCENE.instantiate())
 
 
 func _on_authenticated(initial_state: Dictionary) -> void:
@@ -31,6 +31,8 @@ func _on_authenticated(initial_state: Dictionary) -> void:
 func _on_session_expired() -> void:
 	NetworkManager._delete_saved_session()
 	_switch_to(LOGIN_SCENE.instantiate())
+
+
 
 
 func _switch_to(node: Node) -> void:
