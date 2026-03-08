@@ -100,8 +100,12 @@ func _setup_attack_menu() -> void:
 
 
 func _on_dock() -> void:
+	var poi_id: String = StateManager.location.get("poi_id", "")
+	if poi_id.is_empty():
+		_set_status("No dockable location.", true)
+		return
 	_set_status("Docking...")
-	NetworkManager.send_command("dock", {}, func(_c): _set_status("Docked."))
+	NetworkManager.send_command("dock", {"id": poi_id}, func(_c): _set_status("Docked."))
 
 
 func _on_undock() -> void:
