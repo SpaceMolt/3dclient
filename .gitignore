@@ -13,6 +13,16 @@ builds/
 # Import cache
 *.import
 
+# Godot binary (download via bin/install.sh)
+bin/godot
+bin/*.x86_64
+
+# Godot 4.5+ UID cache files
+*.gd.uid
+
+# GdUnit4 test reports
+reports/
+
 # OS
 .DS_Store
 Thumbs.db

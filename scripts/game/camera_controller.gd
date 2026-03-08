@@ -7,10 +7,10 @@ const PAN_SPEED := 0.05
 const FOLLOW_LERP := 4.0
 
 var _target: Node3D = null
-var _following := true
+var _following: bool = true
 var _drag_start: Vector2 = Vector2.ZERO
-var _dragging := false
-var _zoom := 20.0
+var _dragging: bool = false
+var _zoom: float = 20.0
 
 
 func _ready() -> void:
@@ -48,8 +48,8 @@ func _input(event: InputEvent) -> void:
 				stop_following()
 
 	elif event is InputEventMouseMotion and _dragging:
-		var delta := event.relative * PAN_SPEED * (_zoom / 20.0)
-		global_position += Vector3(-delta.x, 0.0, -delta.y)
+		var pan_delta: Vector2 = event.relative * PAN_SPEED * (_zoom / 20.0)
+		global_position += Vector3(-pan_delta.x, 0.0, -pan_delta.y)
 
 
 func _apply_zoom() -> void:

@@ -39,7 +39,7 @@ func update_state(data: Dictionary) -> void:
 	if data.is_empty():
 		return
 
-	var old_poi := location.get("poi_id", "")
+	var old_poi: String = location.get("poi_id", "")
 
 	if data.has("player"):
 		player = data["player"]
@@ -48,7 +48,7 @@ func update_state(data: Dictionary) -> void:
 		ship_updated.emit()
 	if data.has("location"):
 		location = data["location"]
-		var new_poi := location.get("poi_id", "")
+		var new_poi: String = location.get("poi_id", "")
 		if new_poi != old_poi:
 			location_changed.emit(old_poi, new_poi)
 	if data.has("cargo"):

@@ -30,7 +30,7 @@ func _ready() -> void:
 func _on_register_pressed() -> void:
 	var username := username_field.text.strip_edges()
 	var code := code_field.text.strip_edges()
-	var empire := EMPIRES[empire_option.selected]
+	var empire: String = EMPIRES[empire_option.selected]
 
 	if username.is_empty() or code.is_empty():
 		_set_status("All fields are required.", true)

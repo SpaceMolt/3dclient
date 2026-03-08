@@ -3,18 +3,12 @@ extends GdUnitTestSuite
 # Integration tests for the login screen UI behaviour.
 # Uses GdUnit4's scene runner to instantiate the scene and simulate interaction.
 
-const LOGIN_SCENE := preload("res://scenes/ui/login.tscn")
-
 var _runner: GdUnitSceneRunner
 
 
 func before_test() -> void:
-	_runner = scene_runner(LOGIN_SCENE)
-	await _runner.scene().ready
+	_runner = scene_runner("res://scenes/ui/login.tscn")
 
-
-func after_test() -> void:
-	_runner.free()
 
 
 func test_login_button_present() -> void:
@@ -58,19 +52,18 @@ func test_error_label_is_red() -> void:
 	assert_object(label.modulate).is_equal(Color.RED)
 
 
-func test_empty_username_shows_error() -> void:
+func test_empty_username_shows_validation_error() -> void:
 	var label := _runner.scene().get_node("%StatusLabel") as Label
-	var btn := _runner.scene().get_node("%LoginButton") as Button
 	_runner.scene().get_node("%Username").text = ""
 	_runner.scene().get_node("%Password").text = "password"
-	await _runner.simulate_action_pressed(btn)
+	# Directly invoke the login handler — we're testing the validation logic
+	_runner.scene().get_node("%LoginButton").pressed.emit()
 	assert_str(label.text).is_not_empty()
 
 
-func test_empty_password_shows_error() -> void:
+func test_empty_password_shows_validation_error() -> void:
 	var label := _runner.scene().get_node("%StatusLabel") as Label
-	var btn := _runner.scene().get_node("%LoginButton") as Button
 	_runner.scene().get_node("%Username").text = "user"
 	_runner.scene().get_node("%Password").text = ""
-	await _runner.simulate_action_pressed(btn)
+	_runner.scene().get_node("%LoginButton").pressed.emit()
 	assert_str(label.text).is_not_empty()

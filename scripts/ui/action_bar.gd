@@ -55,10 +55,11 @@ func _refresh_visibility() -> void:
 func _setup_travel_menu() -> void:
 	var popup := travel_button.get_popup()
 	popup.clear()
-	popup.id_pressed.disconnect_all_signals_if_connected()
+	for c in popup.id_pressed.get_connections():
+		popup.id_pressed.disconnect(c["callable"])
 
 	var pois: Array = StateManager.current_system.get("pois", [])
-	var current_poi := StateManager.location.get("poi_id", "")
+	var current_poi: String = StateManager.location.get("poi_id", "")
 
 	for poi in pois:
 		if poi.get("id", "") == current_poi:
@@ -78,7 +79,8 @@ func _setup_travel_menu() -> void:
 func _setup_attack_menu() -> void:
 	var popup := attack_button.get_popup()
 	popup.clear()
-	popup.id_pressed.disconnect_all_signals_if_connected()
+	for c in popup.id_pressed.get_connections():
+		popup.id_pressed.disconnect(c["callable"])
 
 	for p in StateManager.nearby_players:
 		popup.add_item(p.get("username", "Unknown Player"))

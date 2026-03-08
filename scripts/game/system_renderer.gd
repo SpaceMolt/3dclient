@@ -37,7 +37,7 @@ func _update_player_ship() -> void:
 	if pid.is_empty():
 		return
 
-	var pos := _poi_to_world(StateManager.location)
+	var pos: Vector3 = _poi_to_world(StateManager.location)
 	if _ships.has(pid):
 		_ships[pid].move_to(pos)
 	else:
@@ -62,7 +62,7 @@ func _sync_nearby_ships() -> void:
 			continue
 		seen_ids.append(pid)
 
-		var pos := _poi_position_to_world(p.get("position", {}))
+		var pos: Vector3 = _poi_position_to_world(p.get("position", {}))
 		if _ships.has(pid):
 			_ships[pid].move_to(pos)
 		else:
@@ -76,7 +76,7 @@ func _sync_nearby_ships() -> void:
 		var pid: String = "pirate_" + pirate.get("pirate_id", "")
 		seen_ids.append(pid)
 
-		var pos := _poi_position_to_world(pirate.get("position", {}))
+		var pos: Vector3 = _poi_position_to_world(pirate.get("position", {}))
 		if _ships.has(pid):
 			_ships[pid].move_to(pos)
 		else:
@@ -86,7 +86,7 @@ func _sync_nearby_ships() -> void:
 			_ships[pid] = ship
 
 	# Remove ships that are no longer nearby
-	var own_id := StateManager.player.get("id", "")
+	var own_id: String = StateManager.player.get("id", "")
 	for pid in _ships.keys():
 		if pid != own_id and pid not in seen_ids:
 			_ships[pid].queue_free()
@@ -94,7 +94,8 @@ func _sync_nearby_ships() -> void:
 
 
 func _poi_to_world(poi: Dictionary) -> Vector3:
-	return _poi_position_to_world(poi.get("position", {}))
+	var pos: Dictionary = poi.get("position", {})
+	return _poi_position_to_world(pos)
 
 
 func _poi_position_to_world(pos: Dictionary) -> Vector3:
