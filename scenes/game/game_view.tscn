@@ -1,7 +1,8 @@
-[gd_scene load_steps=6 format=3]
+[gd_scene load_steps=7 format=3]
 
 [ext_resource type="Script" path="res://scripts/game/camera_controller.gd" id="1"]
 [ext_resource type="Script" path="res://scripts/game/system_renderer.gd" id="2"]
+[ext_resource type="Script" path="res://scripts/game/space_grid.gd" id="3"]
 
 [sub_resource type="ProceduralSkyMaterial" id="Sky_1"]
 sky_top_color = Color(0.01, 0.01, 0.04, 1)
@@ -37,6 +38,9 @@ light_energy = 0.6
 [node name="Camera3D" type="Camera3D" parent="."]
 script = ExtResource("1")
 position = Vector3(0, 20, 8)
+
+[node name="SpaceGrid" type="MeshInstance3D" parent="."]
+script = ExtResource("3")
 
 [node name="Ships" type="Node3D" parent="."]
 script = ExtResource("2")
