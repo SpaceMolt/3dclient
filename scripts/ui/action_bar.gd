@@ -62,6 +62,7 @@ func _setup_travel_menu() -> void:
 	for c in popup.id_pressed.get_connections():
 		popup.id_pressed.disconnect(c["callable"])
 
+	# Add POIs within the current system
 	var pois: Array = StateManager.current_system.get("pois", [])
 	var current_poi: String = StateManager.location.get("poi_id", "")
 
@@ -69,14 +70,22 @@ func _setup_travel_menu() -> void:
 		if poi.get("id", "") == current_poi:
 			continue
 		popup.add_item(poi.get("name", "Unknown"))
-		popup.set_item_metadata(popup.item_count - 1, poi.get("id", ""))
+		popup.set_item_metadata(popup.item_count - 1, {"id": poi.get("id", ""), "type": "poi"})
+
+	# Add connected systems (if available from get_system response)
+	var connections: Array = StateManager.current_system.get("connections", [])
+	if connections.size() > 0 and pois.size() > 0:
+		popup.add_separator("Systems")
+	for sys in connections:
+		popup.add_item(">> " + sys.get("name", "Unknown System"))
+		popup.set_item_metadata(popup.item_count - 1, {"id": sys.get("id", ""), "type": "system"})
 
 	popup.id_pressed.connect(func(id: int):
-		var poi_id: String = popup.get_item_metadata(id)
-		var poi_name: String = popup.get_item_text(id)
-		_set_status("Traveling to %s..." % poi_name)
-		NetworkManager.send_command("travel", {"id": poi_id}, func(content):
-			_set_status("Arrived at %s." % poi_name)
+		var meta: Dictionary = popup.get_item_metadata(id)
+		var target_name: String = popup.get_item_text(id)
+		_set_status("Traveling to %s..." % target_name)
+		NetworkManager.send_command("travel", {"id": meta["id"]}, func(content):
+			_set_status("Arrived at %s." % target_name)
 	))
 
 
