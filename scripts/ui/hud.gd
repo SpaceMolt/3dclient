@@ -26,6 +26,8 @@ var _trade_panel: PanelContainer = null
 var _was_docked: bool = false
 var _selected_poi_id: String = ""
 var _selected_poi_name: String = ""
+var _selected_ship_id: String = ""
+var _selected_ship_name: String = ""
 var _system_renderer: Node3D = null
 
 
@@ -50,6 +52,8 @@ func _connect_system_renderer() -> void:
 		_system_renderer = game_view
 		game_view.poi_selected.connect(_on_poi_selected)
 		game_view.poi_deselected.connect(_on_poi_deselected)
+		game_view.ship_selected.connect(_on_ship_selected)
+		game_view.ship_deselected.connect(_on_ship_deselected)
 
 
 func _on_logout() -> void:
@@ -159,7 +163,9 @@ func _hide_battle_panel() -> void:
 func _on_poi_selected(poi_id: String, poi_name: String, poi_type: String) -> void:
 	_selected_poi_id = poi_id
 	_selected_poi_name = poi_name
+	_selected_ship_id = ""
 	target_label.text = "%s (%s)" % [poi_name, poi_type]
+	target_travel_button.visible = true
 	target_dock_button.visible = poi_type == "station"
 	target_panel.show()
 
@@ -167,10 +173,44 @@ func _on_poi_selected(poi_id: String, poi_name: String, poi_type: String) -> voi
 func _on_poi_deselected() -> void:
 	_selected_poi_id = ""
 	_selected_poi_name = ""
-	target_panel.hide()
+	if _selected_ship_id.is_empty():
+		target_panel.hide()
+
+
+func _on_ship_selected(ship_id: String, ship_name: String, _is_pirate: bool) -> void:
+	_selected_ship_id = ship_id
+	_selected_ship_name = ship_name
+	_selected_poi_id = ""
+	target_label.text = ship_name
+	target_travel_button.text = "Attack"
+	target_travel_button.visible = true
+	target_dock_button.visible = false
+	target_panel.show()
+
+
+func _on_ship_deselected() -> void:
+	_selected_ship_id = ""
+	_selected_ship_name = ""
+	target_travel_button.text = "Go"
+	if _selected_poi_id.is_empty():
+		target_panel.hide()
 
 
 func _on_target_travel() -> void:
+	if not _selected_ship_id.is_empty():
+		# Attack the selected ship
+		var attack_id: String = _selected_ship_id
+		# Strip "pirate_" prefix for the API call
+		if attack_id.begins_with("pirate_"):
+			attack_id = attack_id.substr(7)
+		NetworkManager.send_command("attack", {"id": attack_id}, func(_c):
+			pass
+		)
+		if _system_renderer:
+			_system_renderer.deselect_ship()
+		_on_ship_deselected()
+		return
+
 	if _selected_poi_id.is_empty():
 		return
 	NetworkManager.send_command("travel", {"id": _selected_poi_id}, func(_c):

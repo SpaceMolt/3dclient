@@ -6,10 +6,13 @@ const POI_MARKER_SCENE := preload("res://scenes/game/poi_marker.tscn")
 
 signal poi_selected(poi_id: String, poi_name: String, poi_type: String)
 signal poi_deselected
+signal ship_selected(ship_id: String, ship_name: String, is_pirate: bool)
+signal ship_deselected
 
 var _ships: Dictionary = {}  # player_id -> ShipController node
 var _poi_markers: Dictionary = {}  # poi_id -> POIMarker node
 var _selected_poi_id: String = ""
+var _selected_ship_id: String = ""
 
 
 func _ready() -> void:
@@ -79,6 +82,7 @@ func _sync_nearby_ships() -> void:
 			var ship := SHIP_SCENE.instantiate() as Node3D
 			add_child(ship)
 			ship.setup(pid, p.get("player_name", "Unknown"), pos)
+			ship.selected.connect(_on_ship_selected)
 			_ships[pid] = ship
 
 	# Update or create pirate ships
@@ -93,6 +97,7 @@ func _sync_nearby_ships() -> void:
 			var ship := SHIP_SCENE.instantiate() as Node3D
 			add_child(ship)
 			ship.setup(pid, "⚠ " + pirate.get("name", "Pirate"), pos)
+			ship.selected.connect(_on_ship_selected)
 			_ships[pid] = ship
 
 	# Remove ships that are no longer nearby
@@ -135,6 +140,10 @@ func _on_poi_marker_selected(marker: Node3D) -> void:
 	if _selected_poi_id and _poi_markers.has(_selected_poi_id):
 		_poi_markers[_selected_poi_id].set_selected(false)
 
+	# Also deselect any selected ship
+	if _selected_ship_id:
+		deselect_ship()
+
 	if marker.poi_id == _selected_poi_id:
 		# Toggle off
 		_selected_poi_id = ""
@@ -143,6 +152,37 @@ func _on_poi_marker_selected(marker: Node3D) -> void:
 		_selected_poi_id = marker.poi_id
 		marker.set_selected(true)
 		poi_selected.emit(marker.poi_id, marker.poi_name, marker.poi_type)
+
+
+func _on_ship_selected(ship_node: Node3D) -> void:
+	# Deselect any previous ship
+	if _selected_ship_id and _ships.has(_selected_ship_id):
+		_ships[_selected_ship_id].set_selected(false)
+
+	# Also deselect any selected POI
+	if _selected_poi_id:
+		deselect_poi()
+
+	if ship_node.player_id == _selected_ship_id:
+		# Toggle off
+		_selected_ship_id = ""
+		ship_deselected.emit()
+	else:
+		_selected_ship_id = ship_node.player_id
+		ship_node.set_selected(true)
+		var is_pirate: bool = ship_node.player_id.begins_with("pirate_")
+		ship_selected.emit(ship_node.player_id, ship_node.player_name, is_pirate)
+
+
+func deselect_ship() -> void:
+	if _selected_ship_id and _ships.has(_selected_ship_id):
+		_ships[_selected_ship_id].set_selected(false)
+	_selected_ship_id = ""
+	ship_deselected.emit()
+
+
+func get_selected_ship_id() -> String:
+	return _selected_ship_id
 
 
 func deselect_poi() -> void:
