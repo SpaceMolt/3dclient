@@ -142,6 +142,29 @@ func _on_refuel() -> void:
 	NetworkManager.send_command("refuel", {"quantity": 10}, func(_c): _set_status("Refueled."))
 
 
+func _unhandled_key_input(event: InputEvent) -> void:
+	if not event.is_pressed() or event.is_echo():
+		return
+	if NetworkManager.is_request_pending:
+		return
+
+	match (event as InputEventKey).keycode:
+		KEY_D:
+			if StateManager.is_docked():
+				_on_undock()
+			elif dock_button.visible:
+				_on_dock()
+		KEY_M:
+			if mine_button.visible and not mine_button.disabled:
+				_on_mine()
+		KEY_R:
+			if repair_button.visible and not repair_button.disabled:
+				_on_repair()
+		KEY_F:
+			if refuel_button.visible and not refuel_button.disabled:
+				_on_refuel()
+
+
 func _lock() -> void:
 	for btn in _all_buttons:
 		btn.disabled = true
