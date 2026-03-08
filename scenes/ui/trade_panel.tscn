@@ -1,0 +1,59 @@
+[gd_scene load_steps=2 format=3]
+
+[ext_resource type="Script" path="res://scripts/ui/trade_panel.gd" id="1"]
+
+[node name="TradePanel" type="PanelContainer"]
+script = ExtResource("1")
+custom_minimum_size = Vector2(300, 0)
+size_flags_vertical = 3
+
+[node name="TradeMargin" type="MarginContainer" parent="."]
+theme_override_constants/margin_left = 12
+theme_override_constants/margin_right = 12
+theme_override_constants/margin_top = 8
+theme_override_constants/margin_bottom = 8
+
+[node name="TradeLayout" type="VBoxContainer" parent="TradeMargin"]
+theme_override_constants/separation = 8
+
+[node name="TitleLabel" type="Label" parent="TradeMargin/TradeLayout"]
+text = "Trade Station"
+horizontal_alignment = 1
+theme_override_font_sizes/font_size = 16
+modulate = Color(0.4, 0.8, 1.0, 1)
+
+[node name="MarketHeader" type="Label" parent="TradeMargin/TradeLayout"]
+text = "— Market —"
+horizontal_alignment = 1
+theme_override_font_sizes/font_size = 11
+modulate = Color(0.6, 0.6, 0.6, 1)
+
+[node name="MarketScroll" type="ScrollContainer" parent="TradeMargin/TradeLayout"]
+custom_minimum_size = Vector2(0, 120)
+size_flags_vertical = 3
+
+[node name="MarketList" type="VBoxContainer" parent="TradeMargin/TradeLayout/MarketScroll"]
+unique_name_in_owner = true
+size_flags_horizontal = 3
+theme_override_constants/separation = 4
+
+[node name="CargoHeader" type="Label" parent="TradeMargin/TradeLayout"]
+text = "— Your Cargo —"
+horizontal_alignment = 1
+theme_override_font_sizes/font_size = 11
+modulate = Color(0.6, 0.6, 0.6, 1)
+
+[node name="CargoScroll" type="ScrollContainer" parent="TradeMargin/TradeLayout"]
+custom_minimum_size = Vector2(0, 100)
+size_flags_vertical = 3
+
+[node name="CargoList" type="VBoxContainer" parent="TradeMargin/TradeLayout/CargoScroll"]
+unique_name_in_owner = true
+size_flags_horizontal = 3
+theme_override_constants/separation = 4
+
+[node name="TradeStatus" type="Label" parent="TradeMargin/TradeLayout"]
+unique_name_in_owner = true
+text = ""
+theme_override_font_sizes/font_size = 11
+modulate = Color(0.7, 0.7, 0.7, 1)

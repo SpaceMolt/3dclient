@@ -1,6 +1,7 @@
 extends CanvasLayer
 
 const BATTLE_PANEL_SCENE := preload("res://scenes/ui/battle_panel.tscn")
+const TRADE_PANEL_SCENE := preload("res://scenes/ui/trade_panel.tscn")
 
 @onready var system_label: Label = %SystemLabel
 @onready var credits_label: Label = %CreditsLabel
@@ -15,6 +16,8 @@ const BATTLE_PANEL_SCENE := preload("res://scenes/ui/battle_panel.tscn")
 @onready var mid_row: HBoxContainer = $Layout/MidRow
 
 var _battle_panel: PanelContainer = null
+var _trade_panel: PanelContainer = null
+var _was_docked: bool = false
 
 
 func _ready() -> void:
@@ -29,6 +32,7 @@ func _refresh() -> void:
 	_refresh_location()
 	_refresh_player()
 	_refresh_ship()
+	_refresh_dock_panels()
 
 
 func _refresh_location() -> void:
@@ -80,6 +84,29 @@ func _refresh_ship() -> void:
 		hull_bar.modulate = Color.ORANGE
 	else:
 		hull_bar.modulate = Color.WHITE
+
+
+func _refresh_dock_panels() -> void:
+	var docked := StateManager.is_docked()
+	if docked and not _was_docked:
+		_show_trade_panel()
+	elif not docked and _was_docked:
+		_hide_trade_panel()
+	_was_docked = docked
+
+
+func _show_trade_panel() -> void:
+	if _trade_panel:
+		return
+	_trade_panel = TRADE_PANEL_SCENE.instantiate()
+	mid_row.add_child(_trade_panel)
+	mid_row.move_child(_trade_panel, 0)
+
+
+func _hide_trade_panel() -> void:
+	if _trade_panel:
+		_trade_panel.queue_free()
+		_trade_panel = null
 
 
 func _show_battle_panel() -> void:
