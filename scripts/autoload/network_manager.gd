@@ -229,6 +229,10 @@ func _poll_state() -> void:
 		return
 	api_post("/api/v2/spacemolt/get_status", {}, func(content: Dictionary) -> void:
 		StateManager.update_state(content)
+		# Also refresh nearby data each tick so we see ships arriving/leaving
+		send_command("get_nearby", {}, func(nearby: Dictionary) -> void:
+			StateManager.update_nearby(nearby)
+		)
 	)
 
 
