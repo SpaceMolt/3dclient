@@ -110,6 +110,11 @@ func update_nearby(data: Dictionary) -> void:
 func update_system(data: Dictionary) -> void:
 	if data.has("system"):
 		current_system = data["system"]
+		state_updated.emit()
+	elif data.has("pois"):
+		# get_system may return system data directly at the top level
+		current_system = data
+		state_updated.emit()
 
 
 func update_battle(data: Dictionary) -> void:

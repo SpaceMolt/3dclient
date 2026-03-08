@@ -271,6 +271,25 @@ func test_get_current_poi_name_returns_empty_when_not_found() -> void:
 	assert_str(StateManager.get_current_poi_name()).is_empty()
 
 
+# --- update_system ---
+
+func test_update_system_with_system_key() -> void:
+	StateManager.update_system({"system": {"id": "sys_001", "name": "Sol", "pois": []}})
+	assert_str(StateManager.current_system.get("name")).is_equal("Sol")
+
+
+func test_update_system_with_top_level_pois() -> void:
+	StateManager.update_system({"id": "sys_002", "name": "Alpha", "pois": [{"id": "p1"}]})
+	assert_str(StateManager.current_system.get("name")).is_equal("Alpha")
+	assert_int(StateManager.current_system.get("pois", []).size()).is_equal(1)
+
+
+func test_update_system_emits_state_updated() -> void:
+	var monitor := monitor_signals(StateManager, false)
+	StateManager.update_system({"system": {"name": "Sol"}})
+	await assert_signal(monitor).is_emitted("state_updated")
+
+
 # --- reset ---
 
 func test_reset_clears_all_state() -> void:
