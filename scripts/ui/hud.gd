@@ -1,7 +1,15 @@
 extends CanvasLayer
 
 const BATTLE_PANEL_SCENE := preload("res://scenes/ui/battle_panel.tscn")
-const TRADE_PANEL_SCENE := preload("res://scenes/ui/trade_panel.tscn")
+const MARKET_PANEL_SCENE := preload("res://scenes/ui/market_panel.tscn")
+const STORAGE_PANEL_SCENE := preload("res://scenes/ui/storage_panel.tscn")
+const CHAT_PANEL_SCENE := preload("res://scenes/ui/chat_panel.tscn")
+const MISSIONS_PANEL_SCENE := preload("res://scenes/ui/missions_panel.tscn")
+const CRAFTING_PANEL_SCENE := preload("res://scenes/ui/crafting_panel.tscn")
+const ACTION_LOG_PANEL_SCENE := preload("res://scenes/ui/action_log_panel.tscn")
+const SHIP_PANEL_SCENE := preload("res://scenes/ui/ship_panel.tscn")
+const GALAXY_MAP_SCENE := preload("res://scenes/ui/galaxy_map.tscn")
+const SETTINGS_PANEL_SCENE := preload("res://scenes/ui/settings_panel.tscn")
 
 @onready var player_name_label: Label = %PlayerNameLabel
 @onready var system_label: Label = %SystemLabel
@@ -16,13 +24,22 @@ const TRADE_PANEL_SCENE := preload("res://scenes/ui/trade_panel.tscn")
 @onready var cargo_label: Label = %CargoLabel
 @onready var mid_row: HBoxContainer = $Layout/MidRow
 @onready var logout_button: Button = %LogoutButton
+@onready var settings_button: Button = %SettingsButton
 @onready var target_panel: PanelContainer = %TargetPanel
 @onready var target_label: Label = %TargetLabel
 @onready var target_travel_button: Button = %TargetTravelButton
 @onready var target_dock_button: Button = %TargetDockButton
 
 var _battle_panel: PanelContainer = null
-var _trade_panel: PanelContainer = null
+var _market_panel: PanelContainer = null
+var _storage_panel: PanelContainer = null
+var _chat_panel: PanelContainer = null
+var _missions_panel: PanelContainer = null
+var _crafting_panel: PanelContainer = null
+var _action_log_panel: PanelContainer = null
+var _ship_panel: PanelContainer = null
+var _galaxy_map: CanvasLayer = null
+var _settings_panel: CanvasLayer = null
 var _was_docked: bool = false
 var _selected_poi_id: String = ""
 var _selected_poi_name: String = ""
@@ -37,6 +54,7 @@ func _ready() -> void:
 	StateManager.combat_started.connect(_show_battle_panel)
 	StateManager.combat_ended.connect(_hide_battle_panel)
 	logout_button.pressed.connect(_on_logout)
+	settings_button.pressed.connect(_toggle_settings)
 	target_travel_button.pressed.connect(_on_target_travel)
 	target_dock_button.pressed.connect(_on_target_dock)
 	target_panel.hide()
@@ -61,14 +79,139 @@ func _on_logout() -> void:
 
 
 func _unhandled_key_input(event: InputEvent) -> void:
-	if event is InputEventKey and event.pressed and event.keycode == KEY_ESCAPE:
-		if target_panel.visible:
-			if _system_renderer:
-				_system_renderer.deselect_poi()
-				_system_renderer.deselect_ship()
-			_on_poi_deselected()
-			_on_ship_deselected()
+	if not (event is InputEventKey and event.pressed):
+		return
+	if event.is_echo():
+		return
+
+	match (event as InputEventKey).keycode:
+		KEY_ESCAPE:
+			if _settings_panel and _settings_panel.visible:
+				_settings_panel.hide()
+				get_viewport().set_input_as_handled()
+			elif _galaxy_map and _galaxy_map.visible:
+				_galaxy_map.hide()
+				get_viewport().set_input_as_handled()
+			elif target_panel.visible:
+				if _system_renderer:
+					_system_renderer.deselect_poi()
+					_system_renderer.deselect_ship()
+				_on_poi_deselected()
+				_on_ship_deselected()
+				get_viewport().set_input_as_handled()
+			else:
+				_toggle_settings()
+				get_viewport().set_input_as_handled()
+		KEY_C:
+			_toggle_panel("chat")
 			get_viewport().set_input_as_handled()
+		KEY_J:
+			_toggle_panel("missions")
+			get_viewport().set_input_as_handled()
+		KEY_K:
+			_toggle_panel("crafting")
+			get_viewport().set_input_as_handled()
+		KEY_L:
+			_toggle_panel("action_log")
+			get_viewport().set_input_as_handled()
+		KEY_S:
+			_toggle_panel("ship")
+			get_viewport().set_input_as_handled()
+		KEY_G:
+			_toggle_galaxy_map()
+			get_viewport().set_input_as_handled()
+		KEY_T:
+			if StateManager.is_docked():
+				_toggle_panel("market")
+				get_viewport().set_input_as_handled()
+		KEY_I:
+			if StateManager.is_docked():
+				_toggle_panel("storage")
+				get_viewport().set_input_as_handled()
+
+
+func _toggle_panel(panel_name: String) -> void:
+	match panel_name:
+		"chat":
+			if _chat_panel:
+				_chat_panel.queue_free()
+				_chat_panel = null
+			else:
+				_chat_panel = CHAT_PANEL_SCENE.instantiate()
+				# Insert before event log (which is the last child of mid_row)
+				mid_row.add_child(_chat_panel)
+				mid_row.move_child(_chat_panel, mid_row.get_child_count() - 2)
+		"missions":
+			if _missions_panel:
+				_missions_panel.queue_free()
+				_missions_panel = null
+			else:
+				_missions_panel = MISSIONS_PANEL_SCENE.instantiate()
+				mid_row.add_child(_missions_panel)
+				mid_row.move_child(_missions_panel, mid_row.get_child_count() - 2)
+		"crafting":
+			if _crafting_panel:
+				_crafting_panel.queue_free()
+				_crafting_panel = null
+			else:
+				_crafting_panel = CRAFTING_PANEL_SCENE.instantiate()
+				mid_row.add_child(_crafting_panel)
+				mid_row.move_child(_crafting_panel, mid_row.get_child_count() - 2)
+		"action_log":
+			if _action_log_panel:
+				_action_log_panel.queue_free()
+				_action_log_panel = null
+			else:
+				_action_log_panel = ACTION_LOG_PANEL_SCENE.instantiate()
+				mid_row.add_child(_action_log_panel)
+				mid_row.move_child(_action_log_panel, mid_row.get_child_count() - 2)
+		"ship":
+			if _ship_panel:
+				_ship_panel.queue_free()
+				_ship_panel = null
+			else:
+				_ship_panel = SHIP_PANEL_SCENE.instantiate()
+				mid_row.add_child(_ship_panel)
+				mid_row.move_child(_ship_panel, mid_row.get_child_count() - 2)
+		"market":
+			if _market_panel:
+				_market_panel.queue_free()
+				_market_panel = null
+			else:
+				_market_panel = MARKET_PANEL_SCENE.instantiate()
+				mid_row.add_child(_market_panel)
+				mid_row.move_child(_market_panel, 0)
+		"storage":
+			if _storage_panel:
+				_storage_panel.queue_free()
+				_storage_panel = null
+			else:
+				_storage_panel = STORAGE_PANEL_SCENE.instantiate()
+				mid_row.add_child(_storage_panel)
+				mid_row.move_child(_storage_panel, 0)
+
+
+func _toggle_galaxy_map() -> void:
+	if _galaxy_map:
+		if _galaxy_map.visible:
+			_galaxy_map.hide()
+		else:
+			_galaxy_map.show_map()
+	else:
+		_galaxy_map = GALAXY_MAP_SCENE.instantiate()
+		add_child(_galaxy_map)
+		_galaxy_map.show_map()
+
+
+func _toggle_settings() -> void:
+	if _settings_panel:
+		if _settings_panel.visible:
+			_settings_panel.hide()
+		else:
+			_settings_panel.show()
+	else:
+		_settings_panel = SETTINGS_PANEL_SCENE.instantiate()
+		add_child(_settings_panel)
 
 
 func _refresh() -> void:
@@ -86,7 +229,13 @@ func _refresh_location() -> void:
 	var parts: Array = []
 	if sys_name:
 		parts.append(sys_name)
-	if poi_name:
+	if StateManager.is_traveling:
+		var dest_name := StateManager.travel_dest_poi_name
+		if not dest_name.is_empty():
+			parts.append("→ %s" % dest_name)
+		else:
+			parts.append("[IN TRANSIT]")
+	elif poi_name:
 		parts.append(poi_name)
 	if docked:
 		parts.append("[DOCKED]")
@@ -106,13 +255,13 @@ func _refresh_player() -> void:
 func _refresh_ship() -> void:
 	var s := StateManager.ship
 	var hull: int = s.get("hull", 0)
-	var max_hull: int = s.get("hull_max", 1)
+	var max_hull: int = s.get("max_hull", 1)
 	var shield: int = s.get("shield", 0)
-	var max_shield: int = s.get("shield_max", 1)
+	var max_shield: int = s.get("max_shield", 1)
 	var fuel: int = s.get("fuel", 0)
-	var max_fuel: int = s.get("fuel_max", 1)
+	var max_fuel: int = s.get("max_fuel", 1)
 	var cargo_used: int = s.get("cargo_used", 0)
-	var cargo_cap: int = s.get("cargo_max", 1)
+	var cargo_cap: int = s.get("cargo_capacity", 1)
 
 	hull_bar.value = StateManager.hull_pct() * 100.0
 	shield_bar.value = StateManager.shield_pct() * 100.0
@@ -135,25 +284,18 @@ func _refresh_ship() -> void:
 
 func _refresh_dock_panels() -> void:
 	var docked := StateManager.is_docked()
-	if docked and not _was_docked:
-		_show_trade_panel()
-	elif not docked and _was_docked:
-		_hide_trade_panel()
+	if not docked and _was_docked:
+		_close_dock_panels()
 	_was_docked = docked
 
 
-func _show_trade_panel() -> void:
-	if _trade_panel:
-		return
-	_trade_panel = TRADE_PANEL_SCENE.instantiate()
-	mid_row.add_child(_trade_panel)
-	mid_row.move_child(_trade_panel, 0)
-
-
-func _hide_trade_panel() -> void:
-	if _trade_panel:
-		_trade_panel.queue_free()
-		_trade_panel = null
+func _close_dock_panels() -> void:
+	if _market_panel:
+		_market_panel.queue_free()
+		_market_panel = null
+	if _storage_panel:
+		_storage_panel.queue_free()
+		_storage_panel = null
 
 
 func _show_battle_panel() -> void:
@@ -224,8 +366,15 @@ func _on_target_travel() -> void:
 
 	if _selected_poi_id.is_empty():
 		return
-	NetworkManager.send_command("travel", {"id": _selected_poi_id}, func(_c):
-		pass
+	var dest_id := _selected_poi_id
+	var dest_name := _selected_poi_name
+	var origin_id: String = StateManager.location.get("poi_id", "")
+	StateManager.begin_travel(dest_id, dest_name)
+	NetworkManager.send_command("travel", {"id": dest_id}, func(_c):
+		if StateManager.location.get("poi_id", "") == origin_id:
+			StateManager.abort_travel()
+		else:
+			StateManager.end_travel()
 	)
 	if _system_renderer:
 		_system_renderer.deselect_poi()

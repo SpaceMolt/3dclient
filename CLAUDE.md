@@ -13,6 +13,7 @@
 - Every new script with logic gets tests. No exceptions.
 - Tests live in `test/unit/` (pure logic) or `test/integration/` (scene runner / UI)
 - Run tests before committing. Don't commit red tests.
+- Run `./scripts/tools/validate_scripts.sh` after editing scripts to catch parse errors. A pre-commit hook also runs this automatically.
 - If you write code that's hard to test, that's a signal the code needs to be restructured.
 
 ### What to test
@@ -38,3 +39,8 @@ Key autoloads (singletons): `NetworkManager`, `StateManager`, `UIManager`, `Asse
 - Mutations block until complete; disable UI during in-flight requests
 - Poll `get_status` every 10 seconds; reset timer after each mutation response
 - Session ID stored in NetworkManager; passed as `X-Session-Id` header on every request
+
+## API Discrepancies Tracking
+- Maintain `API_DISCREPANCIES.md` with any differences between the OpenAPI spec (`openapi.json`) and real API responses
+- When you discover a new mismatch during development or testing, add it to the file immediately
+- This file will be submitted as a bulk bug report — keep it accurate and detailed

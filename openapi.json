@@ -731,13 +731,16 @@
           "action": {
             "type": "string"
           },
+          "channel": {
+            "type": "string"
+          },
           "warning": {
             "type": "string"
           }
         },
         "required": [
           "action",
-          "warning"
+          "channel"
         ],
         "type": "object"
       },
@@ -3214,8 +3217,20 @@
       "FindRouteResponse": {
         "additionalProperties": false,
         "properties": {
+          "cargo_used": {
+            "type": "integer"
+          },
+          "estimated_fuel": {
+            "type": "integer"
+          },
           "found": {
             "type": "boolean"
+          },
+          "fuel_available": {
+            "type": "integer"
+          },
+          "fuel_per_jump": {
+            "type": "integer"
           },
           "message": {
             "type": "string"
@@ -3254,7 +3269,11 @@
           "found",
           "total_jumps",
           "target_system",
-          "message"
+          "message",
+          "fuel_per_jump",
+          "estimated_fuel",
+          "fuel_available",
+          "cargo_used"
         ],
         "type": "object"
       },
@@ -4590,6 +4609,9 @@
               "base_id": {
                 "type": "string"
               },
+              "class": {
+                "type": "string"
+              },
               "description": {
                 "type": "string"
               },
@@ -4929,6 +4951,9 @@
               "base_name": {
                 "type": "string"
               },
+              "class": {
+                "type": "string"
+              },
               "has_base": {
                 "type": "boolean"
               },
@@ -5019,6 +5044,9 @@
                       "type": "string"
                     },
                     "base_name": {
+                      "type": "string"
+                    },
+                    "class": {
                       "type": "string"
                     },
                     "has_base": {
@@ -5246,6 +5274,9 @@
       "GetVersionResponse": {
         "additionalProperties": false,
         "properties": {
+          "has_more": {
+            "type": "boolean"
+          },
           "notes": {
             "items": {
               "type": "string"
@@ -5259,6 +5290,9 @@
             "type": "integer"
           },
           "release_date": {
+            "type": "string"
+          },
+          "search_term": {
             "type": "string"
           },
           "total": {
@@ -5300,7 +5334,13 @@
         "required": [
           "version",
           "release_date",
-          "notes"
+          "notes",
+          "versions",
+          "page",
+          "per_page",
+          "total",
+          "total_pages",
+          "has_more"
         ],
         "type": "object"
       },
@@ -5865,6 +5905,13 @@
                 "format": "date-time",
                 "type": "string"
               },
+              "last_chat_check_map": {
+                "additionalProperties": {
+                  "format": "date-time",
+                  "type": "string"
+                },
+                "type": "object"
+              },
               "last_login_at": {
                 "format": "date-time",
                 "type": "string"
@@ -6014,6 +6061,9 @@
                 "type": "string"
               },
               "base_name": {
+                "type": "string"
+              },
+              "class": {
                 "type": "string"
               },
               "has_base": {
@@ -6343,6 +6393,9 @@
                     "base_name": {
                       "type": "string"
                     },
+                    "class": {
+                      "type": "string"
+                    },
                     "has_base": {
                       "type": "boolean"
                     },
@@ -6608,6 +6661,10 @@
           "base_id": {
             "type": "string"
           },
+          "class": {
+            "description": "Type-specific classification for client rendering (e.g. star spectral class, planet type, belt composition)",
+            "type": "string"
+          },
           "description": {
             "type": "string"
           },
@@ -6753,6 +6810,14 @@
           "last_chat_check": {
             "format": "date-time",
             "type": "string"
+          },
+          "last_chat_check_map": {
+            "additionalProperties": {
+              "format": "date-time",
+              "type": "string"
+            },
+            "description": "Per-channel unread watermarks",
+            "type": "object"
           },
           "last_login_at": {
             "format": "date-time",
@@ -7119,6 +7184,13 @@
                 "format": "date-time",
                 "type": "string"
               },
+              "last_chat_check_map": {
+                "additionalProperties": {
+                  "format": "date-time",
+                  "type": "string"
+                },
+                "type": "object"
+              },
               "last_login_at": {
                 "format": "date-time",
                 "type": "string"
@@ -7271,6 +7343,9 @@
                 "type": "string"
               },
               "base_name": {
+                "type": "string"
+              },
+              "class": {
                 "type": "string"
               },
               "has_base": {
@@ -7575,6 +7650,9 @@
                       "type": "string"
                     },
                     "base_name": {
+                      "type": "string"
+                    },
+                    "class": {
                       "type": "string"
                     },
                     "has_base": {
@@ -8700,6 +8778,9 @@
             "items": {
               "additionalProperties": false,
               "properties": {
+                "class": {
+                  "type": "string"
+                },
                 "description": {
                   "type": "string"
                 },
@@ -8788,6 +8869,9 @@
             "items": {
               "additionalProperties": false,
               "properties": {
+                "class": {
+                  "type": "string"
+                },
                 "description": {
                   "type": "string"
                 },
@@ -8999,6 +9083,10 @@
             "type": "string"
           },
           "base_name": {
+            "type": "string"
+          },
+          "class": {
+            "description": "Type-specific classification for client rendering (e.g. star spectral class, planet type, belt composition)",
             "type": "string"
           },
           "has_base": {
@@ -9403,6 +9491,10 @@
               "empire": {
                 "type": "string"
               },
+              "in_transit": {
+                "description": "True when actively jumping or traveling",
+                "type": "boolean"
+              },
               "poi_id": {
                 "type": "string"
               },
@@ -9419,6 +9511,31 @@
                 "type": "string"
               },
               "system_name": {
+                "type": "string"
+              },
+              "transit_arrival_tick": {
+                "description": "Engine tick when transit completes",
+                "format": "int64",
+                "type": "integer"
+              },
+              "transit_dest_poi_id": {
+                "description": "Destination POI ID (travel only)",
+                "type": "string"
+              },
+              "transit_dest_poi_name": {
+                "description": "Destination POI name (travel only)",
+                "type": "string"
+              },
+              "transit_dest_system_id": {
+                "description": "Destination system ID (jump only)",
+                "type": "string"
+              },
+              "transit_dest_system_name": {
+                "description": "Destination system name (jump only)",
+                "type": "string"
+              },
+              "transit_type": {
+                "description": "\"jump\" or \"travel\"",
                 "type": "string"
               }
             },
@@ -9933,73 +10050,16 @@
           "base": {
             "type": "string"
           },
-          "faction_orders": {
-            "items": {
-              "additionalProperties": false,
-              "properties": {
-                "created_at": {
-                  "type": "string"
-                },
-                "created_by": {
-                  "type": "string"
-                },
-                "faction_order": {
-                  "type": "boolean"
-                },
-                "filled_quantity": {
-                  "type": "integer"
-                },
-                "item_id": {
-                  "type": "string"
-                },
-                "item_name": {
-                  "type": "string"
-                },
-                "listing_fee": {
-                  "type": "integer"
-                },
-                "order_id": {
-                  "type": "string"
-                },
-                "order_type": {
-                  "type": "string"
-                },
-                "price_each": {
-                  "type": "integer"
-                },
-                "quantity": {
-                  "type": "integer"
-                },
-                "remaining": {
-                  "type": "integer"
-                },
-                "side": {
-                  "type": "string"
-                }
-              },
-              "required": [
-                "order_id",
-                "order_type",
-                "side",
-                "item_id",
-                "quantity",
-                "remaining",
-                "filled_quantity",
-                "price_each",
-                "listing_fee",
-                "created_at"
-              ],
-              "type": "object"
-            },
-            "type": "array"
-          },
-          "faction_orders_count": {
-            "type": "integer"
-          },
-          "faction_orders_truncated": {
+          "has_more": {
             "type": "boolean"
           },
           "hint": {
+            "type": "string"
+          },
+          "item_filter": {
+            "type": "string"
+          },
+          "order_type": {
             "type": "string"
           },
           "orders": {
@@ -10062,21 +10122,40 @@
             },
             "type": "array"
           },
-          "orders_count": {
+          "page": {
             "type": "integer"
           },
-          "orders_truncated": {
-            "type": "boolean"
+          "page_size": {
+            "type": "integer"
+          },
+          "scope": {
+            "type": "string"
+          },
+          "search_term": {
+            "type": "string"
+          },
+          "sort_by": {
+            "type": "string"
+          },
+          "total": {
+            "type": "integer"
+          },
+          "total_pages": {
+            "type": "integer"
           }
         },
         "required": [
           "action",
           "base",
-          "orders_count",
-          "faction_orders_count",
-          "hint",
+          "scope",
           "orders",
-          "faction_orders"
+          "total",
+          "page",
+          "page_size",
+          "total_pages",
+          "has_more",
+          "hint",
+          "sort_by"
         ],
         "type": "object"
       },
@@ -10515,10 +10594,18 @@
             "application/json": {
               "schema": {
                 "properties": {
+                  "count": {
+                    "description": "Number of results per page (get_version: 1-20, default 5)",
+                    "type": "integer"
+                  },
                   "id": {
                     "description": "Target: POI ID, system ID, item ID, player ID, etc. (depends on action)",
                     "type": "string",
                     "x-positional-index": 0
+                  },
+                  "page": {
+                    "description": "Page number (default 1)",
+                    "type": "integer"
                   },
                   "quantity": {
                     "description": "Amount: items to buy/sell/jettison/craft, fuel cells, etc.",
@@ -10588,10 +10675,18 @@
             "application/json": {
               "schema": {
                 "properties": {
+                  "count": {
+                    "description": "Number of results per page (get_version: 1-20, default 5)",
+                    "type": "integer"
+                  },
                   "id": {
                     "description": "Target: POI ID, system ID, item ID, player ID, etc. (depends on action)",
                     "type": "string",
                     "x-positional-index": 0
+                  },
+                  "page": {
+                    "description": "Page number (default 1)",
+                    "type": "integer"
                   },
                   "quantity": {
                     "description": "Amount: items to buy/sell/jettison/craft, fuel cells, etc.",
@@ -10661,10 +10756,18 @@
             "application/json": {
               "schema": {
                 "properties": {
+                  "count": {
+                    "description": "Number of results per page (get_version: 1-20, default 5)",
+                    "type": "integer"
+                  },
                   "id": {
                     "description": "Target: POI ID, system ID, item ID, player ID, etc. (depends on action)",
                     "type": "string",
                     "x-positional-index": 0
+                  },
+                  "page": {
+                    "description": "Page number (default 1)",
+                    "type": "integer"
                   },
                   "quantity": {
                     "description": "Amount: items to buy/sell/jettison/craft, fuel cells, etc.",
@@ -10734,10 +10837,18 @@
             "application/json": {
               "schema": {
                 "properties": {
+                  "count": {
+                    "description": "Number of results per page (get_version: 1-20, default 5)",
+                    "type": "integer"
+                  },
                   "id": {
                     "description": "Target: POI ID, system ID, item ID, player ID, etc. (depends on action)",
                     "type": "string",
                     "x-positional-index": 0
+                  },
+                  "page": {
+                    "description": "Page number (default 1)",
+                    "type": "integer"
                   },
                   "quantity": {
                     "description": "Amount: items to buy/sell/jettison/craft, fuel cells, etc.",
@@ -10807,10 +10918,18 @@
             "application/json": {
               "schema": {
                 "properties": {
+                  "count": {
+                    "description": "Number of results per page (get_version: 1-20, default 5)",
+                    "type": "integer"
+                  },
                   "id": {
                     "description": "Target: POI ID, system ID, item ID, player ID, etc. (depends on action)",
                     "type": "string",
                     "x-positional-index": 0
+                  },
+                  "page": {
+                    "description": "Page number (default 1)",
+                    "type": "integer"
                   },
                   "quantity": {
                     "description": "Amount: items to buy/sell/jettison/craft, fuel cells, etc.",
@@ -10880,10 +10999,18 @@
             "application/json": {
               "schema": {
                 "properties": {
+                  "count": {
+                    "description": "Number of results per page (get_version: 1-20, default 5)",
+                    "type": "integer"
+                  },
                   "id": {
                     "description": "Target: POI ID, system ID, item ID, player ID, etc. (depends on action)",
                     "type": "string",
                     "x-positional-index": 0
+                  },
+                  "page": {
+                    "description": "Page number (default 1)",
+                    "type": "integer"
                   },
                   "quantity": {
                     "description": "Amount: items to buy/sell/jettison/craft, fuel cells, etc.",
@@ -10953,10 +11080,18 @@
             "application/json": {
               "schema": {
                 "properties": {
+                  "count": {
+                    "description": "Number of results per page (get_version: 1-20, default 5)",
+                    "type": "integer"
+                  },
                   "id": {
                     "description": "Target: POI ID, system ID, item ID, player ID, etc. (depends on action)",
                     "type": "string",
                     "x-positional-index": 0
+                  },
+                  "page": {
+                    "description": "Page number (default 1)",
+                    "type": "integer"
                   },
                   "quantity": {
                     "description": "Amount: items to buy/sell/jettison/craft, fuel cells, etc.",
@@ -11026,10 +11161,18 @@
             "application/json": {
               "schema": {
                 "properties": {
+                  "count": {
+                    "description": "Number of results per page (get_version: 1-20, default 5)",
+                    "type": "integer"
+                  },
                   "id": {
                     "description": "Target: POI ID, system ID, item ID, player ID, etc. (depends on action)",
                     "type": "string",
                     "x-positional-index": 0
+                  },
+                  "page": {
+                    "description": "Page number (default 1)",
+                    "type": "integer"
                   },
                   "quantity": {
                     "description": "Amount: items to buy/sell/jettison/craft, fuel cells, etc.",
@@ -11099,10 +11242,18 @@
             "application/json": {
               "schema": {
                 "properties": {
+                  "count": {
+                    "description": "Number of results per page (get_version: 1-20, default 5)",
+                    "type": "integer"
+                  },
                   "id": {
                     "description": "Target: POI ID, system ID, item ID, player ID, etc. (depends on action)",
                     "type": "string",
                     "x-positional-index": 0
+                  },
+                  "page": {
+                    "description": "Page number (default 1)",
+                    "type": "integer"
                   },
                   "quantity": {
                     "description": "Amount: items to buy/sell/jettison/craft, fuel cells, etc.",
@@ -11172,10 +11323,18 @@
             "application/json": {
               "schema": {
                 "properties": {
+                  "count": {
+                    "description": "Number of results per page (get_version: 1-20, default 5)",
+                    "type": "integer"
+                  },
                   "id": {
                     "description": "Target: POI ID, system ID, item ID, player ID, etc. (depends on action)",
                     "type": "string",
                     "x-positional-index": 0
+                  },
+                  "page": {
+                    "description": "Page number (default 1)",
+                    "type": "integer"
                   },
                   "quantity": {
                     "description": "Amount: items to buy/sell/jettison/craft, fuel cells, etc.",
@@ -11245,10 +11404,18 @@
             "application/json": {
               "schema": {
                 "properties": {
+                  "count": {
+                    "description": "Number of results per page (get_version: 1-20, default 5)",
+                    "type": "integer"
+                  },
                   "id": {
                     "description": "Target: POI ID, system ID, item ID, player ID, etc. (depends on action)",
                     "type": "string",
                     "x-positional-index": 0
+                  },
+                  "page": {
+                    "description": "Page number (default 1)",
+                    "type": "integer"
                   },
                   "quantity": {
                     "description": "Amount: items to buy/sell/jettison/craft, fuel cells, etc.",
@@ -11318,10 +11485,18 @@
             "application/json": {
               "schema": {
                 "properties": {
+                  "count": {
+                    "description": "Number of results per page (get_version: 1-20, default 5)",
+                    "type": "integer"
+                  },
                   "id": {
                     "description": "Target: POI ID, system ID, item ID, player ID, etc. (depends on action)",
                     "type": "string",
                     "x-positional-index": 0
+                  },
+                  "page": {
+                    "description": "Page number (default 1)",
+                    "type": "integer"
                   },
                   "quantity": {
                     "description": "Amount: items to buy/sell/jettison/craft, fuel cells, etc.",
@@ -11391,10 +11566,18 @@
             "application/json": {
               "schema": {
                 "properties": {
+                  "count": {
+                    "description": "Number of results per page (get_version: 1-20, default 5)",
+                    "type": "integer"
+                  },
                   "id": {
                     "description": "Target: POI ID, system ID, item ID, player ID, etc. (depends on action)",
                     "type": "string",
                     "x-positional-index": 0
+                  },
+                  "page": {
+                    "description": "Page number (default 1)",
+                    "type": "integer"
                   },
                   "quantity": {
                     "description": "Amount: items to buy/sell/jettison/craft, fuel cells, etc.",
@@ -11464,10 +11647,18 @@
             "application/json": {
               "schema": {
                 "properties": {
+                  "count": {
+                    "description": "Number of results per page (get_version: 1-20, default 5)",
+                    "type": "integer"
+                  },
                   "id": {
                     "description": "Target: POI ID, system ID, item ID, player ID, etc. (depends on action)",
                     "type": "string",
                     "x-positional-index": 0
+                  },
+                  "page": {
+                    "description": "Page number (default 1)",
+                    "type": "integer"
                   },
                   "quantity": {
                     "description": "Amount: items to buy/sell/jettison/craft, fuel cells, etc.",
@@ -11537,10 +11728,18 @@
             "application/json": {
               "schema": {
                 "properties": {
+                  "count": {
+                    "description": "Number of results per page (get_version: 1-20, default 5)",
+                    "type": "integer"
+                  },
                   "id": {
                     "description": "Target: POI ID, system ID, item ID, player ID, etc. (depends on action)",
                     "type": "string",
                     "x-positional-index": 0
+                  },
+                  "page": {
+                    "description": "Page number (default 1)",
+                    "type": "integer"
                   },
                   "quantity": {
                     "description": "Amount: items to buy/sell/jettison/craft, fuel cells, etc.",
@@ -11610,10 +11809,18 @@
             "application/json": {
               "schema": {
                 "properties": {
+                  "count": {
+                    "description": "Number of results per page (get_version: 1-20, default 5)",
+                    "type": "integer"
+                  },
                   "id": {
                     "description": "Target: POI ID, system ID, item ID, player ID, etc. (depends on action)",
                     "type": "string",
                     "x-positional-index": 0
+                  },
+                  "page": {
+                    "description": "Page number (default 1)",
+                    "type": "integer"
                   },
                   "quantity": {
                     "description": "Amount: items to buy/sell/jettison/craft, fuel cells, etc.",
@@ -11683,10 +11890,18 @@
             "application/json": {
               "schema": {
                 "properties": {
+                  "count": {
+                    "description": "Number of results per page (get_version: 1-20, default 5)",
+                    "type": "integer"
+                  },
                   "id": {
                     "description": "Target: POI ID, system ID, item ID, player ID, etc. (depends on action)",
                     "type": "string",
                     "x-positional-index": 0
+                  },
+                  "page": {
+                    "description": "Page number (default 1)",
+                    "type": "integer"
                   },
                   "quantity": {
                     "description": "Amount: items to buy/sell/jettison/craft, fuel cells, etc.",
@@ -11756,10 +11971,18 @@
             "application/json": {
               "schema": {
                 "properties": {
+                  "count": {
+                    "description": "Number of results per page (get_version: 1-20, default 5)",
+                    "type": "integer"
+                  },
                   "id": {
                     "description": "Target: POI ID, system ID, item ID, player ID, etc. (depends on action)",
                     "type": "string",
                     "x-positional-index": 0
+                  },
+                  "page": {
+                    "description": "Page number (default 1)",
+                    "type": "integer"
                   },
                   "quantity": {
                     "description": "Amount: items to buy/sell/jettison/craft, fuel cells, etc.",
@@ -11829,10 +12052,18 @@
             "application/json": {
               "schema": {
                 "properties": {
+                  "count": {
+                    "description": "Number of results per page (get_version: 1-20, default 5)",
+                    "type": "integer"
+                  },
                   "id": {
                     "description": "Target: POI ID, system ID, item ID, player ID, etc. (depends on action)",
                     "type": "string",
                     "x-positional-index": 0
+                  },
+                  "page": {
+                    "description": "Page number (default 1)",
+                    "type": "integer"
                   },
                   "quantity": {
                     "description": "Amount: items to buy/sell/jettison/craft, fuel cells, etc.",
@@ -11902,10 +12133,18 @@
             "application/json": {
               "schema": {
                 "properties": {
+                  "count": {
+                    "description": "Number of results per page (get_version: 1-20, default 5)",
+                    "type": "integer"
+                  },
                   "id": {
                     "description": "Target: POI ID, system ID, item ID, player ID, etc. (depends on action)",
                     "type": "string",
                     "x-positional-index": 0
+                  },
+                  "page": {
+                    "description": "Page number (default 1)",
+                    "type": "integer"
                   },
                   "quantity": {
                     "description": "Amount: items to buy/sell/jettison/craft, fuel cells, etc.",
@@ -11975,10 +12214,18 @@
             "application/json": {
               "schema": {
                 "properties": {
+                  "count": {
+                    "description": "Number of results per page (get_version: 1-20, default 5)",
+                    "type": "integer"
+                  },
                   "id": {
                     "description": "Target: POI ID, system ID, item ID, player ID, etc. (depends on action)",
                     "type": "string",
                     "x-positional-index": 0
+                  },
+                  "page": {
+                    "description": "Page number (default 1)",
+                    "type": "integer"
                   },
                   "quantity": {
                     "description": "Amount: items to buy/sell/jettison/craft, fuel cells, etc.",
@@ -12036,10 +12283,18 @@
             "application/json": {
               "schema": {
                 "properties": {
+                  "count": {
+                    "description": "Number of results per page (get_version: 1-20, default 5)",
+                    "type": "integer"
+                  },
                   "id": {
                     "description": "Target: POI ID, system ID, item ID, player ID, etc. (depends on action)",
                     "type": "string",
                     "x-positional-index": 0
+                  },
+                  "page": {
+                    "description": "Page number (default 1)",
+                    "type": "integer"
                   },
                   "quantity": {
                     "description": "Amount: items to buy/sell/jettison/craft, fuel cells, etc.",
@@ -12109,10 +12364,18 @@
             "application/json": {
               "schema": {
                 "properties": {
+                  "count": {
+                    "description": "Number of results per page (get_version: 1-20, default 5)",
+                    "type": "integer"
+                  },
                   "id": {
                     "description": "Target: POI ID, system ID, item ID, player ID, etc. (depends on action)",
                     "type": "string",
                     "x-positional-index": 0
+                  },
+                  "page": {
+                    "description": "Page number (default 1)",
+                    "type": "integer"
                   },
                   "quantity": {
                     "description": "Amount: items to buy/sell/jettison/craft, fuel cells, etc.",
@@ -12182,10 +12445,18 @@
             "application/json": {
               "schema": {
                 "properties": {
+                  "count": {
+                    "description": "Number of results per page (get_version: 1-20, default 5)",
+                    "type": "integer"
+                  },
                   "id": {
                     "description": "Target: POI ID, system ID, item ID, player ID, etc. (depends on action)",
                     "type": "string",
                     "x-positional-index": 0
+                  },
+                  "page": {
+                    "description": "Page number (default 1)",
+                    "type": "integer"
                   },
                   "quantity": {
                     "description": "Amount: items to buy/sell/jettison/craft, fuel cells, etc.",
@@ -12255,10 +12526,18 @@
             "application/json": {
               "schema": {
                 "properties": {
+                  "count": {
+                    "description": "Number of results per page (get_version: 1-20, default 5)",
+                    "type": "integer"
+                  },
                   "id": {
                     "description": "Target: POI ID, system ID, item ID, player ID, etc. (depends on action)",
                     "type": "string",
                     "x-positional-index": 0
+                  },
+                  "page": {
+                    "description": "Page number (default 1)",
+                    "type": "integer"
                   },
                   "quantity": {
                     "description": "Amount: items to buy/sell/jettison/craft, fuel cells, etc.",
@@ -12328,10 +12607,18 @@
             "application/json": {
               "schema": {
                 "properties": {
+                  "count": {
+                    "description": "Number of results per page (get_version: 1-20, default 5)",
+                    "type": "integer"
+                  },
                   "id": {
                     "description": "Target: POI ID, system ID, item ID, player ID, etc. (depends on action)",
                     "type": "string",
                     "x-positional-index": 0
+                  },
+                  "page": {
+                    "description": "Page number (default 1)",
+                    "type": "integer"
                   },
                   "quantity": {
                     "description": "Amount: items to buy/sell/jettison/craft, fuel cells, etc.",
@@ -12401,10 +12688,18 @@
             "application/json": {
               "schema": {
                 "properties": {
+                  "count": {
+                    "description": "Number of results per page (get_version: 1-20, default 5)",
+                    "type": "integer"
+                  },
                   "id": {
                     "description": "Target: POI ID, system ID, item ID, player ID, etc. (depends on action)",
                     "type": "string",
                     "x-positional-index": 0
+                  },
+                  "page": {
+                    "description": "Page number (default 1)",
+                    "type": "integer"
                   },
                   "quantity": {
                     "description": "Amount: items to buy/sell/jettison/craft, fuel cells, etc.",
@@ -12474,10 +12769,18 @@
             "application/json": {
               "schema": {
                 "properties": {
+                  "count": {
+                    "description": "Number of results per page (get_version: 1-20, default 5)",
+                    "type": "integer"
+                  },
                   "id": {
                     "description": "Target: POI ID, system ID, item ID, player ID, etc. (depends on action)",
                     "type": "string",
                     "x-positional-index": 0
+                  },
+                  "page": {
+                    "description": "Page number (default 1)",
+                    "type": "integer"
                   },
                   "quantity": {
                     "description": "Amount: items to buy/sell/jettison/craft, fuel cells, etc.",
@@ -12547,10 +12850,18 @@
             "application/json": {
               "schema": {
                 "properties": {
+                  "count": {
+                    "description": "Number of results per page (get_version: 1-20, default 5)",
+                    "type": "integer"
+                  },
                   "id": {
                     "description": "Target: POI ID, system ID, item ID, player ID, etc. (depends on action)",
                     "type": "string",
                     "x-positional-index": 0
+                  },
+                  "page": {
+                    "description": "Page number (default 1)",
+                    "type": "integer"
                   },
                   "quantity": {
                     "description": "Amount: items to buy/sell/jettison/craft, fuel cells, etc.",
@@ -12620,10 +12931,18 @@
             "application/json": {
               "schema": {
                 "properties": {
+                  "count": {
+                    "description": "Number of results per page (get_version: 1-20, default 5)",
+                    "type": "integer"
+                  },
                   "id": {
                     "description": "Target: POI ID, system ID, item ID, player ID, etc. (depends on action)",
                     "type": "string",
                     "x-positional-index": 0
+                  },
+                  "page": {
+                    "description": "Page number (default 1)",
+                    "type": "integer"
                   },
                   "quantity": {
                     "description": "Amount: items to buy/sell/jettison/craft, fuel cells, etc.",
@@ -12693,10 +13012,18 @@
             "application/json": {
               "schema": {
                 "properties": {
+                  "count": {
+                    "description": "Number of results per page (get_version: 1-20, default 5)",
+                    "type": "integer"
+                  },
                   "id": {
                     "description": "Target: POI ID, system ID, item ID, player ID, etc. (depends on action)",
                     "type": "string",
                     "x-positional-index": 0
+                  },
+                  "page": {
+                    "description": "Page number (default 1)",
+                    "type": "integer"
                   },
                   "quantity": {
                     "description": "Amount: items to buy/sell/jettison/craft, fuel cells, etc.",
@@ -12788,10 +13115,18 @@
             "application/json": {
               "schema": {
                 "properties": {
+                  "count": {
+                    "description": "Number of results per page (get_version: 1-20, default 5)",
+                    "type": "integer"
+                  },
                   "id": {
                     "description": "Target: POI ID, system ID, item ID, player ID, etc. (depends on action)",
                     "type": "string",
                     "x-positional-index": 0
+                  },
+                  "page": {
+                    "description": "Page number (default 1)",
+                    "type": "integer"
                   },
                   "quantity": {
                     "description": "Amount: items to buy/sell/jettison/craft, fuel cells, etc.",
@@ -12861,10 +13196,18 @@
             "application/json": {
               "schema": {
                 "properties": {
+                  "count": {
+                    "description": "Number of results per page (get_version: 1-20, default 5)",
+                    "type": "integer"
+                  },
                   "id": {
                     "description": "Target: POI ID, system ID, item ID, player ID, etc. (depends on action)",
                     "type": "string",
                     "x-positional-index": 0
+                  },
+                  "page": {
+                    "description": "Page number (default 1)",
+                    "type": "integer"
                   },
                   "quantity": {
                     "description": "Amount: items to buy/sell/jettison/craft, fuel cells, etc.",
@@ -12934,10 +13277,18 @@
             "application/json": {
               "schema": {
                 "properties": {
+                  "count": {
+                    "description": "Number of results per page (get_version: 1-20, default 5)",
+                    "type": "integer"
+                  },
                   "id": {
                     "description": "Target: POI ID, system ID, item ID, player ID, etc. (depends on action)",
                     "type": "string",
                     "x-positional-index": 0
+                  },
+                  "page": {
+                    "description": "Page number (default 1)",
+                    "type": "integer"
                   },
                   "quantity": {
                     "description": "Amount: items to buy/sell/jettison/craft, fuel cells, etc.",
@@ -13007,10 +13358,18 @@
             "application/json": {
               "schema": {
                 "properties": {
+                  "count": {
+                    "description": "Number of results per page (get_version: 1-20, default 5)",
+                    "type": "integer"
+                  },
                   "id": {
                     "description": "Target: POI ID, system ID, item ID, player ID, etc. (depends on action)",
                     "type": "string",
                     "x-positional-index": 0
+                  },
+                  "page": {
+                    "description": "Page number (default 1)",
+                    "type": "integer"
                   },
                   "quantity": {
                     "description": "Amount: items to buy/sell/jettison/craft, fuel cells, etc.",
@@ -13080,10 +13439,18 @@
             "application/json": {
               "schema": {
                 "properties": {
+                  "count": {
+                    "description": "Number of results per page (get_version: 1-20, default 5)",
+                    "type": "integer"
+                  },
                   "id": {
                     "description": "Target: POI ID, system ID, item ID, player ID, etc. (depends on action)",
                     "type": "string",
                     "x-positional-index": 0
+                  },
+                  "page": {
+                    "description": "Page number (default 1)",
+                    "type": "integer"
                   },
                   "quantity": {
                     "description": "Amount: items to buy/sell/jettison/craft, fuel cells, etc.",
@@ -13153,10 +13520,18 @@
             "application/json": {
               "schema": {
                 "properties": {
+                  "count": {
+                    "description": "Number of results per page (get_version: 1-20, default 5)",
+                    "type": "integer"
+                  },
                   "id": {
                     "description": "Target: POI ID, system ID, item ID, player ID, etc. (depends on action)",
                     "type": "string",
                     "x-positional-index": 0
+                  },
+                  "page": {
+                    "description": "Page number (default 1)",
+                    "type": "integer"
                   },
                   "quantity": {
                     "description": "Amount: items to buy/sell/jettison/craft, fuel cells, etc.",
@@ -13226,10 +13601,18 @@
             "application/json": {
               "schema": {
                 "properties": {
+                  "count": {
+                    "description": "Number of results per page (get_version: 1-20, default 5)",
+                    "type": "integer"
+                  },
                   "id": {
                     "description": "Target: POI ID, system ID, item ID, player ID, etc. (depends on action)",
                     "type": "string",
                     "x-positional-index": 0
+                  },
+                  "page": {
+                    "description": "Page number (default 1)",
+                    "type": "integer"
                   },
                   "quantity": {
                     "description": "Amount: items to buy/sell/jettison/craft, fuel cells, etc.",
@@ -13299,10 +13682,18 @@
             "application/json": {
               "schema": {
                 "properties": {
+                  "count": {
+                    "description": "Number of results per page (get_version: 1-20, default 5)",
+                    "type": "integer"
+                  },
                   "id": {
                     "description": "Target: POI ID, system ID, item ID, player ID, etc. (depends on action)",
                     "type": "string",
                     "x-positional-index": 0
+                  },
+                  "page": {
+                    "description": "Page number (default 1)",
+                    "type": "integer"
                   },
                   "quantity": {
                     "description": "Amount: items to buy/sell/jettison/craft, fuel cells, etc.",
@@ -13372,10 +13763,18 @@
             "application/json": {
               "schema": {
                 "properties": {
+                  "count": {
+                    "description": "Number of results per page (get_version: 1-20, default 5)",
+                    "type": "integer"
+                  },
                   "id": {
                     "description": "Target: POI ID, system ID, item ID, player ID, etc. (depends on action)",
                     "type": "string",
                     "x-positional-index": 0
+                  },
+                  "page": {
+                    "description": "Page number (default 1)",
+                    "type": "integer"
                   },
                   "quantity": {
                     "description": "Amount: items to buy/sell/jettison/craft, fuel cells, etc.",
@@ -13445,10 +13844,18 @@
             "application/json": {
               "schema": {
                 "properties": {
+                  "count": {
+                    "description": "Number of results per page (get_version: 1-20, default 5)",
+                    "type": "integer"
+                  },
                   "id": {
                     "description": "Target: POI ID, system ID, item ID, player ID, etc. (depends on action)",
                     "type": "string",
                     "x-positional-index": 0
+                  },
+                  "page": {
+                    "description": "Page number (default 1)",
+                    "type": "integer"
                   },
                   "quantity": {
                     "description": "Amount: items to buy/sell/jettison/craft, fuel cells, etc.",
@@ -13518,10 +13925,18 @@
             "application/json": {
               "schema": {
                 "properties": {
+                  "count": {
+                    "description": "Number of results per page (get_version: 1-20, default 5)",
+                    "type": "integer"
+                  },
                   "id": {
                     "description": "Target: POI ID, system ID, item ID, player ID, etc. (depends on action)",
                     "type": "string",
                     "x-positional-index": 0
+                  },
+                  "page": {
+                    "description": "Page number (default 1)",
+                    "type": "integer"
                   },
                   "quantity": {
                     "description": "Amount: items to buy/sell/jettison/craft, fuel cells, etc.",
@@ -13591,10 +14006,18 @@
             "application/json": {
               "schema": {
                 "properties": {
+                  "count": {
+                    "description": "Number of results per page (get_version: 1-20, default 5)",
+                    "type": "integer"
+                  },
                   "id": {
                     "description": "Target: POI ID, system ID, item ID, player ID, etc. (depends on action)",
                     "type": "string",
                     "x-positional-index": 0
+                  },
+                  "page": {
+                    "description": "Page number (default 1)",
+                    "type": "integer"
                   },
                   "quantity": {
                     "description": "Amount: items to buy/sell/jettison/craft, fuel cells, etc.",
@@ -13664,10 +14087,18 @@
             "application/json": {
               "schema": {
                 "properties": {
+                  "count": {
+                    "description": "Number of results per page (get_version: 1-20, default 5)",
+                    "type": "integer"
+                  },
                   "id": {
                     "description": "Target: POI ID, system ID, item ID, player ID, etc. (depends on action)",
                     "type": "string",
                     "x-positional-index": 0
+                  },
+                  "page": {
+                    "description": "Page number (default 1)",
+                    "type": "integer"
                   },
                   "quantity": {
                     "description": "Amount: items to buy/sell/jettison/craft, fuel cells, etc.",
@@ -13737,10 +14168,18 @@
             "application/json": {
               "schema": {
                 "properties": {
+                  "count": {
+                    "description": "Number of results per page (get_version: 1-20, default 5)",
+                    "type": "integer"
+                  },
                   "id": {
                     "description": "Target: POI ID, system ID, item ID, player ID, etc. (depends on action)",
                     "type": "string",
                     "x-positional-index": 0
+                  },
+                  "page": {
+                    "description": "Page number (default 1)",
+                    "type": "integer"
                   },
                   "quantity": {
                     "description": "Amount: items to buy/sell/jettison/craft, fuel cells, etc.",
@@ -13810,10 +14249,18 @@
             "application/json": {
               "schema": {
                 "properties": {
+                  "count": {
+                    "description": "Number of results per page (get_version: 1-20, default 5)",
+                    "type": "integer"
+                  },
                   "id": {
                     "description": "Target: POI ID, system ID, item ID, player ID, etc. (depends on action)",
                     "type": "string",
                     "x-positional-index": 0
+                  },
+                  "page": {
+                    "description": "Page number (default 1)",
+                    "type": "integer"
                   },
                   "quantity": {
                     "description": "Amount: items to buy/sell/jettison/craft, fuel cells, etc.",
@@ -13883,10 +14330,18 @@
             "application/json": {
               "schema": {
                 "properties": {
+                  "count": {
+                    "description": "Number of results per page (get_version: 1-20, default 5)",
+                    "type": "integer"
+                  },
                   "id": {
                     "description": "Target: POI ID, system ID, item ID, player ID, etc. (depends on action)",
                     "type": "string",
                     "x-positional-index": 0
+                  },
+                  "page": {
+                    "description": "Page number (default 1)",
+                    "type": "integer"
                   },
                   "quantity": {
                     "description": "Amount: items to buy/sell/jettison/craft, fuel cells, etc.",
@@ -13956,10 +14411,18 @@
             "application/json": {
               "schema": {
                 "properties": {
+                  "count": {
+                    "description": "Number of results per page (get_version: 1-20, default 5)",
+                    "type": "integer"
+                  },
                   "id": {
                     "description": "Target: POI ID, system ID, item ID, player ID, etc. (depends on action)",
                     "type": "string",
                     "x-positional-index": 0
+                  },
+                  "page": {
+                    "description": "Page number (default 1)",
+                    "type": "integer"
                   },
                   "quantity": {
                     "description": "Amount: items to buy/sell/jettison/craft, fuel cells, etc.",
@@ -14029,10 +14492,18 @@
             "application/json": {
               "schema": {
                 "properties": {
+                  "count": {
+                    "description": "Number of results per page (get_version: 1-20, default 5)",
+                    "type": "integer"
+                  },
                   "id": {
                     "description": "Target: POI ID, system ID, item ID, player ID, etc. (depends on action)",
                     "type": "string",
                     "x-positional-index": 0
+                  },
+                  "page": {
+                    "description": "Page number (default 1)",
+                    "type": "integer"
                   },
                   "quantity": {
                     "description": "Amount: items to buy/sell/jettison/craft, fuel cells, etc.",
@@ -18534,6 +19005,18 @@
                     "type": "string",
                     "x-positional-index": 3
                   },
+                  "order_type": {
+                    "description": "view_orders: filter by 'buy' or 'sell'",
+                    "type": "string"
+                  },
+                  "page": {
+                    "description": "view_orders: page number (default 1)",
+                    "type": "integer"
+                  },
+                  "page_size": {
+                    "description": "view_orders: results per page (default 20, max 50)",
+                    "type": "integer"
+                  },
                   "price_each": {
                     "description": "Price per item in credits",
                     "type": "integer",
@@ -18543,6 +19026,18 @@
                     "description": "Number of items to buy/sell",
                     "type": "integer",
                     "x-positional-index": 1
+                  },
+                  "scope": {
+                    "description": "view_orders: 'personal' (default) or 'faction'",
+                    "type": "string"
+                  },
+                  "search": {
+                    "description": "view_orders: substring search on item names",
+                    "type": "string"
+                  },
+                  "sort_by": {
+                    "description": "view_orders: 'newest', 'oldest', 'price_asc', 'price_desc'",
+                    "type": "string"
                   },
                   "station_id": {
                     "description": "Station ID to view orders at without docking (view_orders only)",
@@ -18616,6 +19111,18 @@
                     "type": "string",
                     "x-positional-index": 3
                   },
+                  "order_type": {
+                    "description": "view_orders: filter by 'buy' or 'sell'",
+                    "type": "string"
+                  },
+                  "page": {
+                    "description": "view_orders: page number (default 1)",
+                    "type": "integer"
+                  },
+                  "page_size": {
+                    "description": "view_orders: results per page (default 20, max 50)",
+                    "type": "integer"
+                  },
                   "price_each": {
                     "description": "Price per item in credits",
                     "type": "integer",
@@ -18625,6 +19132,18 @@
                     "description": "Number of items to buy/sell",
                     "type": "integer",
                     "x-positional-index": 1
+                  },
+                  "scope": {
+                    "description": "view_orders: 'personal' (default) or 'faction'",
+                    "type": "string"
+                  },
+                  "search": {
+                    "description": "view_orders: substring search on item names",
+                    "type": "string"
+                  },
+                  "sort_by": {
+                    "description": "view_orders: 'newest', 'oldest', 'price_asc', 'price_desc'",
+                    "type": "string"
                   },
                   "station_id": {
                     "description": "Station ID to view orders at without docking (view_orders only)",
@@ -18698,6 +19217,18 @@
                     "type": "string",
                     "x-positional-index": 3
                   },
+                  "order_type": {
+                    "description": "view_orders: filter by 'buy' or 'sell'",
+                    "type": "string"
+                  },
+                  "page": {
+                    "description": "view_orders: page number (default 1)",
+                    "type": "integer"
+                  },
+                  "page_size": {
+                    "description": "view_orders: results per page (default 20, max 50)",
+                    "type": "integer"
+                  },
                   "price_each": {
                     "description": "Price per item in credits",
                     "type": "integer",
@@ -18707,6 +19238,18 @@
                     "description": "Number of items to buy/sell",
                     "type": "integer",
                     "x-positional-index": 1
+                  },
+                  "scope": {
+                    "description": "view_orders: 'personal' (default) or 'faction'",
+                    "type": "string"
+                  },
+                  "search": {
+                    "description": "view_orders: substring search on item names",
+                    "type": "string"
+                  },
+                  "sort_by": {
+                    "description": "view_orders: 'newest', 'oldest', 'price_asc', 'price_desc'",
+                    "type": "string"
                   },
                   "station_id": {
                     "description": "Station ID to view orders at without docking (view_orders only)",
@@ -18780,6 +19323,18 @@
                     "type": "string",
                     "x-positional-index": 3
                   },
+                  "order_type": {
+                    "description": "view_orders: filter by 'buy' or 'sell'",
+                    "type": "string"
+                  },
+                  "page": {
+                    "description": "view_orders: page number (default 1)",
+                    "type": "integer"
+                  },
+                  "page_size": {
+                    "description": "view_orders: results per page (default 20, max 50)",
+                    "type": "integer"
+                  },
                   "price_each": {
                     "description": "Price per item in credits",
                     "type": "integer",
@@ -18789,6 +19344,18 @@
                     "description": "Number of items to buy/sell",
                     "type": "integer",
                     "x-positional-index": 1
+                  },
+                  "scope": {
+                    "description": "view_orders: 'personal' (default) or 'faction'",
+                    "type": "string"
+                  },
+                  "search": {
+                    "description": "view_orders: substring search on item names",
+                    "type": "string"
+                  },
+                  "sort_by": {
+                    "description": "view_orders: 'newest', 'oldest', 'price_asc', 'price_desc'",
+                    "type": "string"
                   },
                   "station_id": {
                     "description": "Station ID to view orders at without docking (view_orders only)",
@@ -18862,6 +19429,18 @@
                     "type": "string",
                     "x-positional-index": 3
                   },
+                  "order_type": {
+                    "description": "view_orders: filter by 'buy' or 'sell'",
+                    "type": "string"
+                  },
+                  "page": {
+                    "description": "view_orders: page number (default 1)",
+                    "type": "integer"
+                  },
+                  "page_size": {
+                    "description": "view_orders: results per page (default 20, max 50)",
+                    "type": "integer"
+                  },
                   "price_each": {
                     "description": "Price per item in credits",
                     "type": "integer",
@@ -18871,6 +19450,18 @@
                     "description": "Number of items to buy/sell",
                     "type": "integer",
                     "x-positional-index": 1
+                  },
+                  "scope": {
+                    "description": "view_orders: 'personal' (default) or 'faction'",
+                    "type": "string"
+                  },
+                  "search": {
+                    "description": "view_orders: substring search on item names",
+                    "type": "string"
+                  },
+                  "sort_by": {
+                    "description": "view_orders: 'newest', 'oldest', 'price_asc', 'price_desc'",
+                    "type": "string"
                   },
                   "station_id": {
                     "description": "Station ID to view orders at without docking (view_orders only)",
@@ -18966,6 +19557,18 @@
                     "type": "string",
                     "x-positional-index": 3
                   },
+                  "order_type": {
+                    "description": "view_orders: filter by 'buy' or 'sell'",
+                    "type": "string"
+                  },
+                  "page": {
+                    "description": "view_orders: page number (default 1)",
+                    "type": "integer"
+                  },
+                  "page_size": {
+                    "description": "view_orders: results per page (default 20, max 50)",
+                    "type": "integer"
+                  },
                   "price_each": {
                     "description": "Price per item in credits",
                     "type": "integer",
@@ -18975,6 +19578,18 @@
                     "description": "Number of items to buy/sell",
                     "type": "integer",
                     "x-positional-index": 1
+                  },
+                  "scope": {
+                    "description": "view_orders: 'personal' (default) or 'faction'",
+                    "type": "string"
+                  },
+                  "search": {
+                    "description": "view_orders: substring search on item names",
+                    "type": "string"
+                  },
+                  "sort_by": {
+                    "description": "view_orders: 'newest', 'oldest', 'price_asc', 'price_desc'",
+                    "type": "string"
                   },
                   "station_id": {
                     "description": "Station ID to view orders at without docking (view_orders only)",
@@ -19048,6 +19663,18 @@
                     "type": "string",
                     "x-positional-index": 3
                   },
+                  "order_type": {
+                    "description": "view_orders: filter by 'buy' or 'sell'",
+                    "type": "string"
+                  },
+                  "page": {
+                    "description": "view_orders: page number (default 1)",
+                    "type": "integer"
+                  },
+                  "page_size": {
+                    "description": "view_orders: results per page (default 20, max 50)",
+                    "type": "integer"
+                  },
                   "price_each": {
                     "description": "Price per item in credits",
                     "type": "integer",
@@ -19057,6 +19684,18 @@
                     "description": "Number of items to buy/sell",
                     "type": "integer",
                     "x-positional-index": 1
+                  },
+                  "scope": {
+                    "description": "view_orders: 'personal' (default) or 'faction'",
+                    "type": "string"
+                  },
+                  "search": {
+                    "description": "view_orders: substring search on item names",
+                    "type": "string"
+                  },
+                  "sort_by": {
+                    "description": "view_orders: 'newest', 'oldest', 'price_asc', 'price_desc'",
+                    "type": "string"
                   },
                   "station_id": {
                     "description": "Station ID to view orders at without docking (view_orders only)",
@@ -19130,6 +19769,18 @@
                     "type": "string",
                     "x-positional-index": 3
                   },
+                  "order_type": {
+                    "description": "view_orders: filter by 'buy' or 'sell'",
+                    "type": "string"
+                  },
+                  "page": {
+                    "description": "view_orders: page number (default 1)",
+                    "type": "integer"
+                  },
+                  "page_size": {
+                    "description": "view_orders: results per page (default 20, max 50)",
+                    "type": "integer"
+                  },
                   "price_each": {
                     "description": "Price per item in credits",
                     "type": "integer",
@@ -19139,6 +19790,18 @@
                     "description": "Number of items to buy/sell",
                     "type": "integer",
                     "x-positional-index": 1
+                  },
+                  "scope": {
+                    "description": "view_orders: 'personal' (default) or 'faction'",
+                    "type": "string"
+                  },
+                  "search": {
+                    "description": "view_orders: substring search on item names",
+                    "type": "string"
+                  },
+                  "sort_by": {
+                    "description": "view_orders: 'newest', 'oldest', 'price_asc', 'price_desc'",
+                    "type": "string"
                   },
                   "station_id": {
                     "description": "Station ID to view orders at without docking (view_orders only)",

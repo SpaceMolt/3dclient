@@ -2,6 +2,7 @@ extends PanelContainer
 
 @onready var travel_button: MenuButton = %TravelButton
 @onready var attack_button: MenuButton = %AttackButton
+@onready var scan_button: Button = %ScanButton
 @onready var dock_button: Button = %DockButton
 @onready var undock_button: Button = %UndockButton
 @onready var mine_button: Button = %MineButton
@@ -14,8 +15,8 @@ var _all_buttons: Array[Control] = []
 
 
 func _ready() -> void:
-	_all_buttons = [travel_button, attack_button, dock_button, undock_button,
-					mine_button, repair_button, refuel_button]
+	_all_buttons = [travel_button, attack_button, scan_button, dock_button,
+					undock_button, mine_button, repair_button, refuel_button]
 
 	NetworkManager.request_started.connect(_lock)
 	NetworkManager.request_completed.connect(_unlock)
@@ -23,6 +24,7 @@ func _ready() -> void:
 	UIManager.info_shown.connect(func(msg): _set_status(msg, false))
 	StateManager.state_updated.connect(_refresh_visibility)
 
+	scan_button.pressed.connect(_on_scan)
 	dock_button.pressed.connect(_on_dock)
 	undock_button.pressed.connect(_on_undock)
 	mine_button.pressed.connect(_on_mine)
@@ -45,11 +47,25 @@ func _ready() -> void:
 func _refresh_visibility() -> void:
 	var docked := StateManager.is_docked()
 	var in_combat := StateManager.in_combat
+
+	# Check if current POI is dockable (has_base)
+	var at_dockable := false
+	var poi_id: String = StateManager.location.get("poi_id", "")
+	for poi in StateManager.current_system.get("pois", []):
+		if poi.get("id", "") == poi_id and poi.get("has_base", false):
+			at_dockable = true
+			break
+
+	# Check if current POI is minable
+	var poi_type: String = StateManager.location.get("poi_type", StateManager.location.get("type", ""))
+	var at_minable := poi_type in ["asteroid_belt", "ice_field", "gas_cloud"]
+
 	# Hide most actions during combat
 	travel_button.visible = not docked and not in_combat
 	attack_button.visible = not docked and not in_combat
-	mine_button.visible = not docked and not in_combat
-	dock_button.visible = not docked and not in_combat
+	scan_button.visible = not docked and not in_combat
+	mine_button.visible = not docked and not in_combat and at_minable
+	dock_button.visible = not docked and not in_combat and at_dockable
 	undock_button.visible = docked and not in_combat
 	repair_button.visible = docked and not in_combat
 	refuel_button.visible = docked and not in_combat
@@ -85,10 +101,32 @@ func _setup_travel_menu() -> void:
 	popup.id_pressed.connect(func(id: int):
 		var meta: Dictionary = popup.get_item_metadata(id)
 		var target_name: String = popup.get_item_text(id)
-		_set_status("Traveling to %s..." % target_name)
-		NetworkManager.send_command("travel", {"id": meta["id"]}, func(content):
-			_set_status("Arrived at %s." % target_name)
-	))
+		if meta.get("type", "") == "system":
+			_set_status("Jumping to %s..." % target_name)
+			StateManager.is_jumping = true
+			StateManager.begin_travel(meta["id"], target_name)
+			NetworkManager.send_command("jump", {"id": meta["id"]}, func(content):
+				StateManager.is_jumping = false
+				StateManager.end_travel()
+				_set_status("Arrived in %s." % target_name)
+				# Refresh system data for the new system
+				NetworkManager.send_command("get_system", {}, func(sys_content):
+					StateManager.update_system(sys_content)
+				)
+			)
+		else:
+			var origin_id: String = StateManager.location.get("poi_id", "")
+			_set_status("Traveling to %s..." % target_name)
+			StateManager.begin_travel(meta["id"], target_name)
+			NetworkManager.send_command("travel", {"id": meta["id"]}, func(content):
+				if StateManager.location.get("poi_id", "") == origin_id:
+					StateManager.abort_travel()
+					_set_status("Travel failed.")
+				else:
+					StateManager.end_travel()
+					_set_status("Arrived at %s." % target_name)
+			)
+	)
 
 
 func _setup_attack_menu() -> void:
@@ -98,7 +136,7 @@ func _setup_attack_menu() -> void:
 		popup.id_pressed.disconnect(c["callable"])
 
 	for p in StateManager.nearby_players:
-		popup.add_item(p.get("player_name", "Unknown Player"))
+		popup.add_item(p.get("username", "Unknown Player"))
 		popup.set_item_metadata(popup.item_count - 1, {"id": p.get("player_id", ""), "type": "player"})
 
 	for pirate in StateManager.nearby_pirates:
@@ -114,24 +152,50 @@ func _setup_attack_menu() -> void:
 	))
 
 
+func _on_scan() -> void:
+	var poi_id: String = StateManager.location.get("poi_id", "")
+	_set_status("Scanning...")
+	NetworkManager.send_command("scan", {"id": poi_id}, func(content: Dictionary):
+		var revealed: Array = content.get("revealed_info", [])
+		if revealed.is_empty():
+			_set_status("Scan complete — nothing new found.")
+		else:
+			_set_status("Scan revealed %d results." % revealed.size())
+			for info in revealed:
+				UIManager.show_info("Scan: %s" % str(info))
+	)
+
+
 func _on_dock() -> void:
 	var poi_id: String = StateManager.location.get("poi_id", "")
 	if poi_id.is_empty():
 		_set_status("No dockable location.", true)
 		return
 	_set_status("Docking...")
-	NetworkManager.send_command("dock", {"id": poi_id}, func(_c): _set_status("Docked."))
+	StateManager.is_docking = true
+	NetworkManager.send_command("dock", {"id": poi_id}, func(_c):
+		StateManager.is_docking = false
+		_set_status("Docked.")
+	)
 
 
 func _on_undock() -> void:
 	_set_status("Undocking...")
-	NetworkManager.send_command("undock", {}, func(_c): _set_status("Undocked."))
+	StateManager.is_undocking = true
+	NetworkManager.send_command("undock", {}, func(_c):
+		StateManager.is_undocking = false
+		_set_status("Undocked.")
+	)
 
 
 func _on_mine() -> void:
 	var poi_id: String = StateManager.location.get("poi_id", "")
 	_set_status("Mining...")
-	NetworkManager.send_command("mine", {"id": poi_id}, func(_c): _set_status("Mining complete."))
+	StateManager.is_mining = true
+	NetworkManager.send_command("mine", {"id": poi_id}, func(_c):
+		StateManager.is_mining = false
+		_set_status("Mining complete.")
+	)
 
 
 func _on_repair() -> void:
@@ -165,6 +229,9 @@ func _unhandled_key_input(event: InputEvent) -> void:
 		KEY_F:
 			if refuel_button.visible and not refuel_button.disabled:
 				_on_refuel()
+		KEY_V:
+			if scan_button.visible and not scan_button.disabled:
+				_on_scan()
 
 
 func _lock() -> void:

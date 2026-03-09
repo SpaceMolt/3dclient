@@ -1,0 +1,340 @@
+[gd_scene load_steps=2 format=3]
+
+[ext_resource type="Script" path="res://scripts/ui/settings_panel.gd" id="1"]
+
+[node name="SettingsPanel" type="CanvasLayer"]
+layer = 10
+script = ExtResource("1")
+
+[node name="Panel" type="Panel" parent="."]
+anchors_preset = 15
+anchor_right = 1.0
+anchor_bottom = 1.0
+grow_horizontal = 2
+grow_vertical = 2
+
+[node name="TopBar" type="HBoxContainer" parent="Panel"]
+offset_left = 60.0
+offset_top = 8.0
+offset_right = 400.0
+offset_bottom = 38.0
+theme_override_constants/separation = 12
+
+[node name="CloseButton" type="Button" parent="Panel/TopBar"]
+text = "X"
+theme_override_font_sizes/font_size = 14
+
+[node name="TitleLabel" type="Label" parent="Panel/TopBar"]
+text = "Settings"
+theme_override_font_sizes/font_size = 16
+modulate = Color(0.4, 0.8, 1.0, 1)
+
+[node name="ScrollContainer" type="ScrollContainer" parent="Panel"]
+anchor_right = 1.0
+anchor_bottom = 1.0
+offset_left = 60.0
+offset_top = 50.0
+offset_right = -60.0
+offset_bottom = -20.0
+
+[node name="Content" type="VBoxContainer" parent="Panel/ScrollContainer"]
+size_flags_horizontal = 3
+theme_override_constants/separation = 20
+
+; === Audio Section ===
+
+[node name="AudioHeader" type="Label" parent="Panel/ScrollContainer/Content"]
+text = "Audio"
+theme_override_font_sizes/font_size = 15
+modulate = Color(0.4, 0.8, 1.0, 1)
+
+[node name="AudioSep" type="HSeparator" parent="Panel/ScrollContainer/Content"]
+
+[node name="VolumeRow" type="HBoxContainer" parent="Panel/ScrollContainer/Content"]
+theme_override_constants/separation = 12
+
+[node name="VolumeTitle" type="Label" parent="Panel/ScrollContainer/Content/VolumeRow"]
+custom_minimum_size = Vector2(140, 0)
+text = "Master Volume"
+theme_override_font_sizes/font_size = 13
+
+[node name="MasterVolumeSlider" type="HSlider" parent="Panel/ScrollContainer/Content/VolumeRow"]
+unique_name_in_owner = true
+custom_minimum_size = Vector2(200, 0)
+min_value = 0.0
+max_value = 100.0
+step = 1.0
+value = 100.0
+
+[node name="MasterVolumeLabel" type="Label" parent="Panel/ScrollContainer/Content/VolumeRow"]
+unique_name_in_owner = true
+custom_minimum_size = Vector2(50, 0)
+text = "100%"
+theme_override_font_sizes/font_size = 13
+
+[node name="MuteRow" type="HBoxContainer" parent="Panel/ScrollContainer/Content"]
+theme_override_constants/separation = 12
+
+[node name="MuteTitle" type="Label" parent="Panel/ScrollContainer/Content/MuteRow"]
+custom_minimum_size = Vector2(140, 0)
+text = "Mute"
+theme_override_font_sizes/font_size = 13
+
+[node name="MuteCheckbox" type="CheckBox" parent="Panel/ScrollContainer/Content/MuteRow"]
+unique_name_in_owner = true
+
+; === Display Section ===
+
+[node name="DisplayHeader" type="Label" parent="Panel/ScrollContainer/Content"]
+text = "Display"
+theme_override_font_sizes/font_size = 15
+modulate = Color(0.4, 0.8, 1.0, 1)
+
+[node name="DisplaySep" type="HSeparator" parent="Panel/ScrollContainer/Content"]
+
+[node name="FullscreenRow" type="HBoxContainer" parent="Panel/ScrollContainer/Content"]
+theme_override_constants/separation = 12
+
+[node name="FullscreenTitle" type="Label" parent="Panel/ScrollContainer/Content/FullscreenRow"]
+custom_minimum_size = Vector2(140, 0)
+text = "Fullscreen"
+theme_override_font_sizes/font_size = 13
+
+[node name="FullscreenCheckbox" type="CheckBox" parent="Panel/ScrollContainer/Content/FullscreenRow"]
+unique_name_in_owner = true
+
+[node name="VSyncRow" type="HBoxContainer" parent="Panel/ScrollContainer/Content"]
+theme_override_constants/separation = 12
+
+[node name="VSyncTitle" type="Label" parent="Panel/ScrollContainer/Content/VSyncRow"]
+custom_minimum_size = Vector2(140, 0)
+text = "VSync"
+theme_override_font_sizes/font_size = 13
+
+[node name="VSyncCheckbox" type="CheckBox" parent="Panel/ScrollContainer/Content/VSyncRow"]
+unique_name_in_owner = true
+button_pressed = true
+
+; === Network Section ===
+
+[node name="NetworkHeader" type="Label" parent="Panel/ScrollContainer/Content"]
+text = "Network"
+theme_override_font_sizes/font_size = 15
+modulate = Color(0.4, 0.8, 1.0, 1)
+
+[node name="NetworkSep" type="HSeparator" parent="Panel/ScrollContainer/Content"]
+
+[node name="ServerUrlRow" type="HBoxContainer" parent="Panel/ScrollContainer/Content"]
+theme_override_constants/separation = 12
+
+[node name="ServerUrlTitle" type="Label" parent="Panel/ScrollContainer/Content/ServerUrlRow"]
+custom_minimum_size = Vector2(140, 0)
+text = "Server URL"
+theme_override_font_sizes/font_size = 13
+
+[node name="ServerUrlField" type="LineEdit" parent="Panel/ScrollContainer/Content/ServerUrlRow"]
+unique_name_in_owner = true
+custom_minimum_size = Vector2(300, 0)
+text = "https://game.spacemolt.com"
+theme_override_font_sizes/font_size = 12
+
+[node name="ServerUrlHint" type="Label" parent="Panel/ScrollContainer/Content/ServerUrlRow"]
+text = "(press Enter to apply)"
+theme_override_font_sizes/font_size = 10
+modulate = Color(0.5, 0.5, 0.5, 1)
+
+[node name="TickRow" type="HBoxContainer" parent="Panel/ScrollContainer/Content"]
+theme_override_constants/separation = 12
+
+[node name="TickTitle" type="Label" parent="Panel/ScrollContainer/Content/TickRow"]
+custom_minimum_size = Vector2(140, 0)
+text = "Tick Duration"
+theme_override_font_sizes/font_size = 13
+
+[node name="TickSlider" type="HSlider" parent="Panel/ScrollContainer/Content/TickRow"]
+unique_name_in_owner = true
+custom_minimum_size = Vector2(200, 0)
+min_value = 1.0
+max_value = 30.0
+step = 1.0
+value = 10.0
+
+[node name="TickLabel" type="Label" parent="Panel/ScrollContainer/Content/TickRow"]
+unique_name_in_owner = true
+custom_minimum_size = Vector2(50, 0)
+text = "10s"
+theme_override_font_sizes/font_size = 13
+
+; === Controls Section ===
+
+[node name="ControlsHeader" type="Label" parent="Panel/ScrollContainer/Content"]
+text = "Controls"
+theme_override_font_sizes/font_size = 15
+modulate = Color(0.4, 0.8, 1.0, 1)
+
+[node name="ControlsSep" type="HSeparator" parent="Panel/ScrollContainer/Content"]
+
+[node name="KeybindingsGrid" type="GridContainer" parent="Panel/ScrollContainer/Content"]
+columns = 2
+theme_override_constants/h_separation = 24
+theme_override_constants/v_separation = 4
+
+[node name="KeyD" type="Label" parent="Panel/ScrollContainer/Content/KeybindingsGrid"]
+custom_minimum_size = Vector2(140, 0)
+text = "D"
+theme_override_font_sizes/font_size = 12
+modulate = Color(0.4, 0.8, 1.0, 1)
+
+[node name="DescD" type="Label" parent="Panel/ScrollContainer/Content/KeybindingsGrid"]
+text = "Dock / Undock"
+theme_override_font_sizes/font_size = 12
+
+[node name="KeyM" type="Label" parent="Panel/ScrollContainer/Content/KeybindingsGrid"]
+custom_minimum_size = Vector2(140, 0)
+text = "M"
+theme_override_font_sizes/font_size = 12
+modulate = Color(0.4, 0.8, 1.0, 1)
+
+[node name="DescM" type="Label" parent="Panel/ScrollContainer/Content/KeybindingsGrid"]
+text = "Mine"
+theme_override_font_sizes/font_size = 12
+
+[node name="KeyR" type="Label" parent="Panel/ScrollContainer/Content/KeybindingsGrid"]
+custom_minimum_size = Vector2(140, 0)
+text = "R"
+theme_override_font_sizes/font_size = 12
+modulate = Color(0.4, 0.8, 1.0, 1)
+
+[node name="DescR" type="Label" parent="Panel/ScrollContainer/Content/KeybindingsGrid"]
+text = "Repair"
+theme_override_font_sizes/font_size = 12
+
+[node name="KeyF" type="Label" parent="Panel/ScrollContainer/Content/KeybindingsGrid"]
+custom_minimum_size = Vector2(140, 0)
+text = "F"
+theme_override_font_sizes/font_size = 12
+modulate = Color(0.4, 0.8, 1.0, 1)
+
+[node name="DescF" type="Label" parent="Panel/ScrollContainer/Content/KeybindingsGrid"]
+text = "Refuel"
+theme_override_font_sizes/font_size = 12
+
+[node name="KeyV" type="Label" parent="Panel/ScrollContainer/Content/KeybindingsGrid"]
+custom_minimum_size = Vector2(140, 0)
+text = "V"
+theme_override_font_sizes/font_size = 12
+modulate = Color(0.4, 0.8, 1.0, 1)
+
+[node name="DescV" type="Label" parent="Panel/ScrollContainer/Content/KeybindingsGrid"]
+text = "Scan"
+theme_override_font_sizes/font_size = 12
+
+[node name="KeyC" type="Label" parent="Panel/ScrollContainer/Content/KeybindingsGrid"]
+custom_minimum_size = Vector2(140, 0)
+text = "C"
+theme_override_font_sizes/font_size = 12
+modulate = Color(0.4, 0.8, 1.0, 1)
+
+[node name="DescC" type="Label" parent="Panel/ScrollContainer/Content/KeybindingsGrid"]
+text = "Chat"
+theme_override_font_sizes/font_size = 12
+
+[node name="KeyJ" type="Label" parent="Panel/ScrollContainer/Content/KeybindingsGrid"]
+custom_minimum_size = Vector2(140, 0)
+text = "J"
+theme_override_font_sizes/font_size = 12
+modulate = Color(0.4, 0.8, 1.0, 1)
+
+[node name="DescJ" type="Label" parent="Panel/ScrollContainer/Content/KeybindingsGrid"]
+text = "Missions"
+theme_override_font_sizes/font_size = 12
+
+[node name="KeyK" type="Label" parent="Panel/ScrollContainer/Content/KeybindingsGrid"]
+custom_minimum_size = Vector2(140, 0)
+text = "K"
+theme_override_font_sizes/font_size = 12
+modulate = Color(0.4, 0.8, 1.0, 1)
+
+[node name="DescK" type="Label" parent="Panel/ScrollContainer/Content/KeybindingsGrid"]
+text = "Crafting"
+theme_override_font_sizes/font_size = 12
+
+[node name="KeyL" type="Label" parent="Panel/ScrollContainer/Content/KeybindingsGrid"]
+custom_minimum_size = Vector2(140, 0)
+text = "L"
+theme_override_font_sizes/font_size = 12
+modulate = Color(0.4, 0.8, 1.0, 1)
+
+[node name="DescL" type="Label" parent="Panel/ScrollContainer/Content/KeybindingsGrid"]
+text = "Action Log"
+theme_override_font_sizes/font_size = 12
+
+[node name="KeyS" type="Label" parent="Panel/ScrollContainer/Content/KeybindingsGrid"]
+custom_minimum_size = Vector2(140, 0)
+text = "S"
+theme_override_font_sizes/font_size = 12
+modulate = Color(0.4, 0.8, 1.0, 1)
+
+[node name="DescS" type="Label" parent="Panel/ScrollContainer/Content/KeybindingsGrid"]
+text = "Ship Panel"
+theme_override_font_sizes/font_size = 12
+
+[node name="KeyG" type="Label" parent="Panel/ScrollContainer/Content/KeybindingsGrid"]
+custom_minimum_size = Vector2(140, 0)
+text = "G"
+theme_override_font_sizes/font_size = 12
+modulate = Color(0.4, 0.8, 1.0, 1)
+
+[node name="DescG" type="Label" parent="Panel/ScrollContainer/Content/KeybindingsGrid"]
+text = "Galaxy Map"
+theme_override_font_sizes/font_size = 12
+
+[node name="KeyHome" type="Label" parent="Panel/ScrollContainer/Content/KeybindingsGrid"]
+custom_minimum_size = Vector2(140, 0)
+text = "Home"
+theme_override_font_sizes/font_size = 12
+modulate = Color(0.4, 0.8, 1.0, 1)
+
+[node name="DescHome" type="Label" parent="Panel/ScrollContainer/Content/KeybindingsGrid"]
+text = "Center camera"
+theme_override_font_sizes/font_size = 12
+
+[node name="KeyEsc" type="Label" parent="Panel/ScrollContainer/Content/KeybindingsGrid"]
+custom_minimum_size = Vector2(140, 0)
+text = "Escape"
+theme_override_font_sizes/font_size = 12
+modulate = Color(0.4, 0.8, 1.0, 1)
+
+[node name="DescEsc" type="Label" parent="Panel/ScrollContainer/Content/KeybindingsGrid"]
+text = "Close panels / Deselect / Settings"
+theme_override_font_sizes/font_size = 12
+
+[node name="KeyMiddleMouse" type="Label" parent="Panel/ScrollContainer/Content/KeybindingsGrid"]
+custom_minimum_size = Vector2(140, 0)
+text = "Middle Mouse"
+theme_override_font_sizes/font_size = 12
+modulate = Color(0.4, 0.8, 1.0, 1)
+
+[node name="DescMiddleMouse" type="Label" parent="Panel/ScrollContainer/Content/KeybindingsGrid"]
+text = "Pan camera"
+theme_override_font_sizes/font_size = 12
+
+[node name="KeyScroll" type="Label" parent="Panel/ScrollContainer/Content/KeybindingsGrid"]
+custom_minimum_size = Vector2(140, 0)
+text = "Scroll Wheel"
+theme_override_font_sizes/font_size = 12
+modulate = Color(0.4, 0.8, 1.0, 1)
+
+[node name="DescScroll" type="Label" parent="Panel/ScrollContainer/Content/KeybindingsGrid"]
+text = "Zoom camera"
+theme_override_font_sizes/font_size = 12
+
+[node name="KeyDblRight" type="Label" parent="Panel/ScrollContainer/Content/KeybindingsGrid"]
+custom_minimum_size = Vector2(140, 0)
+text = "Double Right-Click"
+theme_override_font_sizes/font_size = 12
+modulate = Color(0.4, 0.8, 1.0, 1)
+
+[node name="DescDblRight" type="Label" parent="Panel/ScrollContainer/Content/KeybindingsGrid"]
+text = "Re-follow ship"
+theme_override_font_sizes/font_size = 12

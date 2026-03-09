@@ -1,0 +1,50 @@
+[gd_scene load_steps=2 format=3]
+
+[ext_resource type="Script" path="res://scripts/ui/chat_panel.gd" id="1"]
+
+[node name="ChatPanel" type="PanelContainer"]
+script = ExtResource("1")
+custom_minimum_size = Vector2(280, 0)
+size_flags_vertical = 3
+
+[node name="Margin" type="MarginContainer" parent="."]
+theme_override_constants/margin_left = 8
+theme_override_constants/margin_right = 8
+theme_override_constants/margin_top = 6
+theme_override_constants/margin_bottom = 6
+
+[node name="VBox" type="VBoxContainer" parent="Margin"]
+theme_override_constants/separation = 4
+
+[node name="Header" type="HBoxContainer" parent="Margin/VBox"]
+theme_override_constants/separation = 8
+
+[node name="Title" type="Label" parent="Margin/VBox/Header"]
+text = "Chat"
+theme_override_font_sizes/font_size = 14
+modulate = Color(0.4, 0.8, 1.0, 1)
+
+[node name="ChannelSelector" type="OptionButton" parent="Margin/VBox/Header"]
+unique_name_in_owner = true
+theme_override_font_sizes/font_size = 11
+
+[node name="ChatLog" type="RichTextLabel" parent="Margin/VBox"]
+unique_name_in_owner = true
+size_flags_vertical = 3
+bbcode_enabled = true
+scroll_following = true
+text = "[color=gray]— Chat —[/color]"
+
+[node name="InputRow" type="HBoxContainer" parent="Margin/VBox"]
+theme_override_constants/separation = 4
+
+[node name="ChatInput" type="LineEdit" parent="Margin/VBox/InputRow"]
+unique_name_in_owner = true
+size_flags_horizontal = 3
+placeholder_text = "Type a message..."
+theme_override_font_sizes/font_size = 12
+
+[node name="SendButton" type="Button" parent="Margin/VBox/InputRow"]
+unique_name_in_owner = true
+text = "Send"
+theme_override_font_sizes/font_size = 11

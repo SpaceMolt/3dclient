@@ -23,6 +23,9 @@ bin/*.x86_64
 # GdUnit4 test reports
 reports/
 
+# Test credentials (never commit)
+.test_credentials
+
 # OS
 .DS_Store
 Thumbs.db

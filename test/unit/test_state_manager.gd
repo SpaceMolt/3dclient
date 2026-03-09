@@ -16,42 +16,51 @@ func before_test() -> void:
 	StateManager.nearby_pirates = []
 	StateManager.in_combat = false
 	StateManager.battle = {}
+	StateManager.galaxy_map = {}
+	StateManager.travel_dest_poi_id = ""
+	StateManager.travel_dest_poi_name = ""
+	StateManager.travel_origin_poi_id = ""
+	StateManager.set("is_traveling", false)
+	StateManager.set("is_mining", false)
+	StateManager.set("is_docking", false)
+	StateManager.set("is_undocking", false)
+	StateManager.set("is_jumping", false)
 
 
 # --- Percentage helpers ---
 
 func test_hull_pct_full_health() -> void:
-	StateManager.ship = {"hull": 100, "hull_max": 100}
+	StateManager.ship = {"hull": 100, "max_hull": 100}
 	assert_float(StateManager.hull_pct()).is_equal_approx(1.0, 0.001)
 
 
 func test_hull_pct_half_health() -> void:
-	StateManager.ship = {"hull": 50, "hull_max": 100}
+	StateManager.ship = {"hull": 50, "max_hull": 100}
 	assert_float(StateManager.hull_pct()).is_equal_approx(0.5, 0.001)
 
 
 func test_hull_pct_zero_health() -> void:
-	StateManager.ship = {"hull": 0, "hull_max": 100}
+	StateManager.ship = {"hull": 0, "max_hull": 100}
 	assert_float(StateManager.hull_pct()).is_equal_approx(0.0, 0.001)
 
 
 func test_hull_pct_zero_max_does_not_divide_by_zero() -> void:
-	StateManager.ship = {"hull": 0, "hull_max": 0}
+	StateManager.ship = {"hull": 0, "max_hull": 0}
 	assert_float(StateManager.hull_pct()).is_equal_approx(0.0, 0.001)
 
 
 func test_shield_pct() -> void:
-	StateManager.ship = {"shield": 30, "shield_max": 50}
+	StateManager.ship = {"shield": 30, "max_shield": 50}
 	assert_float(StateManager.shield_pct()).is_equal_approx(0.6, 0.001)
 
 
 func test_fuel_pct() -> void:
-	StateManager.ship = {"fuel": 25, "fuel_max": 100}
+	StateManager.ship = {"fuel": 25, "max_fuel": 100}
 	assert_float(StateManager.fuel_pct()).is_equal_approx(0.25, 0.001)
 
 
 func test_cargo_pct() -> void:
-	StateManager.ship = {"cargo_used": 10, "cargo_max": 40}
+	StateManager.ship = {"cargo_used": 10, "cargo_capacity": 40}
 	assert_float(StateManager.cargo_pct()).is_equal_approx(0.25, 0.001)
 
 
@@ -72,17 +81,22 @@ func test_is_docked_when_docked_at_missing() -> void:
 	assert_bool(StateManager.is_docked()).is_false()
 
 
+func test_is_docked_when_docked_at_null() -> void:
+	StateManager.location = {"docked_at": null}
+	assert_bool(StateManager.is_docked()).is_false()
+
+
 # --- update_state data population ---
 
 func test_update_state_updates_ship() -> void:
 	StateManager.update_state({
-		"ship": {"hull": 80, "hull_max": 100, "shield": 50, "shield_max": 50}
+		"ship": {"hull": 80, "max_hull": 100, "shield": 50, "max_shield": 50}
 	})
 	assert_int(StateManager.ship.get("hull")).is_equal(80)
 
 
 func test_update_state_ignores_empty_dict() -> void:
-	StateManager.ship = {"hull": 100, "hull_max": 100}
+	StateManager.ship = {"hull": 100, "max_hull": 100}
 	StateManager.update_state({})
 	assert_int(StateManager.ship.get("hull")).is_equal(100)
 
@@ -101,13 +115,13 @@ func test_update_state_updates_cargo() -> void:
 
 func test_update_state_emits_state_updated() -> void:
 	var monitor := monitor_signals(StateManager, false)
-	StateManager.update_state({"ship": {"hull": 50, "hull_max": 100}})
+	StateManager.update_state({"ship": {"hull": 50, "max_hull": 100}})
 	await assert_signal(monitor).is_emitted("state_updated")
 
 
 func test_update_state_emits_ship_updated_when_ship_changes() -> void:
 	var monitor := monitor_signals(StateManager, false)
-	StateManager.update_state({"ship": {"hull": 50, "hull_max": 100}})
+	StateManager.update_state({"ship": {"hull": 50, "max_hull": 100}})
 	await assert_signal(monitor).is_emitted("ship_updated")
 
 
@@ -130,7 +144,7 @@ func test_update_state_does_not_emit_location_changed_for_same_poi() -> void:
 func test_set_initial_state_populates_player_and_ship() -> void:
 	StateManager.set_initial_state({
 		"player": {"id": "p1", "name": "TestPilot"},
-		"ship": {"hull": 100, "hull_max": 100},
+		"ship": {"hull": 100, "max_hull": 100},
 		"system": {"id": "sys_001", "name": "Sol"},
 		"poi": {"id": "poi_001", "name": "Earth Station"},
 	})
@@ -148,7 +162,7 @@ func test_set_initial_state_emits_state_updated() -> void:
 
 func test_update_nearby_populates_players_and_pirates() -> void:
 	StateManager.update_nearby({
-		"nearby": [{"player_id": "p2", "player_name": "OtherPilot"}],
+		"nearby": [{"player_id": "p2", "username": "OtherPilot"}],
 		"pirates": [{"id": "x1", "name": "Raider"}],
 	})
 	assert_int(StateManager.nearby_players.size()).is_equal(1)
@@ -240,11 +254,20 @@ func test_set_initial_state_normalizes_poi_to_location() -> void:
 	assert_str(StateManager.location.get("name")).is_equal("Earth Station")
 
 
-func test_set_initial_state_is_docked_false_initially() -> void:
+func test_set_initial_state_is_docked_false_when_not_at_base() -> void:
 	StateManager.set_initial_state({
+		"player": {"id": "p1"},
 		"poi": {"id": "poi_001", "name": "Station"},
 	})
 	assert_bool(StateManager.is_docked()).is_false()
+
+
+func test_set_initial_state_is_docked_when_player_docked_at_base() -> void:
+	StateManager.set_initial_state({
+		"player": {"id": "p1", "docked_at_base": "base_001"},
+		"poi": {"id": "poi_001", "name": "Station"},
+	})
+	assert_bool(StateManager.is_docked()).is_true()
 
 
 # --- get_current_poi_name ---
@@ -294,7 +317,7 @@ func test_update_system_emits_state_updated() -> void:
 
 func test_reset_clears_all_state() -> void:
 	StateManager.player = {"id": "p1", "name": "Test"}
-	StateManager.ship = {"hull": 50, "hull_max": 100}
+	StateManager.ship = {"hull": 50, "max_hull": 100}
 	StateManager.location = {"poi_id": "poi_001"}
 	StateManager.cargo = [{"item": "ore"}]
 	StateManager.in_combat = true
@@ -312,3 +335,210 @@ func test_reset_clears_all_state() -> void:
 	assert_bool(StateManager.battle.is_empty()).is_true()
 	assert_bool(StateManager.current_system.is_empty()).is_true()
 	assert_int(StateManager.nearby_players.size()).is_equal(0)
+	assert_bool(StateManager.is_traveling).is_false()
+
+
+func test_set_galaxy_map_stores_systems() -> void:
+	var map_data := {
+		"systems": [
+			{"system_id": "sol", "name": "Sol", "position": {"x": 0, "y": 0}, "connections": ["alpha"]},
+			{"system_id": "alpha", "name": "Alpha Centauri", "position": {"x": 10, "y": 5}, "connections": ["sol"]},
+		],
+		"total_count": 2
+	}
+	StateManager.set_galaxy_map(map_data)
+
+	assert_int(StateManager.galaxy_map.get("systems", []).size()).is_equal(2)
+	assert_int(StateManager.galaxy_map.get("total_count", 0)).is_equal(2)
+
+
+func test_get_system_by_id_finds_system() -> void:
+	StateManager.galaxy_map = {
+		"systems": [
+			{"system_id": "sol", "name": "Sol"},
+			{"system_id": "alpha", "name": "Alpha Centauri"},
+		]
+	}
+
+	var found := StateManager.get_system_by_id("alpha")
+	assert_str(found.get("name", "")).is_equal("Alpha Centauri")
+
+	var not_found := StateManager.get_system_by_id("nonexistent")
+	assert_bool(not_found.is_empty()).is_true()
+
+
+func test_get_current_system_id_from_current_system() -> void:
+	StateManager.current_system = {"id": "sol"}
+	assert_str(StateManager.get_current_system_id()).is_equal("sol")
+
+
+func test_get_current_system_id_from_location() -> void:
+	StateManager.current_system = {}
+	StateManager.location = {"system_id": "alpha"}
+	assert_str(StateManager.get_current_system_id()).is_equal("alpha")
+
+
+func test_update_state_handles_missions_as_array() -> void:
+	StateManager.update_state({
+		"missions": [{"id": "m1", "title": "Test Mission"}]
+	})
+	# Missions should be wrapped in a dict when provided as an array
+	assert_bool(StateManager.missions is Dictionary).is_true()
+	var mission_list: Array = StateManager.missions.get("list", [])
+	assert_int(mission_list.size()).is_equal(1)
+
+
+func test_is_traveling_state() -> void:
+	assert_bool(StateManager.is_traveling).is_false()
+	StateManager.is_traveling = true
+	assert_bool(StateManager.is_traveling).is_true()
+	StateManager.reset()
+	assert_bool(StateManager.is_traveling).is_false()
+
+
+# --- Mining signals ---
+
+func test_mining_started_signal_emitted() -> void:
+	var monitor := monitor_signals(StateManager, false)
+	StateManager.is_mining = true
+	await assert_signal(monitor).is_emitted("mining_started")
+
+
+func test_mining_ended_signal_emitted() -> void:
+	StateManager.set("is_mining", true)
+	var monitor := monitor_signals(StateManager, false)
+	StateManager.is_mining = false
+	await assert_signal(monitor).is_emitted("mining_ended")
+
+
+func test_mining_no_duplicate_signal() -> void:
+	StateManager.set("is_mining", true)
+	var monitor := monitor_signals(StateManager, false)
+	StateManager.is_mining = true
+	await assert_signal(monitor).is_not_emitted("mining_started")
+
+
+func test_reset_clears_mining() -> void:
+	StateManager.is_mining = true
+	StateManager.reset()
+	assert_bool(StateManager.is_mining).is_false()
+
+
+# --- Docking signals ---
+
+func test_docking_started_signal_emitted() -> void:
+	var monitor := monitor_signals(StateManager, false)
+	StateManager.is_docking = true
+	await assert_signal(monitor).is_emitted("docking_started")
+
+
+func test_docking_ended_signal_emitted() -> void:
+	StateManager.set("is_docking", true)
+	var monitor := monitor_signals(StateManager, false)
+	StateManager.is_docking = false
+	await assert_signal(monitor).is_emitted("docking_ended")
+
+
+func test_undocking_started_signal_emitted() -> void:
+	var monitor := monitor_signals(StateManager, false)
+	StateManager.is_undocking = true
+	await assert_signal(monitor).is_emitted("undocking_started")
+
+
+func test_undocking_ended_signal_emitted() -> void:
+	StateManager.set("is_undocking", true)
+	var monitor := monitor_signals(StateManager, false)
+	StateManager.is_undocking = false
+	await assert_signal(monitor).is_emitted("undocking_ended")
+
+
+func test_reset_clears_docking_undocking() -> void:
+	StateManager.is_docking = true
+	StateManager.is_undocking = true
+	StateManager.reset()
+	assert_bool(StateManager.is_docking).is_false()
+	assert_bool(StateManager.is_undocking).is_false()
+
+
+# --- Jumping signal ---
+
+func test_jumping_started_signal_emitted() -> void:
+	var monitor := monitor_signals(StateManager, false)
+	StateManager.is_jumping = true
+	await assert_signal(monitor).is_emitted("jump_started")
+
+
+func test_jumping_ended_signal_emitted() -> void:
+	StateManager.set("is_jumping", true)
+	var monitor := monitor_signals(StateManager, false)
+	StateManager.is_jumping = false
+	await assert_signal(monitor).is_emitted("jump_ended")
+
+
+func test_reset_clears_jumping() -> void:
+	StateManager.is_jumping = true
+	StateManager.reset()
+	assert_bool(StateManager.is_jumping).is_false()
+
+
+# --- begin_travel / end_travel / abort_travel ---
+
+func test_begin_travel_sets_state() -> void:
+	StateManager.location = {"poi_id": "origin_poi"}
+	StateManager.begin_travel("dest_poi", "Destination Name")
+	assert_bool(StateManager.is_traveling).is_true()
+	assert_str(StateManager.travel_dest_poi_id).is_equal("dest_poi")
+	assert_str(StateManager.travel_dest_poi_name).is_equal("Destination Name")
+	assert_str(StateManager.travel_origin_poi_id).is_equal("origin_poi")
+
+
+func test_begin_travel_emits_travel_started_with_dest() -> void:
+	StateManager.location = {"poi_id": "origin_poi"}
+	var monitor := monitor_signals(StateManager, false)
+	StateManager.begin_travel("dest_poi", "Destination Name")
+	await assert_signal(monitor).is_emitted("travel_started", ["dest_poi", "Destination Name"])
+
+
+func test_end_travel_clears_state() -> void:
+	StateManager.location = {"poi_id": "origin_poi"}
+	StateManager.begin_travel("dest_poi", "Destination Name")
+	StateManager.end_travel()
+	assert_bool(StateManager.is_traveling).is_false()
+	assert_str(StateManager.travel_dest_poi_id).is_empty()
+	assert_str(StateManager.travel_dest_poi_name).is_empty()
+	assert_str(StateManager.travel_origin_poi_id).is_empty()
+
+
+func test_end_travel_emits_travel_ended() -> void:
+	StateManager.location = {"poi_id": "origin_poi"}
+	StateManager.begin_travel("dest_poi", "Dest")
+	var monitor := monitor_signals(StateManager, false)
+	StateManager.end_travel()
+	await assert_signal(monitor).is_emitted("travel_ended")
+
+
+func test_abort_travel_emits_travel_aborted_with_origin() -> void:
+	StateManager.location = {"poi_id": "origin_poi"}
+	StateManager.begin_travel("dest_poi", "Dest")
+	var monitor := monitor_signals(StateManager, false)
+	StateManager.abort_travel()
+	await assert_signal(monitor).is_emitted("travel_aborted", ["origin_poi"])
+
+
+func test_abort_travel_clears_state() -> void:
+	StateManager.location = {"poi_id": "origin_poi"}
+	StateManager.begin_travel("dest_poi", "Dest")
+	StateManager.abort_travel()
+	assert_bool(StateManager.is_traveling).is_false()
+	assert_str(StateManager.travel_dest_poi_id).is_empty()
+	assert_str(StateManager.travel_origin_poi_id).is_empty()
+
+
+func test_reset_clears_travel_fields() -> void:
+	StateManager.location = {"poi_id": "origin_poi"}
+	StateManager.begin_travel("dest_poi", "Dest")
+	StateManager.reset()
+	assert_bool(StateManager.is_traveling).is_false()
+	assert_str(StateManager.travel_dest_poi_id).is_empty()
+	assert_str(StateManager.travel_dest_poi_name).is_empty()
+	assert_str(StateManager.travel_origin_poi_id).is_empty()

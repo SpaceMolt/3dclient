@@ -1,18 +1,16 @@
-[gd_scene load_steps=7 format=3]
+[gd_scene load_steps=10 format=3]
 
 [ext_resource type="Script" path="res://scripts/game/camera_controller.gd" id="1"]
 [ext_resource type="Script" path="res://scripts/game/system_renderer.gd" id="2"]
-[ext_resource type="Script" path="res://scripts/game/space_grid.gd" id="3"]
+[ext_resource type="Texture2D" path="res://textures/sky/blue_nebula.hdr" id="4"]
+[ext_resource type="PackedScene" path="res://scenes/game/mining_beam.tscn" id="5"]
+[ext_resource type="PackedScene" path="res://scenes/game/combat_rings.tscn" id="6"]
 
-[sub_resource type="ProceduralSkyMaterial" id="Sky_1"]
-sky_top_color = Color(0.01, 0.01, 0.04, 1)
-sky_horizon_color = Color(0.02, 0.02, 0.06, 1)
-sky_curve = 0.5
-ground_bottom_color = Color(0.01, 0.01, 0.03, 1)
-ground_horizon_color = Color(0.02, 0.02, 0.05, 1)
+[sub_resource type="PanoramaSkyMaterial" id="PanoSkyMat"]
+panorama = ExtResource("4")
 
 [sub_resource type="Sky" id="Sky_2"]
-sky_material = SubResource("Sky_1")
+sky_material = SubResource("PanoSkyMat")
 
 [sub_resource type="Environment" id="Env_1"]
 background_mode = 2
@@ -20,6 +18,7 @@ sky = SubResource("Sky_2")
 ambient_light_source = 2
 ambient_light_color = Color(0.1, 0.12, 0.2, 1)
 ambient_light_energy = 0.3
+tonemap_mode = 2
 glow_enabled = true
 glow_intensity = 0.8
 glow_bloom = 0.15
@@ -37,10 +36,11 @@ light_energy = 0.6
 
 [node name="Camera3D" type="Camera3D" parent="."]
 script = ExtResource("1")
-position = Vector3(0, 20, 8)
-
-[node name="SpaceGrid" type="MeshInstance3D" parent="."]
-script = ExtResource("3")
+position = Vector3(0, 18.4, 7.8)
 
 [node name="Ships" type="Node3D" parent="."]
 script = ExtResource("2")
+
+[node name="MiningBeam" parent="Ships" instance=ExtResource("5")]
+
+[node name="CombatRings" parent="Ships" instance=ExtResource("6")]
