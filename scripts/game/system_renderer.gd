@@ -35,6 +35,22 @@ func _ready() -> void:
 	StateManager.jump_ended.connect(_on_jump_ended)
 
 
+## Returns the distance from a ray to a point, and the ray parameter t.
+## Returns [-1.0, INF] if the point is behind the ray origin.
+static func ray_point_distance(ray_origin: Vector3, ray_dir: Vector3, point: Vector3) -> Array:
+	var to_center: Vector3 = point - ray_origin
+	var t: float = to_center.dot(ray_dir)
+	if t < 0.0:
+		return [-1.0, INF]
+	var closest: Vector3 = ray_origin + ray_dir * t
+	var dist: float = closest.distance_to(point)
+	return [dist, t]
+
+
+const POI_HIT_RADIUS := 2.5
+const SHIP_HIT_RADIUS := 1.5
+
+
 func _unhandled_input(event: InputEvent) -> void:
 	if not (event is InputEventMouseButton and event.pressed and event.button_index == MOUSE_BUTTON_LEFT):
 		return
@@ -48,14 +64,10 @@ func _unhandled_input(event: InputEvent) -> void:
 	var best_dist := INF
 	for marker_v in _poi_markers.values():
 		var marker_node: Node3D = marker_v as Node3D
-		var to_center: Vector3 = marker_node.global_position - from
-		var t: float = to_center.dot(dir)
-		if t < 0.0:
-			continue  # behind camera
-		var closest: Vector3 = from + dir * t
-		var dist_to_ray: float = closest.distance_to(marker_node.global_position)
-		# Use the collision sphere radius (2.0) as hit threshold
-		if dist_to_ray < 2.5 and t < best_dist:
+		var result: Array = ray_point_distance(from, dir, marker_node.global_position)
+		var dist_to_ray: float = result[0]
+		var t: float = result[1]
+		if dist_to_ray >= 0.0 and dist_to_ray < POI_HIT_RADIUS and t < best_dist:
 			best_dist = t
 			best_marker = marker_node
 	# Also check ships (excluding player ship)
@@ -66,13 +78,10 @@ func _unhandled_input(event: InputEvent) -> void:
 		if pid == own_id:
 			continue
 		var ship: Node3D = _ships[pid]
-		var to_center: Vector3 = ship.global_position - from
-		var t: float = to_center.dot(dir)
-		if t < 0.0:
-			continue
-		var closest: Vector3 = from + dir * t
-		var dist_to_ray: float = closest.distance_to(ship.global_position)
-		if dist_to_ray < 1.5 and t < best_ship_dist:
+		var result: Array = ray_point_distance(from, dir, ship.global_position)
+		var dist_to_ray: float = result[0]
+		var t: float = result[1]
+		if dist_to_ray >= 0.0 and dist_to_ray < SHIP_HIT_RADIUS and t < best_ship_dist:
 			best_ship_dist = t
 			best_ship = ship
 	# Prefer POI if both are close, otherwise pick the nearer one

@@ -197,16 +197,57 @@ func test_location_changed_preserves_player_ship_during_travel() -> void:
 
 # --- Click detection (raycast math) ---
 
+var SystemRenderer: GDScript = load("res://scripts/game/system_renderer.gd")
+
+
+func test_ray_point_distance_direct_hit() -> void:
+	# Ray from (0,10,0) pointing straight down at a point at origin
+	var origin := Vector3(0, 10, 0)
+	var dir := Vector3(0, -1, 0)
+	var point := Vector3(0, 0, 0)
+	var result: Array = SystemRenderer.ray_point_distance(origin, dir, point)
+	assert_float(result[0]).is_equal_approx(0.0, 0.01)  # distance = 0 (direct hit)
+	assert_float(result[1]).is_equal_approx(10.0, 0.01)  # t = 10 (distance along ray)
+
+
+func test_ray_point_distance_near_miss() -> void:
+	# Ray from (0,10,0) pointing down, point offset by 2 on X
+	var origin := Vector3(0, 10, 0)
+	var dir := Vector3(0, -1, 0)
+	var point := Vector3(2, 0, 0)
+	var result: Array = SystemRenderer.ray_point_distance(origin, dir, point)
+	assert_float(result[0]).is_equal_approx(2.0, 0.01)  # distance = 2
+	assert_float(result[1]).is_equal_approx(10.0, 0.01)  # t = 10
+
+
+func test_ray_point_distance_behind_camera() -> void:
+	# Point behind the ray origin
+	var origin := Vector3(0, 10, 0)
+	var dir := Vector3(0, -1, 0)
+	var point := Vector3(0, 20, 0)  # above origin, behind downward ray
+	var result: Array = SystemRenderer.ray_point_distance(origin, dir, point)
+	assert_float(result[0]).is_less(0.0)  # negative = behind camera
+
+
+func test_ray_point_distance_angled_ray() -> void:
+	# Angled ray — typical top-down camera at an angle
+	var origin := Vector3(0, 20, 10)
+	var dir := Vector3(0, -0.894, -0.447).normalized()  # ~63 degrees from horizontal
+	var point := Vector3(0, 0, 0)
+	var result: Array = SystemRenderer.ray_point_distance(origin, dir, point)
+	# Should be a near hit (small distance)
+	assert_float(result[0]).is_less(1.0)
+	assert_float(result[1]).is_greater(0.0)
+
+
 func test_poi_selection_via_signal() -> void:
 	var renderer := _make_renderer()
-	# Manually create a POI marker
 	var marker_scene := preload("res://scenes/game/poi_marker.tscn")
 	var marker: Node3D = marker_scene.instantiate()
 	renderer.add_child(marker)
 	marker.setup("poi_002", "Mars", "planet", Vector3(150.0, 0.0, 240.0))
 	renderer._poi_markers["poi_002"] = marker
 
-	# Trigger selection directly (simulates what raycast does)
 	renderer._on_poi_marker_selected(marker)
 
 	assert_str(renderer._selected_poi_id).is_equal("poi_002")
@@ -217,3 +258,16 @@ func test_poi_selection_via_signal() -> void:
 	assert_str(renderer._selected_poi_id).is_equal("")
 	assert_bool(marker.is_selected).is_false()
 	marker.queue_free()
+
+
+# --- HUD scene config: GameArea must not block 3D clicks ---
+
+func test_game_area_has_mouse_filter_ignore() -> void:
+	var hud_scene := load("res://scenes/ui/hud.tscn") as PackedScene
+	var hud: Node = hud_scene.instantiate()
+	# GameArea is at Layout/MidRow/GameArea — use find_child
+	var game_area: Control = hud.find_child("GameArea", true, false) as Control
+	assert_that(game_area).is_not_null()
+	# MOUSE_FILTER_IGNORE = 2 — required so clicks pass through to 3D raycast
+	assert_int(game_area.mouse_filter).is_equal(Control.MOUSE_FILTER_IGNORE)
+	hud.queue_free()
