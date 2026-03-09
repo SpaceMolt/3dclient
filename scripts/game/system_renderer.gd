@@ -35,6 +35,55 @@ func _ready() -> void:
 	StateManager.jump_ended.connect(_on_jump_ended)
 
 
+func _unhandled_input(event: InputEvent) -> void:
+	if not (event is InputEventMouseButton and event.pressed and event.button_index == MOUSE_BUTTON_LEFT):
+		return
+	var camera := get_viewport().get_camera_3d()
+	if not camera:
+		return
+	var from := camera.project_ray_origin(event.position)
+	var dir := camera.project_ray_normal(event.position)
+	# Find closest POI marker hit by the ray
+	var best_marker: Node3D = null
+	var best_dist := INF
+	for marker_v in _poi_markers.values():
+		var marker_node: Node3D = marker_v as Node3D
+		var to_center: Vector3 = marker_node.global_position - from
+		var t: float = to_center.dot(dir)
+		if t < 0.0:
+			continue  # behind camera
+		var closest: Vector3 = from + dir * t
+		var dist_to_ray: float = closest.distance_to(marker_node.global_position)
+		# Use the collision sphere radius (2.0) as hit threshold
+		if dist_to_ray < 2.5 and t < best_dist:
+			best_dist = t
+			best_marker = marker_node
+	# Also check ships (excluding player ship)
+	var own_id: String = StateManager.player.get("id", "")
+	var best_ship: Node3D = null
+	var best_ship_dist := INF
+	for pid in _ships:
+		if pid == own_id:
+			continue
+		var ship: Node3D = _ships[pid]
+		var to_center: Vector3 = ship.global_position - from
+		var t: float = to_center.dot(dir)
+		if t < 0.0:
+			continue
+		var closest: Vector3 = from + dir * t
+		var dist_to_ray: float = closest.distance_to(ship.global_position)
+		if dist_to_ray < 1.5 and t < best_ship_dist:
+			best_ship_dist = t
+			best_ship = ship
+	# Prefer POI if both are close, otherwise pick the nearer one
+	if best_marker and (not best_ship or best_dist <= best_ship_dist):
+		_on_poi_marker_selected(best_marker)
+		get_viewport().set_input_as_handled()
+	elif best_ship:
+		_on_ship_selected(best_ship)
+		get_viewport().set_input_as_handled()
+
+
 func _process(delta: float) -> void:
 	if not _is_animating_travel:
 		return

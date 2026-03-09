@@ -193,3 +193,27 @@ func test_location_changed_preserves_player_ship_during_travel() -> void:
 	assert_bool(renderer._ships.has("p1")).is_true()
 	assert_bool(renderer._ships.has("p2")).is_false()
 	assert_float(ship.global_position.x).is_equal_approx(80.0, 0.1)
+
+
+# --- Click detection (raycast math) ---
+
+func test_poi_selection_via_signal() -> void:
+	var renderer := _make_renderer()
+	# Manually create a POI marker
+	var marker_scene := preload("res://scenes/game/poi_marker.tscn")
+	var marker: Node3D = marker_scene.instantiate()
+	renderer.add_child(marker)
+	marker.setup("poi_002", "Mars", "planet", Vector3(150.0, 0.0, 240.0))
+	renderer._poi_markers["poi_002"] = marker
+
+	# Trigger selection directly (simulates what raycast does)
+	renderer._on_poi_marker_selected(marker)
+
+	assert_str(renderer._selected_poi_id).is_equal("poi_002")
+	assert_bool(marker.is_selected).is_true()
+
+	# Toggle off
+	renderer._on_poi_marker_selected(marker)
+	assert_str(renderer._selected_poi_id).is_equal("")
+	assert_bool(marker.is_selected).is_false()
+	marker.queue_free()

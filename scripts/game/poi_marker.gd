@@ -14,7 +14,6 @@ var is_selected: bool = false
 
 
 func _ready() -> void:
-	click_area.input_event.connect(_on_input_event)
 	if not poi_name.is_empty():
 		name_label.text = poi_name
 		_apply_appearance()
@@ -37,11 +36,6 @@ func set_selected(val: bool) -> void:
 		name_label.modulate = Color(1.0, 1.0, 0.4, 1.0)
 	else:
 		name_label.modulate = Color(0.8, 0.9, 1.0, 1.0)
-
-
-func _on_input_event(_camera: Node, event: InputEvent, _position: Vector3, _normal: Vector3, _shape_idx: int) -> void:
-	if event is InputEventMouseButton and event.pressed and event.button_index == MOUSE_BUTTON_LEFT:
-		selected.emit(self)
 
 
 func _process(_delta: float) -> void:
