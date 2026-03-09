@@ -1,14 +1,19 @@
 extends Camera3D
 
-const ZOOM_MIN := 5.0
-const ZOOM_MAX := 80.0
+## Camera for focus bubble renderer.
+##
+## Zoom ranges are tuned for cinematic-scale POIs (40-3500 Godot units).
+## Default zoom shows the focused POI nicely; scroll out to see impostors.
+
+const ZOOM_MIN := 20.0
+const ZOOM_MAX := 8000.0
 const ZOOM_SPEED := 0.15
 const ZOOM_SMOOTH := 12.0
 const PAN_SPEED := 0.05
 const ROTATE_SPEED := 0.005
 const PITCH_SPEED := 0.003
 const FOLLOW_SMOOTH := 12.0
-const COMBAT_ZOOM := 12.0
+const COMBAT_ZOOM := 30.0
 const COMBAT_ZOOM_DURATION := 1.0
 
 const DEFAULT_ORBIT := 0.0
@@ -16,12 +21,14 @@ const DEFAULT_TILT := 0.4   # horizontal distance = zoom * tilt
 const MIN_TILT := 0.15      # nearly top-down
 const MAX_TILT := 1.2       # low angle
 
+const DEFAULT_ZOOM := 150.0  # Comfortable for station/small planet
+
 var _target: Node3D = null
 var _following: bool = true
 var _panning: bool = false
 var _rotating: bool = false
-var _zoom: float = 20.0
-var _target_zoom: float = 20.0
+var _zoom: float = DEFAULT_ZOOM
+var _target_zoom: float = DEFAULT_ZOOM
 var _orbit: float = DEFAULT_ORBIT   # horizontal orbit (radians around Y)
 var _tilt: float = DEFAULT_TILT     # vertical tilt (higher = more horizontal)
 var _pre_combat_zoom: float = 0.0
@@ -36,6 +43,8 @@ var _first_follow: bool = true
 func _ready() -> void:
 	StateManager.combat_started.connect(_on_combat_started)
 	StateManager.combat_ended.connect(_on_combat_ended)
+	# Set far clip to handle impostor distances (SHELL_MAX = 5000 + margin)
+	far = 12000.0
 
 
 func follow(node: Node3D) -> void:
@@ -109,7 +118,7 @@ func _input(event: InputEvent) -> void:
 
 	elif event is InputEventMouseMotion:
 		if _panning:
-			var scale_factor := _zoom / 20.0
+			var scale_factor := _zoom / 100.0
 			var pan_delta: Vector2 = event.relative * PAN_SPEED * scale_factor
 			var right := global_transform.basis.x.normalized()
 			var forward := Vector3(-right.z, 0.0, right.x).normalized()
@@ -138,6 +147,7 @@ func _unhandled_key_input(event: InputEvent) -> void:
 				_following = true
 				_orbit = DEFAULT_ORBIT
 				_tilt = DEFAULT_TILT
+				_target_zoom = DEFAULT_ZOOM
 				get_viewport().set_input_as_handled()
 
 

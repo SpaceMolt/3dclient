@@ -1,8 +1,9 @@
 extends GdUnitTestSuite
 
-# Tests for system_renderer.gd travel animation logic and coordinate transforms.
+# Tests for system_renderer.gd focus bubble integration, travel animation, and click detection.
 
 const SHIP_SCENE := preload("res://scenes/game/ship.tscn")
+const FocusBubble := preload("res://scripts/game/focus_bubble.gd")
 
 var _renderer: Node3D
 
@@ -15,8 +16,8 @@ func before_test() -> void:
 		"id": "sys_001",
 		"name": "Sol",
 		"pois": [
-			{"id": "poi_001", "name": "Earth", "type": "planet", "position": {"x": 1.0, "y": 2.0}},
-			{"id": "poi_002", "name": "Mars", "type": "planet", "position": {"x": 5.0, "y": 8.0}},
+			{"id": "poi_001", "name": "Earth", "type": "planet", "class": "terran", "position": {"x": 1.0, "y": 2.0}},
+			{"id": "poi_002", "name": "Mars", "type": "planet", "class": "arid", "position": {"x": 5.0, "y": 8.0}},
 		]
 	}
 	StateManager.nearby_players = []
@@ -50,56 +51,100 @@ func _add_player_ship(renderer: Node3D, pos: Vector3) -> Node3D:
 	return ship
 
 
-# --- Coordinate transform ---
+# --- Player ship at origin ---
 
-func test_poi_position_to_world_scales_correctly() -> void:
+func test_player_ship_placed_at_origin() -> void:
 	var renderer := _make_renderer()
-	var result: Vector3 = renderer._poi_position_to_world({"x": 1.0, "y": 2.0})
-	# SCALE = 30.0, x maps to x, y maps to z
-	assert_float(result.x).is_equal_approx(30.0, 0.01)
-	assert_float(result.y).is_equal_approx(0.0, 0.01)
-	assert_float(result.z).is_equal_approx(60.0, 0.01)
+	var ship := _add_player_ship(renderer, Vector3.ZERO)
+	renderer._update_player_ship()
+	# Ship should stay at origin in focus bubble
+	assert_float(ship.global_position.x).is_equal_approx(0.0, 0.1)
+	assert_float(ship.global_position.y).is_equal_approx(0.0, 0.1)
+	assert_float(ship.global_position.z).is_equal_approx(0.0, 0.1)
 
 
-func test_poi_position_to_world_empty_dict() -> void:
+# --- POI positioning (focus bubble) ---
+
+func test_focused_poi_at_cinematic_offset() -> void:
 	var renderer := _make_renderer()
-	var result: Vector3 = renderer._poi_position_to_world({})
-	assert_float(result.x).is_equal_approx(0.0, 0.01)
-	assert_float(result.z).is_equal_approx(0.0, 0.01)
+	_add_player_ship(renderer, Vector3.ZERO)
+	renderer._sync_poi_markers()
+
+	# poi_001 is where the player is — should be rendered at focused offset
+	assert_bool(renderer._poi_markers.has("poi_001")).is_true()
+	var marker: Node3D = renderer._poi_markers["poi_001"]
+	var expected_offset: Vector3 = FocusBubble.focused_poi_offset("planet", "terran")
+	assert_float(marker.global_position.x).is_equal_approx(expected_offset.x, 1.0)
+	assert_float(marker.global_position.y).is_equal_approx(expected_offset.y, 1.0)
+	assert_float(marker.global_position.z).is_equal_approx(expected_offset.z, 1.0)
+	assert_bool(marker.is_impostor).is_false()
+
+
+func test_other_poi_is_impostor() -> void:
+	var renderer := _make_renderer()
+	_add_player_ship(renderer, Vector3.ZERO)
+	renderer._sync_poi_markers()
+
+	# poi_002 (Mars) is not the focused POI — should be an impostor
+	assert_bool(renderer._poi_markers.has("poi_002")).is_true()
+	var marker: Node3D = renderer._poi_markers["poi_002"]
+	assert_bool(marker.is_impostor).is_true()
+
+	# Should be at a compressed distance in the correct direction
+	var dist: float = marker.global_position.length()
+	assert_float(dist).is_greater(FocusBubble.SHELL_MIN)
+	assert_float(dist).is_less_equal(FocusBubble.SHELL_MAX)
+
+
+func test_impostor_direction_correct() -> void:
+	var renderer := _make_renderer()
+	_add_player_ship(renderer, Vector3.ZERO)
+	renderer._sync_poi_markers()
+
+	# Mars is at (5,8), player at (1,2), so delta is (4,6) — positive X and Z
+	var marker: Node3D = renderer._poi_markers["poi_002"]
+	assert_float(marker.global_position.x).is_greater(0.0)
+	assert_float(marker.global_position.z).is_greater(0.0)
 
 
 # --- Travel animation state ---
 
 func test_travel_started_sets_animation_state() -> void:
 	var renderer := _make_renderer()
-	var ship := _add_player_ship(renderer, Vector3(30.0, 0.0, 60.0))
+	_add_player_ship(renderer, Vector3.ZERO)
+	renderer._sync_poi_markers()
 
 	renderer._on_travel_started("poi_002", "Mars")
 
 	assert_bool(renderer._is_animating_travel).is_true()
 	assert_float(renderer._travel_elapsed).is_equal_approx(0.0, 0.001)
-	# Origin should be ship's current position
-	assert_float(renderer._travel_origin_pos.x).is_equal_approx(30.0, 0.1)
-	# Dest should be Mars position (5.0 * 30 = 150, 8.0 * 30 = 240)
-	assert_float(renderer._travel_dest_pos.x).is_equal_approx(150.0, 0.1)
-	assert_float(renderer._travel_dest_pos.z).is_equal_approx(240.0, 0.1)
+	# Origin should be ship's position (origin)
+	assert_float(renderer._travel_origin_pos.length()).is_less(1.0)
+	# Dest should be Mars impostor position (compressed distance, positive X and Z)
+	assert_float(renderer._travel_dest_pos.x).is_greater(0.0)
+	assert_float(renderer._travel_dest_pos.z).is_greater(0.0)
+	var dest_dist: float = renderer._travel_dest_pos.length()
+	assert_float(dest_dist).is_greater(FocusBubble.SHELL_MIN)
+	assert_float(dest_dist).is_less_equal(FocusBubble.SHELL_MAX)
 	# Path line should be created
 	assert_that(renderer._travel_path_line).is_not_null()
 
 
 func test_travel_started_skips_negligible_distance() -> void:
 	var renderer := _make_renderer()
-	_add_player_ship(renderer, Vector3(30.0, 0.0, 60.0))
+	_add_player_ship(renderer, Vector3.ZERO)
+	renderer._sync_poi_markers()
 
-	# Travel to same POI (poi_001) — distance < 1.0
+	# Travel to same POI (poi_001) — impostor position is ZERO (same location)
 	renderer._on_travel_started("poi_001", "Earth")
 
 	assert_bool(renderer._is_animating_travel).is_false()
 
 
-func test_travel_ended_clears_animation_state() -> void:
+func test_travel_ended_snaps_to_origin() -> void:
 	var renderer := _make_renderer()
-	_add_player_ship(renderer, Vector3(30.0, 0.0, 60.0))
+	var ship := _add_player_ship(renderer, Vector3.ZERO)
+	renderer._sync_poi_markers()
 
 	renderer._on_travel_started("poi_002", "Mars")
 	assert_bool(renderer._is_animating_travel).is_true()
@@ -110,47 +155,48 @@ func test_travel_ended_clears_animation_state() -> void:
 
 	assert_bool(renderer._is_animating_travel).is_false()
 	assert_that(renderer._travel_path_line).is_null()
+	# Ship should be back at origin
+	assert_float(ship.global_position.length()).is_less(1.0)
 
 
-func test_travel_aborted_snaps_back_to_origin() -> void:
+func test_travel_aborted_snaps_to_origin() -> void:
 	var renderer := _make_renderer()
-	var ship := _add_player_ship(renderer, Vector3(30.0, 0.0, 60.0))
+	var ship := _add_player_ship(renderer, Vector3.ZERO)
+	renderer._sync_poi_markers()
 
 	renderer._on_travel_started("poi_002", "Mars")
 	# Simulate some elapsed time by moving the ship
-	ship.global_position = Vector3(80.0, 0.0, 120.0)
+	ship.global_position = Vector3(500.0, 0.0, 700.0)
 
 	renderer._on_travel_aborted("poi_001")
 
 	assert_bool(renderer._is_animating_travel).is_false()
-	# Ship should be back at origin position
-	assert_float(ship.global_position.x).is_equal_approx(30.0, 0.1)
-	assert_float(ship.global_position.z).is_equal_approx(60.0, 0.1)
+	# Ship should be back at origin
+	assert_float(ship.global_position.length()).is_less(1.0)
 
 
 # --- Guards ---
 
 func test_update_player_ship_guarded_during_travel() -> void:
 	var renderer := _make_renderer()
-	var ship := _add_player_ship(renderer, Vector3(30.0, 0.0, 60.0))
+	var ship := _add_player_ship(renderer, Vector3.ZERO)
+	renderer._sync_poi_markers()
 
 	renderer._on_travel_started("poi_002", "Mars")
-	ship.global_position = Vector3(80.0, 0.0, 120.0)
+	ship.global_position = Vector3(500.0, 0.0, 700.0)
 
 	# _update_player_ship should be guarded and NOT move the ship
 	renderer._update_player_ship()
-	assert_float(ship.global_position.x).is_equal_approx(80.0, 0.1)
+	assert_float(ship.global_position.x).is_equal_approx(500.0, 0.1)
 
 
 func test_update_player_ship_works_when_not_traveling() -> void:
 	var renderer := _make_renderer()
-	var ship := _add_player_ship(renderer, Vector3(0.0, 0.0, 0.0))
+	var ship := _add_player_ship(renderer, Vector3(100.0, 0.0, 100.0))
 
-	# Not traveling — _update_player_ship should move ship to player position
+	# Not traveling — _update_player_ship should move ship to origin
 	renderer._update_player_ship()
-	# Player location is poi_001 at (1.0, 2.0) → world (30.0, 0.0, 60.0)
-	assert_float(ship.global_position.x).is_equal_approx(30.0, 1.0)
-	assert_float(ship.global_position.z).is_equal_approx(60.0, 1.0)
+	assert_float(ship.global_position.length()).is_less(1.0)
 
 
 # --- Asymptotic progress math ---
@@ -177,22 +223,24 @@ func test_asymptotic_progress_capped_at_95pct() -> void:
 
 func test_location_changed_preserves_player_ship_during_travel() -> void:
 	var renderer := _make_renderer()
-	var ship := _add_player_ship(renderer, Vector3(80.0, 0.0, 120.0))
+	var ship := _add_player_ship(renderer, Vector3.ZERO)
+	renderer._sync_poi_markers()
 
 	# Add another ship
 	var other_ship: Node3D = SHIP_SCENE.instantiate()
 	renderer.add_child(other_ship)
-	other_ship.setup("p2", "Other", Vector3(30.0, 0.0, 60.0), false)
+	other_ship.setup("p2", "Other", Vector3(5.0, 0.0, 5.0), false)
 	renderer._ships["p2"] = other_ship
 
 	renderer._on_travel_started("poi_002", "Mars")
+	ship.global_position = Vector3(500.0, 0.0, 700.0)
 
 	# Location changes — other ship should be removed, player ship untouched
 	renderer._on_location_changed("poi_001", "poi_002")
 
 	assert_bool(renderer._ships.has("p1")).is_true()
 	assert_bool(renderer._ships.has("p2")).is_false()
-	assert_float(ship.global_position.x).is_equal_approx(80.0, 0.1)
+	assert_float(ship.global_position.x).is_equal_approx(500.0, 0.1)
 
 
 # --- Click detection (raycast math) ---
@@ -245,7 +293,7 @@ func test_poi_selection_via_signal() -> void:
 	var marker_scene := preload("res://scenes/game/poi_marker.tscn")
 	var marker: Node3D = marker_scene.instantiate()
 	renderer.add_child(marker)
-	marker.setup("poi_002", "Mars", "planet", Vector3(150.0, 0.0, 240.0))
+	marker.setup("poi_002", "Mars", "planet", Vector3(3000.0, 0.0, 4000.0), "arid")
 	renderer._poi_markers["poi_002"] = marker
 
 	renderer._on_poi_marker_selected(marker)
@@ -258,6 +306,26 @@ func test_poi_selection_via_signal() -> void:
 	assert_str(renderer._selected_poi_id).is_equal("")
 	assert_bool(marker.is_selected).is_false()
 	marker.queue_free()
+
+
+# --- Nearby ship offset ---
+
+func test_nearby_ship_offset_nonzero() -> void:
+	var renderer := _make_renderer()
+	var offset: Vector3 = renderer._nearby_ship_offset("player_abc")
+	# Should be a small distance from origin, not at origin
+	assert_float(offset.length()).is_greater(2.0)
+	assert_float(offset.length()).is_less(15.0)
+	# Should be on the XZ plane
+	assert_float(offset.y).is_equal_approx(0.0, 0.01)
+
+
+func test_nearby_ship_offset_deterministic() -> void:
+	var renderer := _make_renderer()
+	var o1: Vector3 = renderer._nearby_ship_offset("player_xyz")
+	var o2: Vector3 = renderer._nearby_ship_offset("player_xyz")
+	assert_float(o1.x).is_equal_approx(o2.x, 0.001)
+	assert_float(o1.z).is_equal_approx(o2.z, 0.001)
 
 
 # --- HUD scene config: GameArea must not block 3D clicks ---

@@ -1,6 +1,12 @@
 extends Node3D
 
-const SCALE := 30.0  # Godot units per AU
+## Focus Bubble renderer.
+##
+## The player ship stays at world origin. The focused POI (where the player is
+## located) is rendered at cinematic scale nearby. All other system POIs are
+## rendered as small impostor dots at logarithmically compressed distances.
+
+const FocusBubble := preload("res://scripts/game/focus_bubble.gd")
 const SHIP_SCENE := preload("res://scenes/game/ship.tscn")
 const POI_MARKER_SCENE := preload("res://scenes/game/poi_marker.tscn")
 
@@ -10,11 +16,13 @@ signal ship_selected(ship_id: String, ship_name: String, is_pirate: bool)
 signal ship_deselected
 
 const TRAVEL_SPEED_FACTOR := 0.08
+const SHIP_HIT_RADIUS := 3.0  # Ships are small, generous click area
 
 var _ships: Dictionary = {}  # player_id -> ShipController node
 var _poi_markers: Dictionary = {}  # poi_id -> POIMarker node
 var _selected_poi_id: String = ""
 var _selected_ship_id: String = ""
+var _focused_poi_id: String = ""  # POI where player is located (rendered full-scale)
 
 # Travel animation state
 var _is_animating_travel: bool = false
@@ -47,10 +55,6 @@ static func ray_point_distance(ray_origin: Vector3, ray_dir: Vector3, point: Vec
 	return [dist, t]
 
 
-const POI_HIT_RADIUS := 2.5
-const SHIP_HIT_RADIUS := 1.5
-
-
 func _unhandled_input(event: InputEvent) -> void:
 	if not (event is InputEventMouseButton and event.pressed and event.button_index == MOUSE_BUTTON_LEFT):
 		return
@@ -64,10 +68,12 @@ func _unhandled_input(event: InputEvent) -> void:
 	var best_dist := INF
 	for marker_v in _poi_markers.values():
 		var marker_node: Node3D = marker_v as Node3D
+		var hit_r: float = FocusBubble.hit_radius(
+			marker_node.poi_type, marker_node.poi_class, marker_node.is_impostor)
 		var result: Array = ray_point_distance(from, dir, marker_node.global_position)
 		var dist_to_ray: float = result[0]
 		var t: float = result[1]
-		if dist_to_ray >= 0.0 and dist_to_ray < POI_HIT_RADIUS and t < best_dist:
+		if dist_to_ray >= 0.0 and dist_to_ray < hit_r and t < best_dist:
 			best_dist = t
 			best_marker = marker_node
 	# Also check ships (excluding player ship)
@@ -129,10 +135,8 @@ func _on_location_changed(_old_poi: String, _new_poi: String) -> void:
 			_ships[pid].queue_free()
 			_ships.erase(pid)
 
-	# Don't reposition player ship if travel animation is active
-	if not _is_animating_travel and _ships.has(own_id):
-		var new_pos := _get_player_world_pos()
-		_ships[own_id].move_to(new_pos)
+	# Rebuild the focus bubble around the new location
+	_rebuild_bubble()
 
 	# Fetch fresh nearby data and system data
 	NetworkManager.send_command("get_nearby", {}, func(content):
@@ -143,6 +147,26 @@ func _on_location_changed(_old_poi: String, _new_poi: String) -> void:
 	)
 
 
+## Rebuilds all POI marker positions around the current player location.
+## Called when location changes (travel arrival, jump, etc.).
+func _rebuild_bubble() -> void:
+	var own_id: String = StateManager.player.get("id", "")
+	_focused_poi_id = StateManager.location.get("poi_id", "")
+
+	# Snap player ship to origin if not animating
+	if not _is_animating_travel and _ships.has(own_id):
+		_ships[own_id].global_position = Vector3.ZERO
+		_ships[own_id]._prev_pos = Vector3.ZERO
+		_ships[own_id]._next_pos = Vector3.ZERO
+		_ships[own_id]._tick_t = 1.0
+
+	# Reposition all existing markers
+	var player_au := _get_player_au_pos()
+	for id in _poi_markers:
+		var marker: Node3D = _poi_markers[id]
+		_position_marker(marker, id, player_au)
+
+
 func _update_player_ship() -> void:
 	if _is_animating_travel:
 		return  # Don't reposition during travel animation
@@ -150,7 +174,9 @@ func _update_player_ship() -> void:
 	if pid.is_empty():
 		return
 
-	var pos: Vector3 = _get_player_world_pos()
+	# In focus bubble, player ship is always at world origin
+	var pos := Vector3.ZERO
+
 	if _ships.has(pid):
 		_ships[pid].move_to(pos)
 	else:
@@ -164,27 +190,34 @@ func _update_player_ship() -> void:
 		if camera and camera.has_method("follow"):
 			camera.follow(ship)
 
+	# Update focused POI tracking
+	var new_focused: String = StateManager.location.get("poi_id", "")
+	if new_focused != _focused_poi_id:
+		_focused_poi_id = new_focused
+		_rebuild_bubble()
+
 
 func _sync_nearby_ships() -> void:
 	var seen_ids: Array = []
 
-	# Update or create ships for nearby players
+	# Nearby ships are at the same POI — scatter them near origin
 	for p in StateManager.nearby_players:
 		var pid: String = p.get("player_id", "")
 		if pid.is_empty() or pid == StateManager.player.get("id", ""):
 			continue
 		seen_ids.append(pid)
 
-		var pos: Vector3 = _poi_position_to_world(p.get("position", {}))
+		# Place nearby ships near origin with a small offset based on their ID hash
+		var offset := _nearby_ship_offset(pid)
 		var prim: String = p.get("primary_color", "")
 		var sec: String = p.get("secondary_color", "")
 		if _ships.has(pid):
-			_ships[pid].move_to(pos)
+			_ships[pid].move_to(offset)
 			_ships[pid].update_colors(prim, sec)
 		else:
 			var ship := SHIP_SCENE.instantiate() as Node3D
 			add_child(ship)
-			ship.setup(pid, p.get("username", "Unknown"), pos, false, prim, sec)
+			ship.setup(pid, p.get("username", "Unknown"), offset, false, prim, sec)
 			ship.selected.connect(_on_ship_selected)
 			_ships[pid] = ship
 
@@ -193,13 +226,13 @@ func _sync_nearby_ships() -> void:
 		var pid: String = "pirate_" + pirate.get("id", "")
 		seen_ids.append(pid)
 
-		var pos: Vector3 = _poi_position_to_world(pirate.get("position", {}))
+		var offset := _nearby_ship_offset(pid)
 		if _ships.has(pid):
-			_ships[pid].move_to(pos)
+			_ships[pid].move_to(offset)
 		else:
 			var ship := SHIP_SCENE.instantiate() as Node3D
 			add_child(ship)
-			ship.setup(pid, "⚠ " + pirate.get("name", "Pirate"), pos, false, "#cc3333", "#ff0000")
+			ship.setup(pid, "⚠ " + pirate.get("name", "Pirate"), offset, false, "#cc3333", "#ff0000")
 			ship.set_pirate_aura(pirate.get("is_boss", false), pirate.get("tier", "common"))
 			ship.selected.connect(_on_ship_selected)
 			_ships[pid] = ship
@@ -212,9 +245,20 @@ func _sync_nearby_ships() -> void:
 			_ships.erase(pid)
 
 
+## Returns a small world-space offset for a nearby ship so they don't all stack at origin.
+func _nearby_ship_offset(pid: String) -> Vector3:
+	var h := pid.hash()
+	var angle := fmod(float(h), TAU)
+	var dist := 3.0 + fmod(float(h) / 1000.0, 5.0)  # 3-8 units from origin
+	return Vector3(cos(angle) * dist, 0.0, sin(angle) * dist)
+
+
 func _sync_poi_markers() -> void:
 	var pois: Array = StateManager.current_system.get("pois", [])
 	var seen_ids: Array = []
+	var player_au := _get_player_au_pos()
+
+	_focused_poi_id = StateManager.location.get("poi_id", "")
 
 	for poi in pois:
 		var id: String = poi.get("id", "")
@@ -223,20 +267,40 @@ func _sync_poi_markers() -> void:
 		seen_ids.append(id)
 
 		if _poi_markers.has(id):
-			continue  # POI markers don't move
+			# Update position (focus bubble may have changed)
+			_position_marker(_poi_markers[id], id, player_au)
+			continue
 
-		var pos: Vector3 = _poi_position_to_world(poi.get("position", {}))
+		# Create new marker
 		var marker := POI_MARKER_SCENE.instantiate() as Node3D
 		add_child(marker)
-		marker.setup(id, poi.get("name", "Unknown"), poi.get("type", ""), pos, poi.get("class", ""))
+		# Position will be set by _position_marker; pass Vector3.ZERO for now
+		marker.setup(id, poi.get("name", "Unknown"), poi.get("type", ""), Vector3.ZERO, poi.get("class", ""))
 		marker.selected.connect(_on_poi_marker_selected)
 		_poi_markers[id] = marker
+		_position_marker(marker, id, player_au)
 
 	# Remove markers for POIs no longer in the system
 	for id in _poi_markers.keys():
 		if id not in seen_ids:
 			_poi_markers[id].queue_free()
 			_poi_markers.erase(id)
+
+
+## Positions a POI marker based on whether it's the focused POI or an impostor.
+func _position_marker(marker: Node3D, poi_id: String, player_au: Vector2) -> void:
+	var is_focused := (poi_id == _focused_poi_id)
+	if is_focused:
+		# Full cinematic scale, near origin
+		var offset: Vector3 = FocusBubble.focused_poi_offset(marker.poi_type, marker.poi_class)
+		marker.global_position = offset
+		marker.set_mode(false)  # full geometry
+	else:
+		# Impostor at compressed distance
+		var poi_au := _get_poi_au_pos(poi_id)
+		var world_pos: Vector3 = FocusBubble.impostor_position(player_au, poi_au)
+		marker.global_position = world_pos
+		marker.set_mode(true)  # impostor dot
 
 
 func _on_poi_marker_selected(marker: Node3D) -> void:
@@ -300,39 +364,30 @@ func get_selected_poi_id() -> String:
 	return _selected_poi_id
 
 
-func _get_player_world_pos() -> Vector3:
-	# First try direct position from location (set during initial state)
+## Returns the player's current AU position as a 2D vector.
+func _get_player_au_pos() -> Vector2:
 	var pos: Dictionary = StateManager.location.get("position", {})
-	if not pos.is_empty():
-		return _poi_position_to_world(pos)
+	return Vector2(pos.get("x", 0.0), pos.get("y", 0.0))
 
-	# Otherwise look up the POI position from system data
-	var poi_id: String = StateManager.location.get("poi_id", "")
+
+## Returns the AU position for a POI by looking it up in current_system.pois.
+func _get_poi_au_pos(poi_id: String) -> Vector2:
 	for poi in StateManager.current_system.get("pois", []):
 		if poi.get("id", "") == poi_id:
-			return _poi_position_to_world(poi.get("position", {}))
-
-	return Vector3.ZERO
-
-
-func _poi_position_to_world(pos: Dictionary) -> Vector3:
-	var x: float = pos.get("x", 0.0) * SCALE
-	var z: float = pos.get("y", 0.0) * SCALE
-	return Vector3(x, 0.0, z)
+			return FocusBubble.poi_au_pos(poi)
+	return Vector2.ZERO
 
 
 # --- Travel animation ---
 
 func _on_travel_started(dest_poi_id: String, _dest_poi_name: String) -> void:
 	var own_id: String = StateManager.player.get("id", "")
-	_travel_origin_pos = _ships[own_id].global_position if _ships.has(own_id) else _get_player_world_pos()
+	_travel_origin_pos = _ships[own_id].global_position if _ships.has(own_id) else Vector3.ZERO
 
-	# Find destination position from system POI data
-	_travel_dest_pos = _travel_origin_pos  # fallback
-	for poi in StateManager.current_system.get("pois", []):
-		if poi.get("id", "") == dest_poi_id:
-			_travel_dest_pos = _poi_position_to_world(poi.get("position", {}))
-			break
+	# Destination is the impostor position of the target POI
+	var player_au := _get_player_au_pos()
+	var dest_au := _get_poi_au_pos(dest_poi_id)
+	_travel_dest_pos = FocusBubble.impostor_position(player_au, dest_au)
 
 	# Don't animate if distance is negligible
 	if _travel_origin_pos.distance_to(_travel_dest_pos) < 1.0:
@@ -355,28 +410,28 @@ func _on_travel_started(dest_poi_id: String, _dest_poi_name: String) -> void:
 func _on_travel_ended() -> void:
 	if not _is_animating_travel:
 		return
-	# Snap ship to final destination
+	# Snap ship back to origin (new focused POI)
 	var own_id: String = StateManager.player.get("id", "")
 	if _ships.has(own_id):
-		var final_pos := _get_player_world_pos()
-		_ships[own_id].global_position = final_pos
-		_ships[own_id]._prev_pos = final_pos
-		_ships[own_id]._next_pos = final_pos
+		_ships[own_id].global_position = Vector3.ZERO
+		_ships[own_id]._prev_pos = Vector3.ZERO
+		_ships[own_id]._next_pos = Vector3.ZERO
 		_ships[own_id]._tick_t = 1.0
 		_ships[own_id].engine_glow.light_energy = 0.8
 	_cleanup_travel()
+	_rebuild_bubble()
 	NetworkManager.resume_poll()
 
 
-func _on_travel_aborted(origin_poi_id: String) -> void:
+func _on_travel_aborted(_origin_poi_id: String) -> void:
 	if not _is_animating_travel:
 		return
-	# Snap ship back to origin
+	# Snap ship back to origin (stayed at original POI)
 	var own_id: String = StateManager.player.get("id", "")
 	if _ships.has(own_id):
-		_ships[own_id].global_position = _travel_origin_pos
-		_ships[own_id]._prev_pos = _travel_origin_pos
-		_ships[own_id]._next_pos = _travel_origin_pos
+		_ships[own_id].global_position = Vector3.ZERO
+		_ships[own_id]._prev_pos = Vector3.ZERO
+		_ships[own_id]._next_pos = Vector3.ZERO
 		_ships[own_id]._tick_t = 1.0
 		_ships[own_id].engine_glow.light_energy = 0.8
 	_cleanup_travel()
@@ -417,8 +472,9 @@ func _update_travel_path(ship_pos: Vector3, dest_pos: Vector3) -> void:
 	if total_dist < 0.1:
 		mesh.surface_end()
 		return
-	var dash_len := 1.0
-	var gap_len := 0.5
+	# Scale dash length to the shell distances
+	var dash_len := total_dist / 80.0
+	var gap_len := dash_len * 0.5
 	var segment_len := dash_len + gap_len
 	var num_segments := int(total_dist / segment_len)
 	var dir_norm := direction.normalized()
@@ -426,8 +482,8 @@ func _update_travel_path(ship_pos: Vector3, dest_pos: Vector3) -> void:
 		var start := ship_pos + dir_norm * (i * segment_len)
 		var end_pt := ship_pos + dir_norm * (i * segment_len + dash_len)
 		mesh.surface_set_color(Color(0.3, 0.8, 1.0, 0.6))
-		mesh.surface_add_vertex(start + Vector3(0, 0.1, 0))
-		mesh.surface_add_vertex(end_pt + Vector3(0, 0.1, 0))
+		mesh.surface_add_vertex(start + Vector3(0, 0.5, 0))
+		mesh.surface_add_vertex(end_pt + Vector3(0, 0.5, 0))
 	mesh.surface_end()
 
 

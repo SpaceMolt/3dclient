@@ -69,11 +69,11 @@ func test_station_gets_metallic_material() -> void:
 
 
 func test_planet_varies_by_class() -> void:
-	var ocean := _make_marker("p1", "Ocean", "planet", Vector3.ZERO, "ocean")
-	var desert := _make_marker("p2", "Desert", "planet", Vector3(10, 0, 0), "desert")
+	var ocean := _make_marker("p1", "Ocean", "planet", Vector3.ZERO, "oceanic")
+	var desert := _make_marker("p2", "Desert", "planet", Vector3(10, 0, 0), "arid")
 	var mat_ocean: StandardMaterial3D = ocean.mesh_instance.material_override
 	var mat_desert: StandardMaterial3D = desert.mesh_instance.material_override
-	# Ocean should be blue, desert should be warm
+	# Oceanic should be blue, arid should be warm
 	assert_float(mat_ocean.albedo_color.b).is_greater(mat_ocean.albedo_color.r)
 	assert_float(mat_desert.albedo_color.r).is_greater(mat_desert.albedo_color.b)
 	ocean.queue_free()
