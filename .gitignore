@@ -15,7 +15,9 @@ builds/
 
 # Godot binary (download via bin/install.sh)
 bin/godot
+bin/godot-bin
 bin/*.x86_64
+.godot-userdata/
 
 # Godot 4.5+ UID cache files
 *.gd.uid

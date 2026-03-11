@@ -15,8 +15,8 @@ func _ready() -> void:
 
 
 func _on_travel_started(_dest_poi_id: String = "", _dest_poi_name: String = "") -> void:
-	visible = true
-	_animate_intensity(0.0, 1.0, 0.6)
+	# Warp effect disabled while tuning travel animation
+	pass
 
 
 func _on_travel_ended() -> void:

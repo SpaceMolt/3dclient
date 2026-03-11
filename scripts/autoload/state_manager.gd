@@ -162,6 +162,7 @@ func set_initial_state(data: Dictionary) -> void:
 		player = data["player"]
 	if data.has("ship"):
 		ship = data["ship"]
+		_log_ship_payload("initial_state", ship)
 	if data.has("system"):
 		current_system = data["system"]
 	if data.has("poi"):
@@ -194,6 +195,7 @@ func update_state(data: Dictionary) -> void:
 		player = data["player"]
 	if data.has("ship"):
 		ship = data["ship"]
+		_log_ship_payload("update_state", ship)
 		ship_updated.emit()
 	if data.has("location"):
 		location = data["location"]
@@ -367,3 +369,26 @@ func get_system_by_id(system_id: String) -> Dictionary:
 
 func get_current_system_id() -> String:
 	return current_system.get("id", location.get("system_id", ""))
+
+
+func _log_ship_payload(source: String, ship_data: Dictionary) -> void:
+	var keys := PackedStringArray(ship_data.keys())
+	keys.sort()
+	var summary := {
+		"id": ship_data.get("id", ship_data.get("ship_id", null)),
+		"class_id": ship_data.get("class_id", null),
+		"class_name": ship_data.get("class_name", null),
+		"ship_class": ship_data.get("ship_class", null),
+		"ship_class_id": ship_data.get("ship_class_id", null),
+		"active_ship_class": ship_data.get("active_ship_class", null),
+		"name": ship_data.get("name", null),
+	}
+	NetworkManager._log(
+		"SHIP PAYLOAD %s keys=%s values=%s resolved=%s"
+		% [
+			source,
+			JSON.stringify(keys),
+			JSON.stringify(summary),
+			AssetLoader.resolve_ship_class_from_data(ship_data),
+		]
+	)

@@ -48,6 +48,8 @@ light_energy = 1.5
 omni_range = 3.0
 omni_attenuation = 1.5
 
+[node name="ModelRoot" type="Node3D" parent="."]
+
 [node name="ClickArea" type="Area3D" parent="."]
 input_ray_pickable = true
 

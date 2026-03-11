@@ -1,19 +1,19 @@
 extends Camera3D
 
-## Camera for focus bubble renderer.
+## Camera for the stable world-space system view.
 ##
-## Zoom ranges are tuned for cinematic-scale POIs (40-3500 Godot units).
-## Default zoom shows the focused POI nicely; scroll out to see impostors.
+## Close zoom stays readable around the player ship and the local orbiting body.
+## The max zoom and far clip are large enough to inspect a much wider system.
 
-const ZOOM_MIN := 20.0
-const ZOOM_MAX := 8000.0
+const ZOOM_MIN := 30.0
+const ZOOM_MAX := 300000.0
 const ZOOM_SPEED := 0.15
 const ZOOM_SMOOTH := 12.0
 const PAN_SPEED := 0.05
 const ROTATE_SPEED := 0.005
 const PITCH_SPEED := 0.003
 const FOLLOW_SMOOTH := 12.0
-const COMBAT_ZOOM := 30.0
+const COMBAT_ZOOM := 45.0
 const COMBAT_ZOOM_DURATION := 1.0
 
 const DEFAULT_ORBIT := 0.0
@@ -21,7 +21,8 @@ const DEFAULT_TILT := 0.4   # horizontal distance = zoom * tilt
 const MIN_TILT := 0.15      # nearly top-down
 const MAX_TILT := 1.2       # low angle
 
-const DEFAULT_ZOOM := 150.0  # Comfortable for station/small planet
+const DEFAULT_ZOOM := 260.0
+const FAR_CLIP_DISTANCE := 5000000.0
 
 var _target: Node3D = null
 var _following: bool = true
@@ -43,8 +44,9 @@ var _first_follow: bool = true
 func _ready() -> void:
 	StateManager.combat_started.connect(_on_combat_started)
 	StateManager.combat_ended.connect(_on_combat_ended)
-	# Set far clip to handle impostor distances (SHELL_MAX = 5000 + margin)
-	far = 12000.0
+	# A larger far clip is required now that all POIs use one stable world scale.
+	near = 1.0
+	far = FAR_CLIP_DISTANCE
 
 
 func follow(node: Node3D) -> void:
@@ -60,6 +62,11 @@ func stop_following() -> void:
 	_following = false
 
 
+func snap_to_target() -> void:
+	if _target and _following:
+		_update_camera_position(1.0)
+
+
 func _process(delta: float) -> void:
 	# Frame-rate-independent smoothing factor (can't exceed 1.0)
 	var t := 1.0 - exp(-FOLLOW_SMOOTH * delta)
@@ -71,7 +78,10 @@ func _process(delta: float) -> void:
 			_zoom = _target_zoom
 
 	if _following and _target:
-		_update_camera_position(t)
+		var follow_t := t
+		if _rotating or StateManager.is_traveling:
+			follow_t = 1.0
+		_update_camera_position(follow_t)
 	elif not _following:
 		# Free camera — just apply zoom height
 		var zt := 1.0 - exp(-ZOOM_SMOOTH * delta)

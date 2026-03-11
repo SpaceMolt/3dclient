@@ -5,6 +5,7 @@ const DEFAULT_TICK_DURATION = 10.0
 const POLL_INTERVAL = 10.0
 const SESSION_PATH = "user://session.cfg"
 const LOG_PATH = "user://spacemolt.log"
+const MISSING_MODELS_LOG_NAME = "missing_ship_models.log"
 
 var base_url: String = DEFAULT_BASE_URL
 var tick_duration: float = DEFAULT_TICK_DURATION
@@ -14,6 +15,7 @@ var is_authenticated: bool = false
 var is_request_pending: bool = false
 var _is_restoring_session: bool = false
 var _log_file: FileAccess = null
+var _resolved_log_path: String = LOG_PATH
 
 signal request_started
 signal request_completed
@@ -150,6 +152,21 @@ func send_command(action: String, params: Dictionary, on_complete: Callable = Ca
 				on_complete.call(content)
 		_reset_poll()
 	, _on_error)
+
+
+func execute_jump(target_system_id: String, on_complete: Callable) -> void:
+	send_command("jump", {"id": target_system_id}, func(_content: Dictionary):
+		if StateManager.get_current_system_id() != target_system_id:
+			on_complete.call(false)
+			return
+		send_command("get_system", {}, func(sys_content: Dictionary):
+			StateManager.update_system(sys_content)
+			send_command("get_nearby", {}, func(nearby_content: Dictionary):
+				StateManager.update_nearby(nearby_content)
+				on_complete.call(true)
+			)
+		)
+	)
 
 
 func send_battle_command(action: String, params: Dictionary, on_complete: Callable = Callable()) -> void:
@@ -338,6 +355,8 @@ func _refresh_state_then(callback: Callable) -> void:
 	)
 
 
+
+
 func _poll_state() -> void:
 	if not is_authenticated or is_request_pending:
 		return
@@ -416,9 +435,21 @@ func _delete_saved_session() -> void:
 
 
 func _open_log() -> void:
-	_log_file = FileAccess.open(LOG_PATH, FileAccess.WRITE)
+	_resolved_log_path = _resolve_log_path()
+	_log_file = FileAccess.open(_resolved_log_path, FileAccess.WRITE)
 	if _log_file:
 		_log_file.store_string("=== SpaceMolt Log Started %s ===\n" % Time.get_datetime_string_from_system())
+	for resolved_path in _resolve_named_log_paths(MISSING_MODELS_LOG_NAME):
+		_ensure_named_log_exists_at_path(resolved_path, "=== Missing Ship Models Log Started %s ===\n")
+	_log("Missing ship model logs: %s" % JSON.stringify(_resolve_named_log_paths(MISSING_MODELS_LOG_NAME)))
+
+
+func _resolve_log_path() -> String:
+	if not OS.has_feature("editor"):
+		var exe_dir := OS.get_executable_path().get_base_dir()
+		if not exe_dir.is_empty():
+			return exe_dir.path_join("spacemolt.log")
+	return LOG_PATH
 
 
 func _log(msg: String) -> void:
@@ -431,4 +462,64 @@ func _log(msg: String) -> void:
 
 
 func get_log_path() -> String:
-	return ProjectSettings.globalize_path(LOG_PATH)
+	if _resolved_log_path.begins_with("user://"):
+		return ProjectSettings.globalize_path(_resolved_log_path)
+	return _resolved_log_path
+
+
+func append_missing_model_log(msg: String) -> void:
+	_append_named_log(MISSING_MODELS_LOG_NAME, msg)
+
+
+func get_missing_model_log_path() -> String:
+	var resolved_paths := _resolve_named_log_paths(MISSING_MODELS_LOG_NAME)
+	if resolved_paths.is_empty():
+		return ""
+	return String(resolved_paths[0])
+
+
+func _append_named_log(file_name: String, msg: String) -> void:
+	var timestamp := Time.get_datetime_string_from_system()
+	for resolved_path_variant in _resolve_named_log_paths(file_name):
+		var resolved_path := String(resolved_path_variant)
+		var dir_path := resolved_path.get_base_dir()
+		if not dir_path.is_empty():
+			DirAccess.make_dir_recursive_absolute(dir_path)
+		var file := FileAccess.open(resolved_path, FileAccess.READ_WRITE)
+		if file == null:
+			file = FileAccess.open(resolved_path, FileAccess.WRITE_READ)
+		if file == null:
+			_log("Failed to open named log: %s" % resolved_path)
+			continue
+		file.seek_end()
+		file.store_string("[%s] %s\n" % [timestamp, msg])
+		file.flush()
+		file.close()
+
+
+func _resolve_named_log_paths(file_name: String) -> Array[String]:
+	var resolved_paths: Array[String] = []
+	var user_path := ProjectSettings.globalize_path("user://" + file_name)
+	if not user_path.is_empty():
+		resolved_paths.append(user_path)
+	var exe_dir := OS.get_executable_path().get_base_dir()
+	if not exe_dir.is_empty():
+		var exe_path := exe_dir.path_join(file_name)
+		if not resolved_paths.has(exe_path):
+			resolved_paths.append(exe_path)
+	return resolved_paths
+
+
+func _ensure_named_log_exists_at_path(resolved_path: String, header_template: String) -> void:
+	if FileAccess.file_exists(resolved_path):
+		return
+	var dir_path := resolved_path.get_base_dir()
+	if not dir_path.is_empty():
+		DirAccess.make_dir_recursive_absolute(dir_path)
+	var file := FileAccess.open(resolved_path, FileAccess.WRITE)
+	if file == null:
+		_log("Failed to create named log: %s" % resolved_path)
+		return
+	file.store_string(header_template % Time.get_datetime_string_from_system())
+	file.flush()
+	file.close()

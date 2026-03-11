@@ -14,6 +14,10 @@ extends PanelContainer
 var _all_buttons: Array[Control] = []
 
 
+static func _system_jump_id(system_data: Dictionary) -> String:
+	return system_data.get("system_id", system_data.get("id", ""))
+
+
 func _ready() -> void:
 	_all_buttons = [travel_button, attack_button, scan_button, dock_button,
 					undock_button, mine_button, repair_button, refuel_button]
@@ -30,6 +34,8 @@ func _ready() -> void:
 	mine_button.pressed.connect(_on_mine)
 	repair_button.pressed.connect(_on_repair)
 	refuel_button.pressed.connect(_on_refuel)
+	_bind_popup_positioning(travel_button, _setup_travel_menu)
+	_bind_popup_positioning(attack_button, _setup_attack_menu)
 
 	_refresh_visibility()
 	_setup_travel_menu()
@@ -96,23 +102,19 @@ func _setup_travel_menu() -> void:
 		popup.add_separator("Systems")
 	for sys in connections:
 		popup.add_item(">> " + sys.get("name", "Unknown System"))
-		popup.set_item_metadata(popup.item_count - 1, {"id": sys.get("id", ""), "type": "system"})
+		popup.set_item_metadata(popup.item_count - 1, {"id": _system_jump_id(sys), "type": "system"})
 
 	popup.id_pressed.connect(func(id: int):
 		var meta: Dictionary = popup.get_item_metadata(id)
 		var target_name: String = popup.get_item_text(id)
 		if meta.get("type", "") == "system":
 			_set_status("Jumping to %s..." % target_name)
-			StateManager.is_jumping = true
-			StateManager.begin_travel(meta["id"], target_name)
-			NetworkManager.send_command("jump", {"id": meta["id"]}, func(content):
-				StateManager.is_jumping = false
-				StateManager.end_travel()
+			var target_system_id: String = meta["id"]
+			NetworkManager.execute_jump(target_system_id, func(succeeded: bool):
+				if not succeeded:
+					_set_status("Jump to %s failed." % target_name, true)
+					return
 				_set_status("Arrived in %s." % target_name)
-				# Refresh system data for the new system
-				NetworkManager.send_command("get_system", {}, func(sys_content):
-					StateManager.update_system(sys_content)
-				)
 			)
 		else:
 			var origin_id: String = StateManager.location.get("poi_id", "")
@@ -127,6 +129,50 @@ func _setup_travel_menu() -> void:
 					_set_status("Arrived at %s." % target_name)
 			)
 	)
+
+
+func _bind_popup_positioning(button: MenuButton, refresh_menu: Callable) -> void:
+	var popup := button.get_popup()
+	popup.about_to_popup.connect(func():
+		refresh_menu.call()
+		_position_popup_above_button(button)
+		call_deferred("_position_popup_above_button", button)
+	)
+
+
+func _position_popup_above_button(button: MenuButton) -> void:
+	var popup := button.get_popup()
+	popup.reset_size()
+
+	var button_rect := button.get_global_rect()
+	var visible_rect := get_viewport().get_visible_rect()
+	var menu_size := _popup_menu_size(popup)
+	popup.position = _desired_popup_position(button_rect, menu_size, visible_rect)
+
+
+func _popup_menu_size(popup: PopupMenu) -> Vector2i:
+	var content_size := popup.get_contents_minimum_size().ceil()
+	var popup_size := Vector2(popup.size)
+	var width := maxi(int(content_size.x), int(ceil(popup_size.x)))
+	var height := maxi(int(content_size.y), int(ceil(popup_size.y)))
+	return Vector2i(width, height)
+
+
+func _desired_popup_position(button_rect: Rect2, menu_size: Vector2i, visible_rect: Rect2) -> Vector2i:
+	var popup_pos := Vector2i(button_rect.position)
+	var min_x := int(visible_rect.position.x)
+	var max_x := int(visible_rect.end.x) - menu_size.x
+	popup_pos.x = clampi(popup_pos.x, min_x, max_x)
+
+	var preferred_y := int(button_rect.position.y) - menu_size.y
+	if preferred_y >= int(visible_rect.position.y):
+		popup_pos.y = preferred_y
+	else:
+		var below_y := int(button_rect.end.y)
+		var max_y := int(visible_rect.end.y) - menu_size.y
+		popup_pos.y = clampi(below_y, int(visible_rect.position.y), max_y)
+
+	return popup_pos
 
 
 func _setup_attack_menu() -> void:

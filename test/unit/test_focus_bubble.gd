@@ -178,21 +178,84 @@ func test_poi_au_pos_missing_position() -> void:
 	assert_float(pos.y).is_equal_approx(0.0, 0.001)
 
 
+# --- perspective_scale ---
+
+func test_perspective_scale_at_zero_distance() -> void:
+	assert_float(FocusBubble.perspective_scale(0.0)).is_equal_approx(1.0, 0.001)
+
+
+func test_perspective_scale_decreases_with_distance() -> void:
+	var s1: float = FocusBubble.perspective_scale(1.0)
+	var s2: float = FocusBubble.perspective_scale(3.0)
+	var s3: float = FocusBubble.perspective_scale(8.0)
+	assert_float(s1).is_less(1.0)
+	assert_float(s2).is_less(s1)
+	assert_float(s3).is_less(s2)
+
+
+func test_perspective_scale_never_zero() -> void:
+	var s: float = FocusBubble.perspective_scale(100.0)
+	assert_float(s).is_greater(0.0)
+	assert_float(s).is_greater_equal(FocusBubble.MIN_PERSPECTIVE_SCALE)
+
+
 # --- hit_radius ---
 
-func test_hit_radius_impostor_is_generous() -> void:
-	var r: float = FocusBubble.hit_radius("planet", "terran", true)
-	assert_float(r).is_greater(50.0)
-
-
-func test_hit_radius_full_scales_with_poi() -> void:
-	var r_station: float = FocusBubble.hit_radius("station", "", false)
-	var r_planet: float = FocusBubble.hit_radius("planet", "terran", false)
-	# Planet should have bigger hit radius than station
+func test_hit_radius_scales_with_poi() -> void:
+	var r_station: float = FocusBubble.hit_radius("station", "", 1.0)
+	var r_planet: float = FocusBubble.hit_radius("planet", "terran", 1.0)
 	assert_float(r_planet).is_greater(r_station)
 
 
-func test_hit_radius_full_capped() -> void:
-	# Even a massive star shouldn't have an absurdly large hit radius
-	var r: float = FocusBubble.hit_radius("sun", "O", false)
+func test_hit_radius_capped() -> void:
+	var r: float = FocusBubble.hit_radius("sun", "O", 1.0)
 	assert_float(r).is_less_equal(500.0)
+
+
+func test_hit_radius_has_minimum() -> void:
+	var r: float = FocusBubble.hit_radius("station", "", 0.01)
+	assert_float(r).is_greater_equal(20.0)
+
+
+# --- continuous_poi_position ---
+
+func test_continuous_at_zero_distance_returns_focused_offset() -> void:
+	var player := Vector2(3.0, 4.0)
+	var pos: Vector3 = FocusBubble.continuous_poi_position(player, player, "planet", "terran")
+	var expected: Vector3 = FocusBubble.focused_poi_offset("planet", "terran")
+	assert_float(pos.x).is_equal_approx(expected.x, 0.1)
+	assert_float(pos.y).is_equal_approx(expected.y, 0.1)
+	assert_float(pos.z).is_equal_approx(expected.z, 0.1)
+
+
+func test_continuous_beyond_blend_au_returns_background_position() -> void:
+	var player := Vector2(0.0, 0.0)
+	var poi := Vector2(2.0, 0.0)  # 2 AU away, well beyond BLEND_AU
+	var pos: Vector3 = FocusBubble.continuous_poi_position(player, poi, "planet", "terran")
+	var expected: Vector3 = FocusBubble.impostor_position(player, poi)
+	assert_float(pos.x).is_equal_approx(expected.x, 0.1)
+	assert_float(pos.y).is_equal_approx(expected.y, 0.1)
+	assert_float(pos.z).is_equal_approx(expected.z, 0.1)
+
+
+func test_continuous_in_blend_zone_is_between_focused_and_background() -> void:
+	var player := Vector2(0.0, 0.0)
+	var poi := Vector2(FocusBubble.BLEND_AU * 0.5, 0.0)  # halfway into blend zone
+	var pos: Vector3 = FocusBubble.continuous_poi_position(player, poi, "planet", "terran")
+	var focused: Vector3 = FocusBubble.focused_poi_offset("planet", "terran")
+	var background: Vector3 = FocusBubble.impostor_position(player, poi)
+	# Position should be between focused and background — not at either extreme
+	assert_float(pos.y).is_greater(focused.y)
+	assert_float(pos.y).is_less(0.0)
+	assert_float(pos.x).is_greater(focused.x)
+	assert_float(pos.x).is_less(background.x)
+
+
+func test_continuous_direction_preserved_through_blend() -> void:
+	var player := Vector2(0.0, 0.0)
+	# POI to the northeast at 0.5 * BLEND_AU
+	var poi := Vector2(FocusBubble.BLEND_AU * 0.35, FocusBubble.BLEND_AU * 0.35)
+	var pos: Vector3 = FocusBubble.continuous_poi_position(player, poi, "planet", "terran")
+	# XZ components should both be positive (northeast direction preserved)
+	assert_float(pos.x).is_greater(0.0)
+	assert_float(pos.z).is_greater(0.0)

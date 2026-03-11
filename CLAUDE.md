@@ -40,6 +40,24 @@ Key autoloads (singletons): `NetworkManager`, `StateManager`, `UIManager`, `Asse
 - Poll `get_status` every 10 seconds; reset timer after each mutation response
 - Session ID stored in NetworkManager; passed as `X-Session-Id` header on every request
 
+## Build & Validation Tools
+
+All scripts in `scripts/tools/`:
+
+- **`validate_scripts.sh`** — Parse-checks all GDScript files. Also runs as a pre-commit hook. Run after editing scripts.
+- **`check_test_coverage.sh`** — Verifies every non-exempt script has a corresponding test file.
+- **`build_windows.sh`** — Validates scripts, then exports a Windows .exe to `D:\Development\spacemolt\godot\SpaceMolt.exe`. **Always run this after code changes to give Craig a testable build.**
+- **`capture_screenshot.gd`** — Visual testing: `./bin/godot --windowed --resolution 800x600 -s scripts/tools/capture_screenshot.gd`. Saves PNGs to `screenshots/`.
+
+### Build workflow
+1. `./scripts/tools/validate_scripts.sh` — fix any parse errors
+2. Run tests: `./bin/godot --headless -s addons/gdUnit4/bin/GdUnitCmdTool.gd --add "res://test/unit/" --ignoreHeadlessMode`
+3. `./scripts/tools/build_windows.sh` — export the Windows exe for Craig to test
+
+## Visual Animation Rules (Non-Negotiable)
+
+**No snaps or lerps to cover up incorrect math.** If a transition requires a "settle animation," "brief lerp at the end," or any other smoothing step to hide the fact that the start and end states are geometrically inconsistent, that is a signal the math is wrong — not a signal to add a transition. Fix the underlying coordinate system so that things are in the right place from the start. A correct solution animates smoothly because the geometry is right, not because the discontinuity is hidden.
+
 ## API Discrepancies Tracking
 - Maintain `API_DISCREPANCIES.md` with any differences between the OpenAPI spec (`openapi.json`) and real API responses
 - When you discover a new mismatch during development or testing, add it to the file immediately

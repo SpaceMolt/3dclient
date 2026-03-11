@@ -86,3 +86,12 @@ func test_set_selected_changes_label_color() -> void:
 	# White
 	assert_float(ship.name_label.modulate.b).is_equal_approx(1.0, 0.1)
 	ship.queue_free()
+
+
+func test_anonymous_ship_without_class_uses_theoria_fallback_model() -> void:
+	var ship: Node3D = SHIP_SCENE.instantiate()
+	add_child(ship)
+	ship.setup("anon1", "Anonymous", Vector3.ZERO, false)
+	assert_bool(ship._uses_custom_model).is_true()
+	assert_int(ship.model_root.get_child_count()).is_equal(1)
+	ship.queue_free()

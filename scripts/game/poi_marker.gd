@@ -9,7 +9,7 @@ var poi_name: String = ""
 var poi_type: String = ""
 var poi_class: String = ""  # type-specific classification (spectral class, composition, etc.)
 var is_selected: bool = false
-var is_impostor: bool = false  # true = distant billboard dot, false = full geometry
+var _uses_custom_model: bool = false
 
 @onready var name_label: Label3D = $NameLabel
 @onready var mesh_instance: MeshInstance3D = $MeshInstance3D
@@ -20,6 +20,7 @@ func _ready() -> void:
 	if not poi_name.is_empty():
 		name_label.text = poi_name
 		_apply_appearance()
+		_apply_cull_margin()
 
 
 func setup(id: String, pname: String, ptype: String, pos: Vector3, pclass: String = "") -> void:
@@ -31,15 +32,7 @@ func setup(id: String, pname: String, ptype: String, pos: Vector3, pclass: Strin
 	if name_label:
 		name_label.text = poi_name
 		_apply_appearance()
-
-
-func set_mode(impostor: bool) -> void:
-	if impostor == is_impostor:
-		return
-	is_impostor = impostor
-	_clear_visual_children()
-	if name_label:
-		_apply_appearance()
+		_apply_cull_margin()
 
 
 func set_selected(val: bool) -> void:
@@ -51,9 +44,6 @@ func set_selected(val: bool) -> void:
 
 
 func _process(_delta: float) -> void:
-	if is_impostor:
-		# Impostors: billboard label faces camera, no rotation needed
-		return
 	match poi_type:
 		"wormhole", "wormhole_entrance", "wormhole_exit", "jump_gate":
 			rotate_y(_delta * 1.5)
@@ -77,21 +67,32 @@ func _clear_visual_children() -> void:
 		child.queue_free()
 
 
+func _apply_cull_margin() -> void:
+	var radius := FocusBubble.poi_radius(poi_type, poi_class)
+	mesh_instance.extra_cull_margin = maxf(radius * 4.0, 2000.0)
+	for child in get_children():
+		if child is MeshInstance3D:
+			(child as MeshInstance3D).extra_cull_margin = maxf(radius * 4.0, 2000.0)
+
+
 func _apply_appearance() -> void:
-	if is_impostor:
-		_make_impostor()
-		return
+	_clear_visual_children()
+	_uses_custom_model = false
+	mesh_instance.visible = true
 	match poi_type:
 		"sun", "star":
 			_make_star()
 		"planet", "moon":
-			_make_planet()
+			if not _make_celestial_model():
+				_make_planet()
 		"station":
 			_make_station()
 		"asteroid", "asteroid_field", "asteroid_belt":
-			_make_asteroid_cluster()
+			if not _make_celestial_field():
+				_make_asteroid_cluster()
 		"ice_field":
-			_make_ice_field()
+			if not _make_celestial_field():
+				_make_ice_field()
 		"gas_cloud", "nebula":
 			_make_gas_cloud()
 		"wormhole", "jump_gate":
@@ -100,6 +101,198 @@ func _apply_appearance() -> void:
 			_make_relic()
 		_:
 			_make_default()
+
+
+func _make_celestial_model() -> bool:
+	var model_path := _celestial_model_path()
+	if model_path.is_empty():
+		return false
+	if not ResourceLoader.exists(model_path):
+		return false
+	var model_scene := load(model_path) as PackedScene
+	if model_scene == null:
+		return false
+	var model := model_scene.instantiate() as Node3D
+	if model == null:
+		return false
+	_add_visual_child(model)
+	_fit_model_to_radius(model, FocusBubble.poi_radius(poi_type, poi_class))
+	mesh_instance.mesh = null
+	mesh_instance.material_override = null
+	mesh_instance.visible = false
+	_uses_custom_model = true
+	var radius := FocusBubble.poi_radius(poi_type, poi_class)
+	name_label.position = Vector3(0, radius * 1.15, 0)
+	name_label.font_size = 72
+	return true
+
+
+func _make_celestial_field() -> bool:
+	var model_paths := _celestial_field_model_paths()
+	if model_paths.is_empty():
+		return false
+	var field_radius := FocusBubble.poi_radius(poi_type, poi_class)
+	var rng := RandomNumberGenerator.new()
+	rng.seed = poi_name.hash()
+	var instance_count := 10 if poi_type == "ice_field" else 14
+	var created_any := false
+	for index in instance_count:
+		var model_path := model_paths[index % model_paths.size()]
+		if not ResourceLoader.exists(model_path):
+			continue
+		var model_scene := load(model_path) as PackedScene
+		if model_scene == null:
+			continue
+		var model := model_scene.instantiate() as Node3D
+		if model == null:
+			continue
+		_add_visual_child(model)
+		var piece_radius := field_radius * rng.randf_range(0.08, 0.22)
+		_fit_model_to_radius(model, piece_radius)
+		model.position = Vector3(
+			rng.randf_range(-field_radius, field_radius),
+			rng.randf_range(-field_radius * 0.18, field_radius * 0.18),
+			rng.randf_range(-field_radius, field_radius)
+		)
+		model.rotation = Vector3(rng.randf() * TAU, rng.randf() * TAU, rng.randf() * TAU)
+		created_any = true
+	if not created_any:
+		return false
+	mesh_instance.mesh = null
+	mesh_instance.material_override = null
+	mesh_instance.visible = false
+	_uses_custom_model = true
+	name_label.position = Vector3(0, field_radius * 0.55, 0)
+	name_label.font_size = 64
+	return true
+
+
+func _celestial_model_path() -> String:
+	match poi_type:
+		"planet", "moon":
+			return "res://assets/celestial/%s.glb" % _planet_model_id()
+		_:
+			return ""
+
+
+func _celestial_field_model_paths() -> Array[String]:
+	match poi_type:
+		"asteroid", "asteroid_field", "asteroid_belt":
+			if poi_class == "metallic":
+				return [
+					"res://assets/celestial/asteroid_metallic.glb",
+					"res://assets/celestial/asteroid_large.glb",
+				]
+			if poi_class == "icy":
+				return [
+					"res://assets/celestial/asteroid_icy.glb",
+					"res://assets/celestial/asteroid_small.glb",
+				]
+			return [
+				"res://assets/celestial/asteroid_large.glb",
+				"res://assets/celestial/asteroid_small.glb",
+				"res://assets/celestial/asteroid_metallic.glb",
+			]
+		"ice_field":
+			return [
+				"res://assets/celestial/ice_chunk_large.glb",
+				"res://assets/celestial/ice_chunk_small.glb",
+			]
+		_:
+			return []
+
+
+func _planet_model_id() -> String:
+	if poi_name.strip_edges().to_lower() == "earth":
+		return "planet_earth"
+	match poi_class:
+		"jovian":
+			return "gas_giant_orange"
+		"hot_jupiter":
+			return "gas_giant_ringed"
+		"sub_neptune", "ice_giant":
+			return "gas_giant_blue"
+		"arid", "hothouse":
+			return "planet_arid"
+		"scorched", "lava_world", "chthonian", "carbon":
+			return "planet_scorched"
+		"tundra", "glacial", "ice_world":
+			return "planet_ice"
+		"terran", "super_terran":
+			return "planet_earth"
+		"oceanic":
+			return "planet_terran"
+		_:
+			return "planet_terran"
+
+
+func _asteroid_model_id() -> String:
+	match poi_class:
+		"metallic":
+			return "asteroid_metallic"
+		"icy":
+			return "asteroid_icy"
+		_:
+			return "asteroid_large"
+
+
+func _fit_model_to_radius(model: Node3D, target_radius: float) -> void:
+	var model_aabb := _compute_model_aabb(model)
+	if model_aabb.size.length_squared() <= 0.0001:
+		return
+	var longest_axis := maxf(model_aabb.size.x, maxf(model_aabb.size.y, model_aabb.size.z))
+	var target_span := target_radius * 2.0
+	var scale_factor := target_span / maxf(longest_axis, 0.001)
+	var model_center := model_aabb.position + model_aabb.size * 0.5
+	model.scale = Vector3.ONE * scale_factor
+	model.position = -model_center * scale_factor
+
+
+func _compute_model_aabb(root: Node3D) -> AABB:
+	var has_bounds := false
+	var min_corner := Vector3.ZERO
+	var max_corner := Vector3.ZERO
+	var stack: Array[Node] = [root]
+
+	while not stack.is_empty():
+		var current: Node = stack.pop_back()
+		for child in current.get_children():
+			stack.append(child)
+		if not (current is MeshInstance3D):
+			continue
+		var mesh_node := current as MeshInstance3D
+		if mesh_node.mesh == null:
+			continue
+		var local_aabb := mesh_node.mesh.get_aabb()
+		for corner in _aabb_corners(local_aabb):
+			var world_corner := mesh_node.to_global(corner)
+			var root_corner := root.to_local(world_corner)
+			if not has_bounds:
+				min_corner = root_corner
+				max_corner = root_corner
+				has_bounds = true
+				continue
+			min_corner = min_corner.min(root_corner)
+			max_corner = max_corner.max(root_corner)
+
+	if not has_bounds:
+		return AABB()
+	return AABB(min_corner, max_corner - min_corner)
+
+
+func _aabb_corners(box: AABB) -> Array[Vector3]:
+	var p := box.position
+	var s := box.size
+	return [
+		p,
+		p + Vector3(s.x, 0, 0),
+		p + Vector3(0, s.y, 0),
+		p + Vector3(0, 0, s.z),
+		p + Vector3(s.x, s.y, 0),
+		p + Vector3(s.x, 0, s.z),
+		p + Vector3(0, s.y, s.z),
+		p + s,
+	]
 
 
 func _make_star() -> void:
@@ -424,53 +617,6 @@ func _make_default() -> void:
 	mat.transparency = BaseMaterial3D.TRANSPARENCY_ALPHA
 	mesh_instance.mesh = mesh
 	mesh_instance.material_override = mat
-
-
-func _make_impostor() -> void:
-	# Small glowing sphere + name label for distant POIs
-	var color := _impostor_color()
-	var mesh := SphereMesh.new()
-	mesh.radius = 8.0
-	mesh.height = 16.0
-	var mat := StandardMaterial3D.new()
-	mat.albedo_color = color
-	mat.emission_enabled = true
-	mat.emission = color
-	mat.emission_energy_multiplier = 2.0
-	mat.shading_mode = BaseMaterial3D.SHADING_MODE_UNSHADED
-	mesh_instance.mesh = mesh
-	mesh_instance.material_override = mat
-	# Make label larger for distance readability
-	name_label.font_size = 64
-	name_label.position = Vector3(0, 14.0, 0)
-	# Update collision shape for impostor hit detection
-	var shape_node := click_area.get_node_or_null("CollisionShape3D") as CollisionShape3D
-	if shape_node and shape_node.shape is SphereShape3D:
-		(shape_node.shape as SphereShape3D).radius = 12.0
-
-
-func _impostor_color() -> Color:
-	match poi_type:
-		"sun", "star":
-			return _star_color()
-		"planet":
-			return Color(0.4, 0.6, 0.9)  # blue-white
-		"moon":
-			return Color(0.7, 0.7, 0.7)
-		"station":
-			return Color(0.3, 0.8, 1.0)  # cyan
-		"asteroid", "asteroid_belt":
-			return Color(0.6, 0.5, 0.4)  # brown
-		"ice_field":
-			return Color(0.7, 0.9, 1.0)  # ice blue
-		"nebula", "gas_cloud":
-			return Color(0.8, 0.5, 0.2)  # orange
-		"relic":
-			return Color(0.3, 0.6, 0.9)  # blue glow
-		"wormhole_entrance", "wormhole_exit", "wormhole_collapsed":
-			return Color(0.7, 0.2, 1.0)  # purple
-		_:
-			return Color(0.5, 0.5, 0.5)
 
 
 func _star_color() -> Color:

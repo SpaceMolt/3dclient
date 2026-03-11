@@ -281,19 +281,15 @@ func _on_jump() -> void:
 	var sys: Dictionary = _system_lookup.get(_selected_id, {})
 	var sys_name: String = sys.get("name", "Unknown")
 
-	StateManager.is_traveling = true
 	jump_button.disabled = true
 	jump_button.text = "Jumping..."
 
-	NetworkManager.send_command("jump", {"id": _selected_id}, func(content: Dictionary):
-		StateManager.is_traveling = false
-		# Refresh system data for the new system
-		NetworkManager.send_command("get_system", {}, func(sys_content: Dictionary):
-			StateManager.update_system(sys_content)
-		)
-		NetworkManager.send_command("get_nearby", {}, func(nearby_content: Dictionary):
-			StateManager.update_nearby(nearby_content)
-		)
+	NetworkManager.execute_jump(_selected_id, func(succeeded: bool):
+		if not succeeded:
+			jump_button.disabled = false
+			jump_button.text = "Jump"
+			UIManager.show_error("Jump to %s failed." % sys_name)
+			return
 		hide()
 	)
 

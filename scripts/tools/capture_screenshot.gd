@@ -45,29 +45,32 @@ func _init() -> void:
 	_scene.add_child(planet)
 	planet.setup("p1", "Earth", "planet", planet_offset, "terran")
 
-	# Create some impostors at compressed distances
+	# Create distant POIs at compressed distances with perspective scaling
 	var player_au := Vector2(1.0, 2.0)
 
-	# Mars impostor
+	# Mars (distant, perspective-scaled)
+	var mars_au := Vector2(5.0, 8.0)
 	var mars := POI_MARKER_SCENE.instantiate() as Node3D
-	var mars_pos: Vector3 = FocusBubble.impostor_position(player_au, Vector2(5.0, 8.0))
+	var mars_pos: Vector3 = FocusBubble.impostor_position(player_au, mars_au)
 	_scene.add_child(mars)
 	mars.setup("p2", "Mars", "planet", mars_pos, "arid")
-	mars.set_mode(true)
+	mars.scale = Vector3.ONE * FocusBubble.perspective_scale(player_au.distance_to(mars_au))
 
-	# Station impostor
+	# Station (distant, perspective-scaled)
+	var station_au := Vector2(-2.0, 0.5)
 	var station := POI_MARKER_SCENE.instantiate() as Node3D
-	var station_pos: Vector3 = FocusBubble.impostor_position(player_au, Vector2(-2.0, 0.5))
+	var station_pos: Vector3 = FocusBubble.impostor_position(player_au, station_au)
 	_scene.add_child(station)
 	station.setup("s1", "Alpha Station", "station", station_pos)
-	station.set_mode(true)
+	station.scale = Vector3.ONE * FocusBubble.perspective_scale(player_au.distance_to(station_au))
 
-	# Star impostor
+	# Star (distant, perspective-scaled)
+	var star_au := Vector2(0.0, 0.0)
 	var star := POI_MARKER_SCENE.instantiate() as Node3D
-	var star_pos: Vector3 = FocusBubble.impostor_position(player_au, Vector2(0.0, 0.0))
+	var star_pos: Vector3 = FocusBubble.impostor_position(player_au, star_au)
 	_scene.add_child(star)
 	star.setup("star1", "Sol", "sun", star_pos, "G")
-	star.set_mode(true)
+	star.scale = Vector3.ONE * FocusBubble.perspective_scale(player_au.distance_to(star_au))
 
 	# Also create a focused station scene for comparison
 	var station_full := POI_MARKER_SCENE.instantiate() as Node3D
