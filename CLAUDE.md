@@ -69,6 +69,16 @@ This repo uses Git LFS for all binary assets. Tracked extensions (see `.gitattri
 - **Pulling LFS objects later:** `git lfs pull` to fetch all, or `git lfs pull --include="assets/ships/*"` for a subset
 - Git objects (code/scenes/configs) are ~1MB; LFS objects (3D models, textures) are ~700MB
 
+## Godot Documentation (DeepWiki MCP)
+
+When you need to look up Godot 4.x APIs, classes, or engine behavior, use the DeepWiki MCP server (configured in user scope). The docs repo is `godotengine/godot-docs`.
+
+- **Browse topics:** `read_wiki_structure(repoName: "godotengine/godot-docs")`
+- **Read a specific page:** `read_wiki_contents(repoName: "godotengine/godot-docs", path: "<page-path>")` — get the path from `read_wiki_structure`
+- **Ask a question:** `ask_question(repoName: "godotengine/godot-docs", question: "How do I use HTTPRequest in GDScript?")` — returns an AI-generated answer grounded in the docs
+
+Use `godotengine/godot` (the engine source repo) instead of `godot-docs` when you need implementation details rather than user-facing documentation.
+
 ## API Discrepancies Tracking
 - Maintain `API_DISCREPANCIES.md` with any differences between the OpenAPI spec (`openapi.json`) and real API responses
 - When you discover a new mismatch during development or testing, add it to the file immediately

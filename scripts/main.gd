@@ -8,6 +8,7 @@ var _current: Node = null
 
 
 func _ready() -> void:
+	_apply_saved_display_settings()
 	NetworkManager.authenticated.connect(_on_authenticated)
 	NetworkManager.session_expired.connect(_on_session_expired)
 
@@ -33,6 +34,22 @@ func _on_session_expired() -> void:
 	_switch_to(LOGIN_SCENE.instantiate())
 
 
+
+
+func _apply_saved_display_settings() -> void:
+	var cfg := ConfigFile.new()
+	if cfg.load("user://settings.cfg") != OK:
+		return  # No saved settings; project.godot defaults (fullscreen windowed) apply
+	var fullscreen: bool = cfg.get_value("display", "fullscreen", true)
+	if fullscreen:
+		DisplayServer.window_set_mode(DisplayServer.WINDOW_MODE_FULLSCREEN)
+	else:
+		DisplayServer.window_set_mode(DisplayServer.WINDOW_MODE_WINDOWED)
+	var vsync: bool = cfg.get_value("display", "vsync", true)
+	if vsync:
+		DisplayServer.window_set_vsync_mode(DisplayServer.VSYNC_ENABLED)
+	else:
+		DisplayServer.window_set_vsync_mode(DisplayServer.VSYNC_DISABLED)
 
 
 func _switch_to(node: Node) -> void:

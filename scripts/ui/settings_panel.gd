@@ -32,7 +32,7 @@ func _load_settings() -> void:
 		mute_checkbox.button_pressed = cfg.get_value("audio", "mute", false)
 
 		# Display
-		fullscreen_checkbox.button_pressed = cfg.get_value("display", "fullscreen", false)
+		fullscreen_checkbox.button_pressed = cfg.get_value("display", "fullscreen", true)
 		vsync_checkbox.button_pressed = cfg.get_value("display", "vsync", true)
 
 		# Network
