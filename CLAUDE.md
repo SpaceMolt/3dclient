@@ -58,6 +58,17 @@ All scripts in `scripts/tools/`:
 
 **No snaps or lerps to cover up incorrect math.** If a transition requires a "settle animation," "brief lerp at the end," or any other smoothing step to hide the fact that the start and end states are geometrically inconsistent, that is a signal the math is wrong — not a signal to add a transition. Fix the underlying coordinate system so that things are in the right place from the start. A correct solution animates smoothly because the geometry is right, not because the discontinuity is hidden.
 
+## Git LFS
+
+This repo uses Git LFS for all binary assets. Tracked extensions (see `.gitattributes`):
+
+`*.glb *.gltf *.fbx *.obj *.jpg *.jpeg *.png *.webp *.svg *.hdr *.exr *.dds *.wav *.mp3 *.ogg *.ttf *.otf *.woff *.woff2 *.res`
+
+- **Adding new binary types:** Run `git lfs track "*.ext"` and commit `.gitattributes`
+- **Code-only clone:** `GIT_LFS_SKIP_SMUDGE=1 git clone ...` skips downloading LFS objects
+- **Pulling LFS objects later:** `git lfs pull` to fetch all, or `git lfs pull --include="assets/ships/*"` for a subset
+- Git objects (code/scenes/configs) are ~1MB; LFS objects (3D models, textures) are ~700MB
+
 ## API Discrepancies Tracking
 - Maintain `API_DISCREPANCIES.md` with any differences between the OpenAPI spec (`openapi.json`) and real API responses
 - When you discover a new mismatch during development or testing, add it to the file immediately
