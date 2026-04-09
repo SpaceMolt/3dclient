@@ -1,6 +1,6 @@
 [gd_scene load_steps=5 format=3]
 
-[ext_resource type="Texture2D" path="res://textures/sky/blue_nebula.hdr" id="1"]
+[ext_resource type="Texture2D" path="res://textures/sky/blue_nebula.jpg" id="1"]
 
 [sub_resource type="PanoramaSkyMaterial" id="PanoSkyMat"]
 panorama = ExtResource("1")

@@ -2,7 +2,7 @@
 
 [ext_resource type="Script" path="res://scripts/game/camera_controller.gd" id="1"]
 [ext_resource type="Script" path="res://scripts/game/system_renderer.gd" id="2"]
-[ext_resource type="Texture2D" path="res://textures/sky/blue_nebula.hdr" id="4"]
+[ext_resource type="Texture2D" path="res://textures/sky/blue_nebula.jpg" id="4"]
 [ext_resource type="PackedScene" path="res://scenes/game/mining_beam.tscn" id="5"]
 [ext_resource type="PackedScene" path="res://scenes/game/combat_rings.tscn" id="6"]
 
