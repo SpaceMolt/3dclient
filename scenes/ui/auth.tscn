@@ -1,0 +1,68 @@
+[gd_scene load_steps=2 format=3]
+
+[ext_resource type="Script" path="res://scripts/ui/auth.gd" id="1"]
+
+[node name="Auth" type="CanvasLayer"]
+script = ExtResource("1")
+
+[node name="Background" type="ColorRect" parent="."]
+anchor_right = 1.0
+anchor_bottom = 1.0
+color = Color(0.04, 0.04, 0.08, 1)
+
+[node name="Center" type="CenterContainer" parent="."]
+anchor_right = 1.0
+anchor_bottom = 1.0
+
+[node name="Panel" type="PanelContainer" parent="Center"]
+custom_minimum_size = Vector2(400, 0)
+
+[node name="Margin" type="MarginContainer" parent="Center/Panel"]
+theme_override_constants/margin_left = 32
+theme_override_constants/margin_right = 32
+theme_override_constants/margin_top = 32
+theme_override_constants/margin_bottom = 32
+
+[node name="VBox" type="VBoxContainer" parent="Center/Panel/Margin"]
+theme_override_constants/separation = 12
+
+[node name="Title" type="Label" parent="Center/Panel/Margin/VBox"]
+text = "SpaceMolt"
+horizontal_alignment = 1
+theme_override_font_sizes/font_size = 32
+
+[node name="Subtitle" type="Label" parent="Center/Panel/Margin/VBox"]
+text = "Sign in to play"
+horizontal_alignment = 1
+modulate = Color(0.7, 0.7, 0.7, 1)
+
+[node name="Spacer" type="Control" parent="Center/Panel/Margin/VBox"]
+custom_minimum_size = Vector2(0, 16)
+
+[node name="SignInButton" type="Button" parent="Center/Panel/Margin/VBox"]
+unique_name_in_owner = true
+text = "Sign In with Browser"
+custom_minimum_size = Vector2(0, 40)
+
+[node name="Spacer2" type="Control" parent="Center/Panel/Margin/VBox"]
+custom_minimum_size = Vector2(0, 8)
+
+[node name="KeyLabel" type="Label" parent="Center/Panel/Margin/VBox"]
+text = "Paste your key:"
+modulate = Color(0.7, 0.7, 0.7, 1)
+
+[node name="KeyField" type="LineEdit" parent="Center/Panel/Margin/VBox"]
+unique_name_in_owner = true
+placeholder_text = "sk_live_..."
+custom_minimum_size = Vector2(0, 36)
+
+[node name="SubmitButton" type="Button" parent="Center/Panel/Margin/VBox"]
+unique_name_in_owner = true
+text = "Submit"
+custom_minimum_size = Vector2(0, 40)
+
+[node name="StatusLabel" type="Label" parent="Center/Panel/Margin/VBox"]
+unique_name_in_owner = true
+text = ""
+horizontal_alignment = 1
+autowrap_mode = 3
