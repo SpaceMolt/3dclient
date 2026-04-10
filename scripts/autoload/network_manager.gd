@@ -58,6 +58,7 @@ func get_players(on_success: Callable, on_error: Callable = Callable()) -> void:
 		on_success.call(players)
 	, on_error)
 
+
 func create_player(username: String, empire: String, on_success: Callable, on_error: Callable = Callable()) -> void:
 	create_session(func() -> void:
 		api_post(
@@ -355,14 +356,15 @@ func _api_get_with_key(path: String, on_success: Callable, on_error: Callable = 
 				if on_error.is_valid():
 					on_error.call({})
 				return
-			var data = JSON.parse_string(body_bytes.get_string_from_utf8())
+			var raw_text := body_bytes.get_string_from_utf8()
+			var data = JSON.parse_string(raw_text)
 			if data == null:
-				_log("<< PARSE ERROR %s" % path)
+				_log("<< PARSE ERROR %s http=%d body=%s" % [path, response_code, raw_text.left(500)])
 				UIManager.show_error("Invalid response from server")
 				if on_error.is_valid():
 					on_error.call({})
 				return
-			if data is Dictionary and data.has("error"):
+			if data is Dictionary and data.has("error") and data["error"] != null:
 				_log("<< ERROR %s: %s" % [path, JSON.stringify(data["error"])])
 				if on_error.is_valid():
 					on_error.call(data.get("error", {}))
@@ -389,14 +391,15 @@ func _api_post_with_key(path: String, body: Dictionary, on_success: Callable, on
 				if on_error.is_valid():
 					on_error.call({})
 				return
-			var data = JSON.parse_string(body_bytes.get_string_from_utf8())
+			var raw_text := body_bytes.get_string_from_utf8()
+			var data = JSON.parse_string(raw_text)
 			if data == null:
-				_log("<< PARSE ERROR %s" % path)
+				_log("<< PARSE ERROR %s http=%d body=%s" % [path, response_code, raw_text.left(500)])
 				UIManager.show_error("Invalid response from server")
 				if on_error.is_valid():
 					on_error.call({})
 				return
-			if data is Dictionary and data.has("error"):
+			if data is Dictionary and data.has("error") and data["error"] != null:
 				_log("<< ERROR %s: %s" % [path, JSON.stringify(data["error"])])
 				if on_error.is_valid():
 					on_error.call(data.get("error", {}))
