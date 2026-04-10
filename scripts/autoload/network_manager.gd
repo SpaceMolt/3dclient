@@ -100,9 +100,7 @@ func logout() -> void:
 		pass
 	)
 	_clear_session()
-	api_key = ""
-	registration_code = ""
-	_delete_saved_auth()
+	clear_auth()
 	StateManager.reset()
 	session_expired.emit()
 
@@ -115,10 +113,16 @@ func try_restore_auth(on_success: Callable, on_failure: Callable) -> void:
 	get_players(func(players: Array) -> void:
 		on_success.call(players)
 	, func(_error: Dictionary = {}) -> void:
-		_delete_saved_auth()
-		api_key = ""
+		clear_auth()
 		on_failure.call()
 	)
+
+
+func clear_auth() -> void:
+	api_key = ""
+	registration_code = ""
+	_delete_saved_auth()
+
 
 func has_saved_auth() -> bool:
 	return FileAccess.file_exists(AUTH_PATH)

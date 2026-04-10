@@ -28,8 +28,7 @@ func _on_authenticated(initial_state: Dictionary) -> void:
 
 
 func _on_session_expired() -> void:
-	NetworkManager._delete_saved_auth()
-	NetworkManager.api_key = ""
+	NetworkManager.clear_auth()
 	_switch_to(AUTH_SCENE.instantiate())
 
 

@@ -50,8 +50,7 @@ func _on_player_selected(player_id: String) -> void:
 
 
 func _on_sign_out() -> void:
-	NetworkManager.api_key = ""
-	NetworkManager._delete_saved_auth()
+	NetworkManager.clear_auth()
 	show_auth.emit()
 
 
