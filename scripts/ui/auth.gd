@@ -38,6 +38,7 @@ func _on_submit() -> void:
 		func(_error: Dictionary = {}) -> void:
 			_set_status("Invalid key. Try signing in again.", true)
 			NetworkManager.api_key = ""
+			key_field.text = ""
 	)
 
 
