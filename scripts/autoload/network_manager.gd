@@ -3,7 +3,7 @@ extends Node
 const DEFAULT_BASE_URL = "https://game.spacemolt.com"
 const DEFAULT_TICK_DURATION = 10.0
 const POLL_INTERVAL = 10.0
-const SESSION_PATH = "user://session.cfg"
+const AUTH_PATH = "user://auth.cfg"
 const LOG_PATH = "user://spacemolt.log"
 const MISSING_MODELS_LOG_NAME = "missing_ship_models.log"
 
@@ -16,6 +16,8 @@ var is_request_pending: bool = false
 var _is_restoring_session: bool = false
 var _log_file: FileAccess = null
 var _resolved_log_path: String = LOG_PATH
+var api_key: String = ""
+var registration_code: String = ""
 
 signal request_started
 signal request_completed
@@ -44,32 +46,50 @@ func create_session(on_complete: Callable) -> void:
 	)
 
 
-func login(username: String, password: String) -> void:
-	api_post(
-		"/api/v2/spacemolt_auth/login",
-		{"username": username, "password": password},
-		func(content: Dictionary) -> void:
-			is_authenticated = true
-			_save_session(username, password)
-			_start_poll()
-			authenticated.emit(content)
-	)
+func set_api_key(key: String) -> void:
+	api_key = key
+	_save_auth()
 
 
-func register(username: String, empire: String, code: String) -> void:
-	api_post(
-		"/api/v2/spacemolt_auth/register",
-		{"username": username, "empire": empire, "registration_code": code},
-		func(content: Dictionary) -> void:
-			is_authenticated = true
-			# Save the generated password from the response for future logins
-			var password: String = content.get("password", "")
-			var uname: String = content.get("player", {}).get("name", "")
-			if not password.is_empty() and not uname.is_empty():
-				_save_session(uname, password)
-			_start_poll()
-			authenticated.emit(content)
+func get_players(on_success: Callable, on_error: Callable = Callable()) -> void:
+	_api_get_with_key("/api/registration-code", func(data: Dictionary) -> void:
+		registration_code = data.get("registration_code", "")
+		var players: Array = data.get("players", [])
+		on_success.call(players)
+	, on_error)
+
+func create_player(username: String, empire: String, on_success: Callable, on_error: Callable = Callable()) -> void:
+	create_session(func() -> void:
+		api_post(
+			"/api/v2/spacemolt_auth/register",
+			{"username": username, "empire": empire, "registration_code": registration_code},
+			func(content: Dictionary) -> void:
+				is_authenticated = true
+				_start_poll()
+				authenticated.emit(content)
+				on_success.call(content)
+		, on_error)
 	)
+
+func select_player(player_id: String, on_success: Callable, on_error: Callable = Callable()) -> void:
+	_api_post_with_key("/api/player/" + player_id + "/ws-token", {}, func(data: Dictionary) -> void:
+		var token: String = data.get("token", "")
+		if token.is_empty():
+			if on_error.is_valid():
+				on_error.call({"code": "no_token", "message": "Failed to get auth token"})
+			return
+		create_session(func() -> void:
+			api_post(
+				"/api/v2/spacemolt_auth/login_token",
+				{"token": token},
+				func(content: Dictionary) -> void:
+					is_authenticated = true
+					_start_poll()
+					authenticated.emit(content)
+					on_success.call(content)
+			, on_error)
+		)
+	, on_error)
 
 
 func logout() -> void:
@@ -79,54 +99,28 @@ func logout() -> void:
 		pass
 	)
 	_clear_session()
-	_delete_saved_session()
+	api_key = ""
+	registration_code = ""
+	_delete_saved_auth()
 	StateManager.reset()
 	session_expired.emit()
 
 
-func try_restore_session(on_success: Callable, on_failure: Callable) -> void:
-	var cfg := ConfigFile.new()
-	if cfg.load(SESSION_PATH) != OK:
+func try_restore_auth(on_success: Callable, on_failure: Callable) -> void:
+	_load_auth()
+	if api_key.is_empty():
 		on_failure.call()
 		return
-
-	var username: String = cfg.get_value("auth", "username", "")
-	var password: String = cfg.get_value("auth", "password", "")
-	var saved_session: String = cfg.get_value("auth", "session_id", "")
-	if username.is_empty() or password.is_empty():
+	get_players(func(players: Array) -> void:
+		on_success.call(players)
+	, func(_error: Dictionary = {}) -> void:
+		_delete_saved_auth()
+		api_key = ""
 		on_failure.call()
-		return
+	)
 
-	# Try reusing the saved session_id first (avoids a login call)
-	if not saved_session.is_empty():
-		session_id = saved_session
-		_is_restoring_session = true
-		# Temporarily intercept session_expired to fall back to full login
-		var fallback := func():
-			_is_restoring_session = false
-			session_id = ""
-			_full_login(username, password, on_success, on_failure)
-		session_expired.connect(fallback, CONNECT_ONE_SHOT)
-		# Test the session with a lightweight call
-		api_post("/api/v2/spacemolt/get_status", {}, func(content: Dictionary) -> void:
-			_is_restoring_session = false
-			# Disconnect the fallback since we succeeded
-			if session_expired.is_connected(fallback):
-				session_expired.disconnect(fallback)
-			is_authenticated = true
-			StateManager.update_state(content)
-			_save_session(username, password)
-			_start_poll()
-			on_success.call(content)
-		)
-		return
-
-	# No saved session_id — create a new session and login
-	_full_login(username, password, on_success, on_failure)
-
-
-func has_saved_session() -> bool:
-	return FileAccess.file_exists(SESSION_PATH)
+func has_saved_auth() -> bool:
+	return FileAccess.file_exists(AUTH_PATH)
 
 
 func send_command(action: String, params: Dictionary, on_complete: Callable = Callable()) -> void:
@@ -348,6 +342,75 @@ func _raw_post(path: String, body: Dictionary, callback: Callable) -> void:
 	http.request(base_url + path, headers, HTTPClient.METHOD_POST, JSON.stringify(body))
 
 
+func _api_get_with_key(path: String, on_success: Callable, on_error: Callable = Callable()) -> void:
+	_log(">> GET %s (with API key)" % path)
+	var http := HTTPRequest.new()
+	add_child(http)
+	http.request_completed.connect(
+		func(result: int, response_code: int, _headers: PackedStringArray, body_bytes: PackedByteArray) -> void:
+			http.queue_free()
+			if result != HTTPRequest.RESULT_SUCCESS:
+				_log("<< NETWORK ERROR %s result=%d" % [path, result])
+				UIManager.show_error("Network error (code %d)" % result)
+				if on_error.is_valid():
+					on_error.call({})
+				return
+			var data = JSON.parse_string(body_bytes.get_string_from_utf8())
+			if data == null:
+				_log("<< PARSE ERROR %s" % path)
+				UIManager.show_error("Invalid response from server")
+				if on_error.is_valid():
+					on_error.call({})
+				return
+			if data is Dictionary and data.has("error"):
+				_log("<< ERROR %s: %s" % [path, JSON.stringify(data["error"])])
+				if on_error.is_valid():
+					on_error.call(data.get("error", {}))
+				return
+			_log("<< OK %s http=%d" % [path, response_code])
+			on_success.call(data)
+	)
+	var headers := PackedStringArray([
+		"Authorization: Bearer " + api_key,
+	])
+	http.request(base_url + path, headers, HTTPClient.METHOD_GET)
+
+
+func _api_post_with_key(path: String, body: Dictionary, on_success: Callable, on_error: Callable = Callable()) -> void:
+	_log(">> POST %s (with API key)" % path)
+	var http := HTTPRequest.new()
+	add_child(http)
+	http.request_completed.connect(
+		func(result: int, response_code: int, _headers: PackedStringArray, body_bytes: PackedByteArray) -> void:
+			http.queue_free()
+			if result != HTTPRequest.RESULT_SUCCESS:
+				_log("<< NETWORK ERROR %s result=%d" % [path, result])
+				UIManager.show_error("Network error (code %d)" % result)
+				if on_error.is_valid():
+					on_error.call({})
+				return
+			var data = JSON.parse_string(body_bytes.get_string_from_utf8())
+			if data == null:
+				_log("<< PARSE ERROR %s" % path)
+				UIManager.show_error("Invalid response from server")
+				if on_error.is_valid():
+					on_error.call({})
+				return
+			if data is Dictionary and data.has("error"):
+				_log("<< ERROR %s: %s" % [path, JSON.stringify(data["error"])])
+				if on_error.is_valid():
+					on_error.call(data.get("error", {}))
+				return
+			_log("<< OK %s http=%d" % [path, response_code])
+			on_success.call(data)
+	)
+	var headers := PackedStringArray([
+		"Content-Type: application/json",
+		"Authorization: Bearer " + api_key,
+	])
+	http.request(base_url + path, headers, HTTPClient.METHOD_POST, JSON.stringify(body))
+
+
 func _refresh_state_then(callback: Callable) -> void:
 	api_post("/api/v2/spacemolt/get_status", {}, func(state: Dictionary) -> void:
 		StateManager.update_state(state)
@@ -401,37 +464,28 @@ func _stop_poll() -> void:
 		timer.stop()
 
 
-func _full_login(username: String, password: String, on_success: Callable, on_failure: Callable) -> void:
-	create_session(func():
-		api_post(
-			"/api/v2/spacemolt_auth/login",
-			{"username": username, "password": password},
-			func(content: Dictionary) -> void:
-				is_authenticated = true
-				_save_session(username, password)
-				_start_poll()
-				on_success.call(content)
-		)
-	)
-
-
 func _clear_session() -> void:
 	is_authenticated = false
 	session_id = ""
 	_stop_poll()
 
 
-func _save_session(username: String, password: String) -> void:
+func _save_auth() -> void:
 	var cfg := ConfigFile.new()
-	cfg.set_value("auth", "username", username)
-	cfg.set_value("auth", "password", password)
-	cfg.set_value("auth", "session_id", session_id)
-	cfg.save(SESSION_PATH)
+	cfg.set_value("auth", "api_key", api_key)
+	cfg.save(AUTH_PATH)
 
 
-func _delete_saved_session() -> void:
-	if FileAccess.file_exists(SESSION_PATH):
-		DirAccess.remove_absolute(ProjectSettings.globalize_path(SESSION_PATH))
+func _load_auth() -> void:
+	var cfg := ConfigFile.new()
+	if cfg.load(AUTH_PATH) != OK:
+		return
+	api_key = cfg.get_value("auth", "api_key", "")
+
+
+func _delete_saved_auth() -> void:
+	if FileAccess.file_exists(AUTH_PATH):
+		DirAccess.remove_absolute(ProjectSettings.globalize_path(AUTH_PATH))
 
 
 func _open_log() -> void:

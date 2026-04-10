@@ -45,47 +45,32 @@ func test_api_post_requires_session_id() -> void:
 	NetworkManager.session_id = original_session
 
 
-func test_save_and_has_saved_session() -> void:
-	# Clean up any leftover session file
-	_cleanup_session_file()
-
-	assert_bool(NetworkManager.has_saved_session()).is_false()
-
-	NetworkManager._save_session("testuser", "testpass")
-	assert_bool(NetworkManager.has_saved_session()).is_true()
-
-	# Clean up
-	_cleanup_session_file()
+func test_save_and_load_auth() -> void:
+	NetworkManager.api_key = "sk_test_key123"
+	NetworkManager._save_auth()
+	NetworkManager.api_key = ""
+	NetworkManager._load_auth()
+	assert_str(NetworkManager.api_key).is_equal("sk_test_key123")
 
 
-func test_save_session_writes_credentials() -> void:
-	_cleanup_session_file()
-
-	NetworkManager._save_session("alice", "secret123")
-
-	var cfg := ConfigFile.new()
-	assert_int(cfg.load(NetworkManager.SESSION_PATH)).is_equal(OK)
-	assert_str(cfg.get_value("auth", "username", "")).is_equal("alice")
-	assert_str(cfg.get_value("auth", "password", "")).is_equal("secret123")
-
-	_cleanup_session_file()
+func test_has_saved_auth_true() -> void:
+	NetworkManager.api_key = "sk_test_key123"
+	NetworkManager._save_auth()
+	assert_bool(NetworkManager.has_saved_auth()).is_true()
 
 
-func test_delete_saved_session_removes_file() -> void:
-	NetworkManager._save_session("testuser", "testpass")
-	assert_bool(NetworkManager.has_saved_session()).is_true()
-
-	NetworkManager._delete_saved_session()
-	assert_bool(NetworkManager.has_saved_session()).is_false()
+func test_has_saved_auth_false_when_no_file() -> void:
+	NetworkManager._delete_saved_auth()
+	assert_bool(NetworkManager.has_saved_auth()).is_false()
 
 
-func test_has_saved_session_false_when_no_file() -> void:
-	_cleanup_session_file()
-	assert_bool(NetworkManager.has_saved_session()).is_false()
+func test_delete_saved_auth() -> void:
+	NetworkManager.api_key = "sk_test_key123"
+	NetworkManager._save_auth()
+	NetworkManager._delete_saved_auth()
+	assert_bool(NetworkManager.has_saved_auth()).is_false()
 
 
-func _cleanup_session_file() -> void:
-	if FileAccess.file_exists(NetworkManager.SESSION_PATH):
-		DirAccess.remove_absolute(
-			ProjectSettings.globalize_path(NetworkManager.SESSION_PATH)
-		)
+func test_initial_state_no_api_key() -> void:
+	assert_str(NetworkManager.api_key).is_equal("")
+	assert_bool(NetworkManager.is_authenticated).is_false()
