@@ -1,7 +1,8 @@
 extends Node
 
-const LOGIN_SCENE := preload("res://scenes/ui/login.tscn")
-const REGISTER_SCENE := preload("res://scenes/ui/register.tscn")
+const AUTH_SCENE := preload("res://scenes/ui/auth.tscn")
+const PLAYER_SELECT_SCENE := preload("res://scenes/ui/player_select.tscn")
+const CREATE_PLAYER_SCENE := preload("res://scenes/ui/create_player.tscn")
 const GAME_SCENE := preload("res://scenes/game/game.tscn")
 
 var _current: Node = null
@@ -12,16 +13,13 @@ func _ready() -> void:
 	NetworkManager.authenticated.connect(_on_authenticated)
 	NetworkManager.session_expired.connect(_on_session_expired)
 
-	# Always show login screen first; auto-login replaces it on success
-	_switch_to(LOGIN_SCENE.instantiate())
-
-	if NetworkManager.has_saved_session():
-		NetworkManager.try_restore_session(
-			func(content: Dictionary) -> void:
-				_on_authenticated(content),
-			func() -> void:
-				pass  # Already showing login screen
-		)
+	# Try restoring saved auth; if valid, go to player select
+	NetworkManager.try_restore_auth(
+		func(players: Array) -> void:
+			_show_player_select(players),
+		func() -> void:
+			_switch_to(AUTH_SCENE.instantiate())
+	)
 
 
 func _on_authenticated(initial_state: Dictionary) -> void:
@@ -30,10 +28,15 @@ func _on_authenticated(initial_state: Dictionary) -> void:
 
 
 func _on_session_expired() -> void:
-	NetworkManager._delete_saved_session()
-	_switch_to(LOGIN_SCENE.instantiate())
+	NetworkManager._delete_saved_auth()
+	NetworkManager.api_key = ""
+	_switch_to(AUTH_SCENE.instantiate())
 
 
+func _show_player_select(players: Array) -> void:
+	var scene := PLAYER_SELECT_SCENE.instantiate()
+	_switch_to(scene)
+	scene.set_players(players)
 
 
 func _apply_saved_display_settings() -> void:
@@ -58,12 +61,16 @@ func _switch_to(node: Node) -> void:
 	_current = node
 	add_child(_current)
 
-	# Wire login ↔ register navigation
-	if _current.has_signal("show_register"):
-		_current.show_register.connect(func():
-			_switch_to(REGISTER_SCENE.instantiate())
+	# Wire scene navigation
+	if _current.has_signal("show_player_select"):
+		_current.show_player_select.connect(func(players: Array) -> void:
+			_show_player_select(players)
 		)
-	if _current.has_signal("show_login"):
-		_current.show_login.connect(func():
-			_switch_to(LOGIN_SCENE.instantiate())
+	if _current.has_signal("show_create_player"):
+		_current.show_create_player.connect(func() -> void:
+			_switch_to(CREATE_PLAYER_SCENE.instantiate())
+		)
+	if _current.has_signal("show_auth"):
+		_current.show_auth.connect(func() -> void:
+			_switch_to(AUTH_SCENE.instantiate())
 		)
