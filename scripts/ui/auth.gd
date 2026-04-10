@@ -44,4 +44,4 @@ func _on_submit() -> void:
 
 func _set_status(text: String, is_error: bool = false) -> void:
 	status_label.text = text
-	status_label.add_theme_color_override("font_color", Color.RED if is_error else Color.WHITE)
+	status_label.modulate = Color.RED if is_error else Color.WHITE
