@@ -14,8 +14,8 @@ endif
 help: ## Show this help
 	@grep -E '^[a-z][a-z_-]+:.*## ' $(MAKEFILE_LIST) | awk -F ':.*## ' '{printf "  make %-12s %s\n", $$1, $$2}'
 
-run: ## Launch the game client
-	$(GODOT) --path .
+run: ## Launch the game client (logs to output.log)
+	$(GODOT) --path . 2>&1 | tee output.log
 
 test: ## Run all tests (unit + integration)
 	$(GODOT) --headless -s addons/gdUnit4/bin/GdUnitCmdTool.gd \

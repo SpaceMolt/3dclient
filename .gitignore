@@ -28,6 +28,9 @@ reports/
 # Test credentials (never commit)
 .test_credentials
 
+# Game output log
+output.log
+
 # OS
 .DS_Store
 Thumbs.db

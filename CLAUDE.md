@@ -40,6 +40,10 @@ Key autoloads (singletons): `NetworkManager`, `StateManager`, `UIManager`, `Asse
 - Poll `get_status` every 10 seconds; reset timer after each mutation response
 - Session ID stored in NetworkManager; passed as `X-Session-Id` header on every request
 
+## Runtime Log
+
+`make run` tees all stdout/stderr to `output.log`. When the user asks you to "check the log" or "look at the output," read this file. It is gitignored and overwritten on each run.
+
 ## Build & Validation Tools
 
 All scripts in `scripts/tools/`:
