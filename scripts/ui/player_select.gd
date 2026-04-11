@@ -39,14 +39,12 @@ func _refresh_list() -> void:
 func _on_player_selected(player_id: String) -> void:
 	_set_status("Connecting...")
 	_set_buttons_disabled(true)
-	NetworkManager.select_player(player_id,
-		func(_content: Dictionary) -> void:
-			pass  # Main.gd handles authenticated signal
-		,
-		func(_error: Dictionary = {}) -> void:
-			_set_status("Failed to connect. Try again.", true)
-			_set_buttons_disabled(false)
-	)
+	var on_success := func(_content: Dictionary) -> void:
+		pass  # Main.gd handles authenticated signal
+	var on_error := func(_error: Dictionary = {}) -> void:
+		_set_status("Failed to connect. Try again.", true)
+		_set_buttons_disabled(false)
+	NetworkManager.select_player(player_id, on_success, on_error)
 
 
 func _on_sign_out() -> void:

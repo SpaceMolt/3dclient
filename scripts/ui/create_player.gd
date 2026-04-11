@@ -22,12 +22,12 @@ func _ready() -> void:
 func _on_back() -> void:
 	_set_status("Loading...")
 	back_button.disabled = true
-	NetworkManager.get_players(func(players: Array) -> void:
+	var on_success := func(players: Array) -> void:
 		show_player_select.emit(players)
-	, func(_error: Dictionary = {}) -> void:
+	var on_error := func(_error: Dictionary = {}) -> void:
 		_set_status("Failed to load players.", true)
 		back_button.disabled = false
-	)
+	NetworkManager.get_players(on_success, on_error)
 
 
 func _on_create() -> void:
@@ -41,16 +41,14 @@ func _on_create() -> void:
 	create_button.disabled = true
 	back_button.disabled = true
 
-	NetworkManager.create_player(username, empire,
-		func(_content: Dictionary) -> void:
-			pass  # authenticated signal handled by Main.gd
-		,
-		func(error: Dictionary = {}) -> void:
-			var msg: String = error.get("message", "Failed to create player.")
-			_set_status(msg, true)
-			create_button.disabled = false
-			back_button.disabled = false
-	)
+	var on_created := func(_content: Dictionary) -> void:
+		pass  # authenticated signal handled by Main.gd
+	var on_create_error := func(error: Dictionary = {}) -> void:
+		var msg: String = error.get("message", "Failed to create player.")
+		_set_status(msg, true)
+		create_button.disabled = false
+		back_button.disabled = false
+	NetworkManager.create_player(username, empire, on_created, on_create_error)
 
 
 func _set_status(text: String, is_error: bool = false) -> void:

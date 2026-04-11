@@ -31,15 +31,13 @@ func _on_submit() -> void:
 
 	_set_status("Validating...")
 	NetworkManager.set_api_key(key)
-	NetworkManager.get_players(
-		func(players: Array) -> void:
-			show_player_select.emit(players)
-		,
-		func(_error: Dictionary = {}) -> void:
-			_set_status("Invalid key. Try signing in again.", true)
-			NetworkManager.clear_auth()
-			key_field.text = ""
-	)
+	var on_success := func(players: Array) -> void:
+		show_player_select.emit(players)
+	var on_error := func(_error: Dictionary = {}) -> void:
+		_set_status("Invalid key. Try signing in again.", true)
+		NetworkManager.clear_auth()
+		key_field.text = ""
+	NetworkManager.get_players(on_success, on_error)
 
 
 func _set_status(text: String, is_error: bool = false) -> void:
