@@ -40,18 +40,24 @@ func _show_player_select(players: Array) -> void:
 
 func _apply_saved_display_settings() -> void:
 	var cfg := ConfigFile.new()
-	if cfg.load("user://settings.cfg") != OK:
-		return  # No saved settings; project.godot defaults (fullscreen windowed) apply
-	var fullscreen: bool = cfg.get_value("display", "fullscreen", true)
-	if fullscreen:
-		DisplayServer.window_set_mode(DisplayServer.WINDOW_MODE_FULLSCREEN)
-	else:
-		DisplayServer.window_set_mode(DisplayServer.WINDOW_MODE_WINDOWED)
-	var vsync: bool = cfg.get_value("display", "vsync", true)
-	if vsync:
-		DisplayServer.window_set_vsync_mode(DisplayServer.VSYNC_ENABLED)
-	else:
-		DisplayServer.window_set_vsync_mode(DisplayServer.VSYNC_DISABLED)
+	var has_config := cfg.load("user://settings.cfg") == OK
+	if has_config:
+		var fullscreen: bool = cfg.get_value("display", "fullscreen", true)
+		if fullscreen:
+			DisplayServer.window_set_mode(DisplayServer.WINDOW_MODE_FULLSCREEN)
+		else:
+			DisplayServer.window_set_mode(DisplayServer.WINDOW_MODE_WINDOWED)
+		var vsync: bool = cfg.get_value("display", "vsync", true)
+		if vsync:
+			DisplayServer.window_set_vsync_mode(DisplayServer.VSYNC_ENABLED)
+		else:
+			DisplayServer.window_set_vsync_mode(DisplayServer.VSYNC_DISABLED)
+	# HiDPI: default off for performance on retina displays
+	var hidpi: bool = cfg.get_value("display", "hidpi", false) if has_config else false
+	if not hidpi:
+		var screen_scale := DisplayServer.screen_get_scale()
+		if screen_scale > 1.0:
+			get_viewport().scaling_3d_scale = 1.0 / screen_scale
 
 
 func _switch_to(node: Node) -> void:

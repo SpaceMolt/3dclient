@@ -6,17 +6,30 @@
 layer = 10
 script = ExtResource("1")
 
-[node name="Panel" type="Panel" parent="."]
+[node name="Dimmer" type="ColorRect" parent="."]
 anchors_preset = 15
 anchor_right = 1.0
 anchor_bottom = 1.0
+color = Color(0, 0, 0, 0.5)
+
+[node name="Panel" type="Panel" parent="."]
+anchors_preset = 8
+anchor_left = 0.5
+anchor_top = 0.5
+anchor_right = 0.5
+anchor_bottom = 0.5
+offset_left = -280
+offset_top = -310
+offset_right = 280
+offset_bottom = 310
 grow_horizontal = 2
 grow_vertical = 2
 
 [node name="TopBar" type="HBoxContainer" parent="Panel"]
-offset_left = 60.0
+anchor_right = 1.0
+offset_left = 20.0
 offset_top = 8.0
-offset_right = 400.0
+offset_right = -20.0
 offset_bottom = 38.0
 theme_override_constants/separation = 12
 
@@ -32,14 +45,14 @@ modulate = Color(0.4, 0.8, 1.0, 1)
 [node name="ScrollContainer" type="ScrollContainer" parent="Panel"]
 anchor_right = 1.0
 anchor_bottom = 1.0
-offset_left = 60.0
-offset_top = 50.0
-offset_right = -60.0
-offset_bottom = -20.0
+offset_left = 20.0
+offset_top = 44.0
+offset_right = -20.0
+offset_bottom = -12.0
 
 [node name="Content" type="VBoxContainer" parent="Panel/ScrollContainer"]
 size_flags_horizontal = 3
-theme_override_constants/separation = 20
+theme_override_constants/separation = 10
 
 ; === Audio Section ===
 
@@ -115,6 +128,22 @@ theme_override_font_sizes/font_size = 13
 unique_name_in_owner = true
 button_pressed = true
 
+[node name="HiDPIRow" type="HBoxContainer" parent="Panel/ScrollContainer/Content"]
+theme_override_constants/separation = 12
+
+[node name="HiDPITitle" type="Label" parent="Panel/ScrollContainer/Content/HiDPIRow"]
+custom_minimum_size = Vector2(140, 0)
+text = "HiDPI Rendering"
+theme_override_font_sizes/font_size = 13
+
+[node name="HiDPICheckbox" type="CheckBox" parent="Panel/ScrollContainer/Content/HiDPIRow"]
+unique_name_in_owner = true
+
+[node name="HiDPIHint" type="Label" parent="Panel/ScrollContainer/Content/HiDPIRow"]
+text = "(Retina)"
+theme_override_font_sizes/font_size = 10
+modulate = Color(0.5, 0.5, 0.5, 1)
+
 ; === Network Section ===
 
 [node name="NetworkHeader" type="Label" parent="Panel/ScrollContainer/Content"]
@@ -164,6 +193,128 @@ unique_name_in_owner = true
 custom_minimum_size = Vector2(50, 0)
 text = "10s"
 theme_override_font_sizes/font_size = 13
+
+; === Player Section ===
+
+[node name="PlayerHeader" type="Label" parent="Panel/ScrollContainer/Content"]
+text = "Player"
+theme_override_font_sizes/font_size = 15
+modulate = Color(0.4, 0.8, 1.0, 1)
+
+[node name="PlayerSep" type="HSeparator" parent="Panel/ScrollContainer/Content"]
+
+[node name="StatusRow" type="HBoxContainer" parent="Panel/ScrollContainer/Content"]
+theme_override_constants/separation = 12
+
+[node name="StatusTitle" type="Label" parent="Panel/ScrollContainer/Content/StatusRow"]
+custom_minimum_size = Vector2(140, 0)
+text = "Status Message"
+theme_override_font_sizes/font_size = 13
+
+[node name="StatusField" type="LineEdit" parent="Panel/ScrollContainer/Content/StatusRow"]
+unique_name_in_owner = true
+custom_minimum_size = Vector2(200, 0)
+theme_override_font_sizes/font_size = 12
+placeholder_text = "Enter status..."
+
+[node name="SetStatusButton" type="Button" parent="Panel/ScrollContainer/Content/StatusRow"]
+unique_name_in_owner = true
+text = "Set Status"
+theme_override_font_sizes/font_size = 12
+modulate = Color(1.0, 0.42, 0.208, 1)
+
+[node name="ClanTagRow" type="HBoxContainer" parent="Panel/ScrollContainer/Content"]
+theme_override_constants/separation = 12
+
+[node name="ClanTagTitle" type="Label" parent="Panel/ScrollContainer/Content/ClanTagRow"]
+custom_minimum_size = Vector2(140, 0)
+text = "Clan Tag"
+theme_override_font_sizes/font_size = 13
+
+[node name="ClanTagField" type="LineEdit" parent="Panel/ScrollContainer/Content/ClanTagRow"]
+unique_name_in_owner = true
+custom_minimum_size = Vector2(80, 0)
+max_length = 4
+theme_override_font_sizes/font_size = 12
+placeholder_text = "ABCD"
+
+[node name="SetTagButton" type="Button" parent="Panel/ScrollContainer/Content/ClanTagRow"]
+unique_name_in_owner = true
+text = "Set Tag"
+theme_override_font_sizes/font_size = 12
+modulate = Color(1.0, 0.42, 0.208, 1)
+
+[node name="PrimaryColorRow" type="HBoxContainer" parent="Panel/ScrollContainer/Content"]
+theme_override_constants/separation = 12
+
+[node name="PrimaryColorTitle" type="Label" parent="Panel/ScrollContainer/Content/PrimaryColorRow"]
+custom_minimum_size = Vector2(140, 0)
+text = "Primary Color"
+theme_override_font_sizes/font_size = 13
+
+[node name="PrimaryColorField" type="LineEdit" parent="Panel/ScrollContainer/Content/PrimaryColorRow"]
+unique_name_in_owner = true
+custom_minimum_size = Vector2(100, 0)
+theme_override_font_sizes/font_size = 12
+placeholder_text = "FF0000"
+
+[node name="PrimaryColorPreview" type="ColorRect" parent="Panel/ScrollContainer/Content/PrimaryColorRow"]
+unique_name_in_owner = true
+custom_minimum_size = Vector2(24, 24)
+color = Color(0.165, 0.227, 0.290, 1)
+
+[node name="SecondaryColorRow" type="HBoxContainer" parent="Panel/ScrollContainer/Content"]
+theme_override_constants/separation = 12
+
+[node name="SecondaryColorTitle" type="Label" parent="Panel/ScrollContainer/Content/SecondaryColorRow"]
+custom_minimum_size = Vector2(140, 0)
+text = "Secondary Color"
+theme_override_font_sizes/font_size = 13
+
+[node name="SecondaryColorField" type="LineEdit" parent="Panel/ScrollContainer/Content/SecondaryColorRow"]
+unique_name_in_owner = true
+custom_minimum_size = Vector2(100, 0)
+theme_override_font_sizes/font_size = 12
+placeholder_text = "00FF00"
+
+[node name="SecondaryColorPreview" type="ColorRect" parent="Panel/ScrollContainer/Content/SecondaryColorRow"]
+unique_name_in_owner = true
+custom_minimum_size = Vector2(24, 24)
+color = Color(0.165, 0.227, 0.290, 1)
+
+[node name="SetColorsRow" type="HBoxContainer" parent="Panel/ScrollContainer/Content"]
+theme_override_constants/separation = 12
+
+[node name="SetColorsSpacing" type="Label" parent="Panel/ScrollContainer/Content/SetColorsRow"]
+custom_minimum_size = Vector2(140, 0)
+text = ""
+
+[node name="SetColorsButton" type="Button" parent="Panel/ScrollContainer/Content/SetColorsRow"]
+unique_name_in_owner = true
+text = "Set Colors"
+theme_override_font_sizes/font_size = 12
+modulate = Color(1.0, 0.42, 0.208, 1)
+
+[node name="HomeBaseRow" type="HBoxContainer" parent="Panel/ScrollContainer/Content"]
+theme_override_constants/separation = 12
+
+[node name="HomeBaseLabel" type="Label" parent="Panel/ScrollContainer/Content/HomeBaseRow"]
+unique_name_in_owner = true
+custom_minimum_size = Vector2(200, 0)
+text = "Home Base: None"
+theme_override_font_sizes/font_size = 13
+
+[node name="SetHomeBaseButton" type="Button" parent="Panel/ScrollContainer/Content/HomeBaseRow"]
+unique_name_in_owner = true
+text = "Set Home Base"
+theme_override_font_sizes/font_size = 12
+modulate = Color(1.0, 0.42, 0.208, 1)
+
+[node name="PlayerStatusLabel" type="Label" parent="Panel/ScrollContainer/Content"]
+unique_name_in_owner = true
+text = ""
+theme_override_font_sizes/font_size = 12
+modulate = Color(0.176, 0.831, 0.749, 1)
 
 ; === Controls Section ===
 
