@@ -1,7 +1,7 @@
 # SpaceMolt Godot Client
 
-# Detect Godot binary
-GODOT := $(or $(shell command -v godot 2>/dev/null), \
+# Detect Godot binary (honors $GODOT from environment)
+GODOT ?= $(or $(shell command -v godot 2>/dev/null), \
 	$(wildcard /Applications/Godot.app/Contents/MacOS/Godot), \
 	$(wildcard bin/godot))
 
