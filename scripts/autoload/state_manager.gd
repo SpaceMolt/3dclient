@@ -383,7 +383,7 @@ func _log_ship_payload(source: String, ship_data: Dictionary) -> void:
 		"active_ship_class": ship_data.get("active_ship_class", null),
 		"name": ship_data.get("name", null),
 	}
-	NetworkManager._log(
+	Log.i(
 		"SHIP PAYLOAD %s keys=%s values=%s resolved=%s"
 		% [
 			source,

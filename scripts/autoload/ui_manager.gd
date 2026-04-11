@@ -13,7 +13,7 @@ func register_event_log(log_node: Node) -> void:
 
 
 func show_error(message: String) -> void:
-	push_warning("UIManager error: " + message)
+	Log.w(message)
 	error_shown.emit(message)
 	_dispatch("add_error", message)
 

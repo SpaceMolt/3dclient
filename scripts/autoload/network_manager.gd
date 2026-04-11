@@ -4,7 +4,6 @@ const DEFAULT_BASE_URL = "https://game.spacemolt.com"
 const DEFAULT_TICK_DURATION = 10.0
 const POLL_INTERVAL = 10.0
 const AUTH_PATH = "user://auth.cfg"
-const LOG_PATH = "user://spacemolt.log"
 const MISSING_MODELS_LOG_NAME = "missing_ship_models.log"
 
 var base_url: String = DEFAULT_BASE_URL
@@ -14,8 +13,6 @@ var session_id: String = ""
 var is_authenticated: bool = false
 var is_request_pending: bool = false
 var _is_restoring_session: bool = false
-var _log_file: FileAccess = null
-var _resolved_log_path: String = LOG_PATH
 var api_key: String = ""
 var registration_code: String = ""
 
@@ -27,8 +24,8 @@ signal session_expired
 
 
 func _ready() -> void:
-	_open_log()
-	_log("NetworkManager ready, base_url=%s" % base_url)
+	_init_named_logs()
+	Log.i("NetworkManager ready, base_url=%s" % base_url)
 	var poll_timer := Timer.new()
 	poll_timer.name = "PollTimer"
 	poll_timer.wait_time = POLL_INTERVAL
@@ -234,13 +231,12 @@ func send_catalog_command(params: Dictionary, on_complete: Callable = Callable()
 
 func api_post(path: String, body: Dictionary, on_success: Callable, on_error: Callable = Callable()) -> void:
 	if session_id.is_empty():
-		_log("ERROR: api_post called without session_id for %s" % path)
-		push_error("NetworkManager: api_post called without session_id")
+		Log.e("api_post called without session_id for %s" % path)
 		if on_error.is_valid():
 			on_error.call({"code": "no_session", "message": "No session"})
 		return
 
-	_log(">> POST %s %s" % [path, JSON.stringify(body)])
+	Log.i(">> POST %s %s" % [path, JSON.stringify(body)])
 	is_request_pending = true
 	request_started.emit()
 
@@ -253,7 +249,7 @@ func api_post(path: String, body: Dictionary, on_success: Callable, on_error: Ca
 			request_completed.emit()
 
 			if result != HTTPRequest.RESULT_SUCCESS:
-				_log("<< NETWORK ERROR %s result=%d" % [path, result])
+				Log.e("<< NETWORK ERROR %s result=%d" % [path, result])
 				UIManager.show_error("Network error (code %d)" % result)
 				if on_error.is_valid():
 					on_error.call({})
@@ -262,20 +258,20 @@ func api_post(path: String, body: Dictionary, on_success: Callable, on_error: Ca
 			var raw_text := body_bytes.get_string_from_utf8()
 			var data = JSON.parse_string(raw_text)
 			if data == null:
-				_log("<< PARSE ERROR %s http=%d body=%s" % [path, response_code, raw_text.left(500)])
+				Log.e("<< PARSE ERROR %s http=%d body=%s" % [path, response_code, raw_text.left(500)])
 				UIManager.show_error("Invalid response from server")
 				if on_error.is_valid():
 					on_error.call({})
 				return
 
 			if data.has("error") and data["error"] != null:
-				_log("<< ERROR %s http=%d error=%s" % [path, response_code, JSON.stringify(data["error"])])
+				Log.w("<< ERROR %s http=%d error=%s" % [path, response_code, JSON.stringify(data["error"])])
 				_handle_error(data["error"])
 				if on_error.is_valid():
 					on_error.call(data.get("error", {}))
 				return
 
-			_log("<< OK %s http=%d" % [path, response_code])
+			Log.i("<< OK %s http=%d" % [path, response_code])
 
 			if data.has("notifications") and data["notifications"] is Array:
 				_handle_notifications(data["notifications"])
@@ -298,11 +294,11 @@ func api_post(path: String, body: Dictionary, on_success: Callable, on_error: Ca
 func _handle_error(error: Dictionary) -> void:
 	var code: String = error.get("code", "")
 	var message: String = error.get("message", "Unknown error")
-	_log("HANDLE_ERROR code=%s message=%s" % [code, message])
+	Log.w("HANDLE_ERROR code=%s message=%s" % [code, message])
 
 	match code:
 		"session_expired", "session_invalid", "not_authenticated":
-			_log("SESSION LOST — emitting session_expired, returning to login")
+			Log.w("SESSION LOST — emitting session_expired, returning to login")
 			if not _is_restoring_session:
 				UIManager.show_error("Session expired. Please log in again.")
 			_clear_session()
@@ -348,14 +344,14 @@ func _raw_post(path: String, body: Dictionary, callback: Callable) -> void:
 
 
 func _api_get_with_key(path: String, on_success: Callable, on_error: Callable = Callable()) -> void:
-	_log(">> GET %s (with API key)" % path)
+	Log.i(">> GET %s (with API key)" % path)
 	var http := HTTPRequest.new()
 	add_child(http)
 	http.request_completed.connect(
 		func(result: int, response_code: int, _headers: PackedStringArray, body_bytes: PackedByteArray) -> void:
 			http.queue_free()
 			if result != HTTPRequest.RESULT_SUCCESS:
-				_log("<< NETWORK ERROR %s result=%d" % [path, result])
+				Log.e("<< NETWORK ERROR %s result=%d" % [path, result])
 				UIManager.show_error("Network error (code %d)" % result)
 				if on_error.is_valid():
 					on_error.call({})
@@ -363,17 +359,17 @@ func _api_get_with_key(path: String, on_success: Callable, on_error: Callable = 
 			var raw_text := body_bytes.get_string_from_utf8()
 			var data = JSON.parse_string(raw_text)
 			if data == null:
-				_log("<< PARSE ERROR %s http=%d body=%s" % [path, response_code, raw_text.left(500)])
+				Log.e("<< PARSE ERROR %s http=%d body=%s" % [path, response_code, raw_text.left(500)])
 				UIManager.show_error("Invalid response from server")
 				if on_error.is_valid():
 					on_error.call({})
 				return
 			if data is Dictionary and data.has("error") and data["error"] != null:
-				_log("<< ERROR %s: %s" % [path, JSON.stringify(data["error"])])
+				Log.w("<< ERROR %s: %s" % [path, JSON.stringify(data["error"])])
 				if on_error.is_valid():
 					on_error.call(data.get("error", {}))
 				return
-			_log("<< OK %s http=%d" % [path, response_code])
+			Log.i("<< OK %s http=%d" % [path, response_code])
 			on_success.call(data)
 	)
 	var headers := PackedStringArray([
@@ -383,14 +379,14 @@ func _api_get_with_key(path: String, on_success: Callable, on_error: Callable = 
 
 
 func _api_post_with_key(path: String, body: Dictionary, on_success: Callable, on_error: Callable = Callable()) -> void:
-	_log(">> POST %s (with API key)" % path)
+	Log.i(">> POST %s (with API key)" % path)
 	var http := HTTPRequest.new()
 	add_child(http)
 	http.request_completed.connect(
 		func(result: int, response_code: int, _headers: PackedStringArray, body_bytes: PackedByteArray) -> void:
 			http.queue_free()
 			if result != HTTPRequest.RESULT_SUCCESS:
-				_log("<< NETWORK ERROR %s result=%d" % [path, result])
+				Log.e("<< NETWORK ERROR %s result=%d" % [path, result])
 				UIManager.show_error("Network error (code %d)" % result)
 				if on_error.is_valid():
 					on_error.call({})
@@ -398,17 +394,17 @@ func _api_post_with_key(path: String, body: Dictionary, on_success: Callable, on
 			var raw_text := body_bytes.get_string_from_utf8()
 			var data = JSON.parse_string(raw_text)
 			if data == null:
-				_log("<< PARSE ERROR %s http=%d body=%s" % [path, response_code, raw_text.left(500)])
+				Log.e("<< PARSE ERROR %s http=%d body=%s" % [path, response_code, raw_text.left(500)])
 				UIManager.show_error("Invalid response from server")
 				if on_error.is_valid():
 					on_error.call({})
 				return
 			if data is Dictionary and data.has("error") and data["error"] != null:
-				_log("<< ERROR %s: %s" % [path, JSON.stringify(data["error"])])
+				Log.w("<< ERROR %s: %s" % [path, JSON.stringify(data["error"])])
 				if on_error.is_valid():
 					on_error.call(data.get("error", {}))
 				return
-			_log("<< OK %s http=%d" % [path, response_code])
+			Log.i("<< OK %s http=%d" % [path, response_code])
 			on_success.call(data)
 	)
 	var headers := PackedStringArray([
@@ -495,37 +491,10 @@ func _delete_saved_auth() -> void:
 		DirAccess.remove_absolute(ProjectSettings.globalize_path(AUTH_PATH))
 
 
-func _open_log() -> void:
-	_resolved_log_path = _resolve_log_path()
-	_log_file = FileAccess.open(_resolved_log_path, FileAccess.WRITE)
-	if _log_file:
-		_log_file.store_string("=== SpaceMolt Log Started %s ===\n" % Time.get_datetime_string_from_system())
+func _init_named_logs() -> void:
 	for resolved_path in _resolve_named_log_paths(MISSING_MODELS_LOG_NAME):
 		_ensure_named_log_exists_at_path(resolved_path, "=== Missing Ship Models Log Started %s ===\n")
-	_log("Missing ship model logs: %s" % JSON.stringify(_resolve_named_log_paths(MISSING_MODELS_LOG_NAME)))
-
-
-func _resolve_log_path() -> String:
-	if not OS.has_feature("editor"):
-		var exe_dir := OS.get_executable_path().get_base_dir()
-		if not exe_dir.is_empty():
-			return exe_dir.path_join("spacemolt.log")
-	return LOG_PATH
-
-
-func _log(msg: String) -> void:
-	var timestamp := Time.get_datetime_string_from_system()
-	var line := "[%s] %s" % [timestamp, msg]
-	print(line)
-	if _log_file:
-		_log_file.store_string(line + "\n")
-		_log_file.flush()
-
-
-func get_log_path() -> String:
-	if _resolved_log_path.begins_with("user://"):
-		return ProjectSettings.globalize_path(_resolved_log_path)
-	return _resolved_log_path
+	Log.i("Missing ship model logs: %s" % JSON.stringify(_resolve_named_log_paths(MISSING_MODELS_LOG_NAME)))
 
 
 func append_missing_model_log(msg: String) -> void:
@@ -550,7 +519,7 @@ func _append_named_log(file_name: String, msg: String) -> void:
 		if file == null:
 			file = FileAccess.open(resolved_path, FileAccess.WRITE_READ)
 		if file == null:
-			_log("Failed to open named log: %s" % resolved_path)
+			Log.w("Failed to open named log: %s" % resolved_path)
 			continue
 		file.seek_end()
 		file.store_string("[%s] %s\n" % [timestamp, msg])
@@ -579,7 +548,7 @@ func _ensure_named_log_exists_at_path(resolved_path: String, header_template: St
 		DirAccess.make_dir_recursive_absolute(dir_path)
 	var file := FileAccess.open(resolved_path, FileAccess.WRITE)
 	if file == null:
-		_log("Failed to create named log: %s" % resolved_path)
+		Log.w("Failed to create named log: %s" % resolved_path)
 		return
 	file.store_string(header_template % Time.get_datetime_string_from_system())
 	file.flush()
