@@ -45,7 +45,7 @@ func _refresh_my_ships() -> void:
 		var empty := Label.new()
 		empty.text = "No ships found."
 		empty.add_theme_font_size_override("font_size", 12)
-		empty.modulate = Color(0.5, 0.5, 0.5)
+		empty.modulate = ThemeColors.TEXT_MUTED
 		my_ships_list.add_child(empty)
 		return
 
@@ -72,13 +72,13 @@ func _refresh_my_ships() -> void:
 		name_label.size_flags_horizontal = Control.SIZE_EXPAND_FILL
 		name_label.add_theme_font_size_override("font_size", 13)
 		if is_active:
-			name_label.modulate = Color(0.4, 1.0, 0.4)
+			name_label.modulate = ThemeColors.ACTIVE
 		name_row.add_child(name_label)
 
 		var status_lbl := Label.new()
 		status_lbl.text = "ACTIVE" if is_active else "Stored"
 		status_lbl.add_theme_font_size_override("font_size", 11)
-		status_lbl.modulate = Color(0.4, 1.0, 0.4) if is_active else Color(0.6, 0.6, 0.6)
+		status_lbl.modulate = ThemeColors.ACTIVE if is_active else ThemeColors.TEXT_SECONDARY
 		name_row.add_child(status_lbl)
 
 		if not is_active and docked:
@@ -98,19 +98,19 @@ func _refresh_my_ships() -> void:
 		var hull_label := Label.new()
 		hull_label.text = "Hull: %d" % hull
 		hull_label.add_theme_font_size_override("font_size", 11)
-		hull_label.modulate = Color(0.7, 0.7, 0.7)
+		hull_label.modulate = ThemeColors.CHROME_SILVER
 		stats_row.add_child(hull_label)
 
 		var fuel_label := Label.new()
 		fuel_label.text = "Fuel: %d" % fuel
 		fuel_label.add_theme_font_size_override("font_size", 11)
-		fuel_label.modulate = Color(0.7, 0.7, 0.7)
+		fuel_label.modulate = ThemeColors.CHROME_SILVER
 		stats_row.add_child(fuel_label)
 
 		var cargo_label := Label.new()
 		cargo_label.text = "Cargo: %d" % cargo_used
 		cargo_label.add_theme_font_size_override("font_size", 11)
-		cargo_label.modulate = Color(0.7, 0.7, 0.7)
+		cargo_label.modulate = ThemeColors.CHROME_SILVER
 		stats_row.add_child(cargo_label)
 
 		card.add_child(stats_row)
@@ -120,12 +120,12 @@ func _refresh_my_ships() -> void:
 			var loc_label := Label.new()
 			loc_label.text = "Location: %s" % location_str
 			loc_label.add_theme_font_size_override("font_size", 10)
-			loc_label.modulate = Color(0.5, 0.5, 0.5)
+			loc_label.modulate = ThemeColors.TEXT_MUTED
 			card.add_child(loc_label)
 
 		# Separator
 		var sep := HSeparator.new()
-		sep.modulate = Color(0.3, 0.3, 0.3)
+		sep.modulate = ThemeColors.DIM_GREY
 		card.add_child(sep)
 
 		my_ships_list.add_child(card)
@@ -164,7 +164,7 @@ func _refresh_shipyard_not_docked() -> void:
 	var msg := Label.new()
 	msg.text = "Dock at a station to browse the shipyard."
 	msg.add_theme_font_size_override("font_size", 12)
-	msg.modulate = Color(0.5, 0.5, 0.5)
+	msg.modulate = ThemeColors.TEXT_MUTED
 	msg.autowrap_mode = TextServer.AUTOWRAP_WORD_SMART
 	shipyard_list.add_child(msg)
 	status_label.text = "Not docked"
@@ -178,7 +178,7 @@ func _refresh_shipyard() -> void:
 		var empty := Label.new()
 		empty.text = "No ships available at this station."
 		empty.add_theme_font_size_override("font_size", 12)
-		empty.modulate = Color(0.5, 0.5, 0.5)
+		empty.modulate = ThemeColors.TEXT_MUTED
 		shipyard_list.add_child(empty)
 		return
 
@@ -190,7 +190,7 @@ func _refresh_shipyard() -> void:
 	h_name.text = "SHIP"
 	h_name.size_flags_horizontal = Control.SIZE_EXPAND_FILL
 	h_name.add_theme_font_size_override("font_size", 10)
-	h_name.modulate = Color(0.5, 0.6, 0.7)
+	h_name.modulate = ThemeColors.HULL_GREY
 	header.add_child(h_name)
 
 	var h_price := Label.new()
@@ -198,7 +198,7 @@ func _refresh_shipyard() -> void:
 	h_price.custom_minimum_size.x = 65
 	h_price.add_theme_font_size_override("font_size", 10)
 	h_price.horizontal_alignment = HORIZONTAL_ALIGNMENT_RIGHT
-	h_price.modulate = Color(0.5, 0.6, 0.7)
+	h_price.modulate = ThemeColors.HULL_GREY
 	header.add_child(h_price)
 
 	var h_spacer := Label.new()
@@ -252,21 +252,21 @@ func _refresh_shipyard() -> void:
 			var hull_lbl := Label.new()
 			hull_lbl.text = "Hull: %d" % hull_max
 			hull_lbl.add_theme_font_size_override("font_size", 10)
-			hull_lbl.modulate = Color(0.6, 0.6, 0.6)
+			hull_lbl.modulate = ThemeColors.TEXT_SECONDARY
 			stats_row.add_child(hull_lbl)
 
 		if fuel_max > 0:
 			var fuel_lbl := Label.new()
 			fuel_lbl.text = "Fuel: %d" % fuel_max
 			fuel_lbl.add_theme_font_size_override("font_size", 10)
-			fuel_lbl.modulate = Color(0.6, 0.6, 0.6)
+			fuel_lbl.modulate = ThemeColors.TEXT_SECONDARY
 			stats_row.add_child(fuel_lbl)
 
 		if cargo_cap > 0:
 			var cargo_lbl := Label.new()
 			cargo_lbl.text = "Cargo: %d" % cargo_cap
 			cargo_lbl.add_theme_font_size_override("font_size", 10)
-			cargo_lbl.modulate = Color(0.6, 0.6, 0.6)
+			cargo_lbl.modulate = ThemeColors.TEXT_SECONDARY
 			stats_row.add_child(cargo_lbl)
 
 		if stats_row.get_child_count() > 0:
@@ -274,7 +274,7 @@ func _refresh_shipyard() -> void:
 
 		# Separator
 		var sep := HSeparator.new()
-		sep.modulate = Color(0.3, 0.3, 0.3)
+		sep.modulate = ThemeColors.DIM_GREY
 		card.add_child(sep)
 
 		shipyard_list.add_child(card)

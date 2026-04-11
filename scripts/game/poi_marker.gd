@@ -38,9 +38,9 @@ func setup(id: String, pname: String, ptype: String, pos: Vector3, pclass: Strin
 func set_selected(val: bool) -> void:
 	is_selected = val
 	if is_selected:
-		name_label.modulate = Color(1.0, 1.0, 0.4, 1.0)
+		name_label.modulate = ThemeColors.WARNING_YELLOW
 	else:
-		name_label.modulate = Color(0.8, 0.9, 1.0, 1.0)
+		name_label.modulate = ThemeColors.STAR_WHITE
 
 
 func _process(_delta: float) -> void:

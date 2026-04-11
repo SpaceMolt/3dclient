@@ -295,4 +295,4 @@ func _unlock() -> void:
 
 func _set_status(text: String, is_error: bool = false) -> void:
 	status_label.text = text
-	status_label.modulate = Color.RED if is_error else Color(0.8, 0.8, 0.8)
+	status_label.modulate = ThemeColors.TEXT_ERROR if is_error else ThemeColors.CHROME_SILVER

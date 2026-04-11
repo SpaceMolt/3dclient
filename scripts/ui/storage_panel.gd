@@ -50,7 +50,7 @@ func _refresh_storage() -> void:
 		var empty := Label.new()
 		empty.text = "Storage empty."
 		empty.add_theme_font_size_override("font_size", 12)
-		empty.modulate = Color(0.5, 0.5, 0.5)
+		empty.modulate = ThemeColors.TEXT_MUTED
 		storage_list.add_child(empty)
 		return
 
@@ -119,7 +119,7 @@ func _refresh_cargo() -> void:
 		var empty := Label.new()
 		empty.text = "Cargo hold empty."
 		empty.add_theme_font_size_override("font_size", 12)
-		empty.modulate = Color(0.5, 0.5, 0.5)
+		empty.modulate = ThemeColors.TEXT_MUTED
 		cargo_list.add_child(empty)
 		return
 
@@ -213,7 +213,7 @@ func _show_quantity_dialog(action: String, item_name: String, max_qty: int, on_c
 	var hint := Label.new()
 	hint.text = "Available: %d" % max_qty
 	hint.add_theme_font_size_override("font_size", 11)
-	hint.modulate = Color(0.5, 0.5, 0.5)
+	hint.modulate = ThemeColors.TEXT_MUTED
 	vbox.add_child(hint)
 
 	dialog.add_child(vbox)
@@ -239,7 +239,7 @@ func _make_header(cols: Array) -> HBoxContainer:
 		var lbl := Label.new()
 		lbl.text = cols[i]
 		lbl.add_theme_font_size_override("font_size", 10)
-		lbl.modulate = Color(0.5, 0.6, 0.7)
+		lbl.modulate = ThemeColors.HULL_GREY
 		if i == 0:
 			lbl.size_flags_horizontal = Control.SIZE_EXPAND_FILL
 		elif cols[i].is_empty():

@@ -17,6 +17,7 @@ boot_splash/bg_color=Color(0, 0, 0, 1)
 
 [autoload]
 
+ThemeManager="*res://scripts/autoload/theme_manager.gd"
 NetworkManager="*res://scripts/autoload/network_manager.gd"
 StateManager="*res://scripts/autoload/state_manager.gd"
 UIManager="*res://scripts/autoload/ui_manager.gd"

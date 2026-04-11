@@ -101,7 +101,7 @@ func _screen_to_map(screen_pos: Vector2) -> Vector2:
 func _draw_map() -> void:
 	if _systems.is_empty():
 		map_canvas.draw_string(ThemeDB.fallback_font, Vector2(20, 30), "Loading galaxy map...",
-			HORIZONTAL_ALIGNMENT_LEFT, -1, 14, Color(0.5, 0.5, 0.5))
+			HORIZONTAL_ALIGNMENT_LEFT, -1, 14, ThemeColors.TEXT_MUTED)
 		return
 
 	var cur_system_id := StateManager.get_current_system_id()
@@ -111,7 +111,7 @@ func _draw_map() -> void:
 	var show_labels := _zoom > 0.03
 
 	# Draw connections first (below nodes)
-	var connection_color := Color(0.2, 0.3, 0.4, 0.4)
+	var connection_color := Color(ThemeColors.DIM_GREY, 0.4)
 	var drawn_connections: Dictionary = {}
 	for s in _systems:
 		var sid: String = s.get("system_id", "")
@@ -144,13 +144,13 @@ func _draw_map() -> void:
 		if screen_pos.y < -20 or screen_pos.y > map_canvas.size.y + 20:
 			continue
 
-		var color := Color(0.3, 0.4, 0.6)
+		var color := ThemeColors.HULL_GREY
 		if sid == cur_system_id:
-			color = Color(0.2, 1.0, 0.4)
+			color = ThemeColors.BIO_GREEN
 		elif sid == _selected_id:
-			color = Color(1.0, 1.0, 0.3)
+			color = ThemeColors.WARNING_YELLOW
 		elif s.get("visited", false):
-			color = Color(0.5, 0.7, 0.9)
+			color = ThemeColors.LASER_BLUE
 
 		var r := node_radius
 		if sid == cur_system_id or sid == _selected_id:
@@ -159,14 +159,14 @@ func _draw_map() -> void:
 		# Online player indicator
 		var online: int = int(s.get("online", 0))
 		if online > 0 and sid != cur_system_id:
-			map_canvas.draw_circle(screen_pos, r + 3, Color(0.4, 0.8, 1.0, 0.3))
+			map_canvas.draw_circle(screen_pos, r + 3, Color(ThemeColors.PLASMA_CYAN, 0.3))
 
 		map_canvas.draw_circle(screen_pos, r, color)
 
 		if show_labels:
 			var name_text: String = s.get("name", "")
 			map_canvas.draw_string(font, screen_pos + Vector2(r + 3, 4),
-				name_text, HORIZONTAL_ALIGNMENT_LEFT, -1, label_size, Color(0.7, 0.7, 0.7, 0.8))
+				name_text, HORIZONTAL_ALIGNMENT_LEFT, -1, label_size, Color(ThemeColors.CHROME_SILVER, 0.8))
 
 	# Draw path from current to selected
 	if not _selected_id.is_empty() and _selected_id != cur_system_id:
@@ -175,7 +175,7 @@ func _draw_map() -> void:
 			var to_pos: Dictionary = _system_lookup[_selected_id].get("position", {})
 			var from_screen := _map_to_screen(Vector2(from_pos.get("x", 0.0), from_pos.get("y", 0.0)))
 			var to_screen := _map_to_screen(Vector2(to_pos.get("x", 0.0), to_pos.get("y", 0.0)))
-			map_canvas.draw_line(from_screen, to_screen, Color(1.0, 1.0, 0.3, 0.6), 2.0, true)
+			map_canvas.draw_line(from_screen, to_screen, Color(ThemeColors.WARNING_YELLOW, 0.6), 2.0, true)
 
 	zoom_label.text = "%.0f%%" % (_zoom * 100.0 / _initial_zoom())
 

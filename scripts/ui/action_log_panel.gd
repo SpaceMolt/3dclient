@@ -17,11 +17,11 @@ const CATEGORY_MAP := {
 }
 
 const CATEGORY_COLORS := {
-	"combat": Color(1.0, 0.3, 0.3),
-	"trading": Color(1.0, 0.84, 0.0),
-	"mining": Color(1.0, 0.6, 0.2),
-	"navigation": Color(0.4, 0.9, 1.0),
-	"social": Color(0.4, 1.0, 0.5),
+	"combat": ThemeColors.CAT_COMBAT,
+	"trading": ThemeColors.CAT_TRADE,
+	"mining": ThemeColors.SHELL_ORANGE,
+	"navigation": ThemeColors.CAT_NAVIGATION,
+	"social": ThemeColors.CAT_SOCIAL,
 }
 
 const CATEGORY_TAGS := {
@@ -100,7 +100,7 @@ func _refresh_list() -> void:
 		var empty := Label.new()
 		empty.text = "No actions recorded."
 		empty.add_theme_font_size_override("font_size", 12)
-		empty.modulate = Color(0.5, 0.5, 0.5)
+		empty.modulate = ThemeColors.TEXT_MUTED
 		entries_list.add_child(empty)
 		load_more_button.hide()
 		return
@@ -121,7 +121,7 @@ func _make_entry_row(entry: Dictionary) -> HBoxContainer:
 	var time_label := Label.new()
 	time_label.text = time_str
 	time_label.add_theme_font_size_override("font_size", 11)
-	time_label.modulate = Color(0.5, 0.5, 0.5)
+	time_label.modulate = ThemeColors.TEXT_MUTED
 	time_label.custom_minimum_size.x = 50
 	row.add_child(time_label)
 
@@ -130,7 +130,7 @@ func _make_entry_row(entry: Dictionary) -> HBoxContainer:
 	var tag_label := Label.new()
 	tag_label.text = CATEGORY_TAGS.get(category, "[???]")
 	tag_label.add_theme_font_size_override("font_size", 11)
-	tag_label.modulate = CATEGORY_COLORS.get(category, Color(0.6, 0.6, 0.6))
+	tag_label.modulate = CATEGORY_COLORS.get(category, ThemeColors.TEXT_MUTED)
 	tag_label.custom_minimum_size.x = 40
 	row.add_child(tag_label)
 

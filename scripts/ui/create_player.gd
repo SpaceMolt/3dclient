@@ -9,14 +9,25 @@ signal show_player_select(players: Array)
 @onready var create_button: Button = %CreateButton
 @onready var back_button: Button = %BackButton
 @onready var status_label: Label = %StatusLabel
+@onready var title_label: Label = %Title
+@onready var username_label: Label = %UsernameLabel
+@onready var empire_label: Label = %EmpireLabel
 
 
 func _ready() -> void:
+	_apply_theme()
 	for empire in EMPIRES:
 		empire_dropdown.add_item(empire.capitalize())
 	create_button.pressed.connect(_on_create)
 	back_button.pressed.connect(_on_back)
 	username_field.text_submitted.connect(func(_text: String) -> void: _on_create())
+
+
+func _apply_theme() -> void:
+	title_label.add_theme_font_override("font", ThemeManager.font_orbitron_bold)
+	title_label.modulate = ThemeColors.PLASMA_CYAN
+	username_label.modulate = ThemeColors.CHROME_SILVER
+	empire_label.modulate = ThemeColors.CHROME_SILVER
 
 
 func _on_back() -> void:
@@ -53,4 +64,4 @@ func _on_create() -> void:
 
 func _set_status(text: String, is_error: bool = false) -> void:
 	status_label.text = text
-	status_label.modulate = Color.RED if is_error else Color.WHITE
+	status_label.modulate = ThemeColors.TEXT_ERROR if is_error else ThemeColors.TEXT_PRIMARY

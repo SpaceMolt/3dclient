@@ -62,7 +62,7 @@ func _refresh() -> void:
 		var empty := Label.new()
 		empty.text = "No items found."
 		empty.add_theme_font_size_override("font_size", 12)
-		empty.modulate = Color(0.5, 0.5, 0.5)
+		empty.modulate = ThemeColors.TEXT_MUTED
 		catalog_list.add_child(empty)
 		return
 
@@ -85,7 +85,7 @@ func _make_item_card(item: Dictionary) -> HBoxContainer:
 	cat_label.text = item.get("category", "")
 	cat_label.custom_minimum_size.x = 70
 	cat_label.add_theme_font_size_override("font_size", 11)
-	cat_label.modulate = Color(0.5, 0.6, 0.7)
+	cat_label.modulate = ThemeColors.HULL_GREY
 	row.add_child(cat_label)
 
 	var desc: String = item.get("description", "")

@@ -151,7 +151,7 @@ func _refresh_browse() -> void:
 		var empty := Label.new()
 		empty.text = "No items match filter."
 		empty.add_theme_font_size_override("font_size", 12)
-		empty.modulate = Color(0.5, 0.5, 0.5)
+		empty.modulate = ThemeColors.TEXT_MUTED
 		browse_list.add_child(empty)
 
 
@@ -179,7 +179,7 @@ func _refresh_orders() -> void:
 		var empty := Label.new()
 		empty.text = "No active orders."
 		empty.add_theme_font_size_override("font_size", 12)
-		empty.modulate = Color(0.5, 0.5, 0.5)
+		empty.modulate = ThemeColors.TEXT_MUTED
 		orders_list.add_child(empty)
 		return
 
@@ -202,7 +202,7 @@ func _refresh_orders() -> void:
 		type_label.text = order_type.to_upper()
 		type_label.custom_minimum_size.x = 40
 		type_label.add_theme_font_size_override("font_size", 11)
-		type_label.modulate = Color(0.4, 1.0, 0.4) if order_type == "buy" else Color(1.0, 0.6, 0.4)
+		type_label.modulate = ThemeColors.BUY_ORDER if order_type == "buy" else ThemeColors.SELL_ORDER
 		row.add_child(type_label)
 
 		var qty_label := Label.new()
@@ -252,7 +252,7 @@ func _refresh_cargo() -> void:
 		var empty := Label.new()
 		empty.text = "Cargo hold empty."
 		empty.add_theme_font_size_override("font_size", 12)
-		empty.modulate = Color(0.5, 0.5, 0.5)
+		empty.modulate = ThemeColors.TEXT_MUTED
 		cargo_list.add_child(empty)
 		return
 
@@ -345,7 +345,7 @@ func _show_deposit_dialog(item_id: String, item_name: String, max_qty: int) -> v
 	var hint := Label.new()
 	hint.text = "Available: %d" % max_qty
 	hint.add_theme_font_size_override("font_size", 11)
-	hint.modulate = Color(0.5, 0.5, 0.5)
+	hint.modulate = ThemeColors.TEXT_MUTED
 	vbox.add_child(hint)
 
 	dialog.add_child(vbox)
@@ -473,7 +473,7 @@ func _make_row(col1: String, col2: String, col3: String, col4: String, col5: Str
 	var row := HBoxContainer.new()
 	row.add_theme_constant_override("separation", 4)
 	var font_size := 10 if is_header else 12
-	var color := Color(0.5, 0.6, 0.7) if is_header else Color.WHITE
+	var color := ThemeColors.HULL_GREY if is_header else ThemeColors.TEXT_PRIMARY
 
 	var l1 := Label.new()
 	l1.text = col1

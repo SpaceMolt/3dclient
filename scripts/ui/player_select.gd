@@ -7,11 +7,14 @@ signal show_auth
 @onready var create_button: Button = %CreateButton
 @onready var sign_out_button: Button = %SignOutButton
 @onready var status_label: Label = %StatusLabel
+@onready var title_label: Label = %Title
 
 var _players: Array = []
 
 
 func _ready() -> void:
+	title_label.add_theme_font_override("font", ThemeManager.font_orbitron_bold)
+	title_label.modulate = ThemeColors.PLASMA_CYAN
 	create_button.pressed.connect(func() -> void: show_create_player.emit())
 	sign_out_button.pressed.connect(_on_sign_out)
 
@@ -62,4 +65,4 @@ func _set_buttons_disabled(disabled: bool) -> void:
 
 func _set_status(text: String, is_error: bool = false) -> void:
 	status_label.text = text
-	status_label.modulate = Color.RED if is_error else Color.WHITE
+	status_label.modulate = ThemeColors.TEXT_ERROR if is_error else ThemeColors.TEXT_PRIMARY

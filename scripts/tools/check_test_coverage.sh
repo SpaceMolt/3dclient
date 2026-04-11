@@ -14,6 +14,8 @@ EXEMPT=(
     "scripts/main.gd"
     "scripts/autoload/ui_manager.gd"
     "scripts/autoload/asset_loader.gd"
+    "scripts/autoload/theme_manager.gd"
+    "scripts/theme_colors.gd"
     "scripts/game/space_grid.gd"
 )
 

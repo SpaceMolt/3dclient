@@ -122,10 +122,10 @@ func _refresh() -> void:
 		for btn in _stance_buttons:
 			btn.modulate = Color.WHITE
 		match current_stance:
-			"fire": stance_fire.modulate = Color.YELLOW
-			"evade": stance_evade.modulate = Color.CYAN
-			"brace": stance_brace.modulate = Color.GREEN
-			"flee": stance_flee.modulate = Color.ORANGE
+			"fire": stance_fire.modulate = ThemeColors.WARNING_YELLOW
+			"evade": stance_evade.modulate = ThemeColors.PLASMA_CYAN
+			"brace": stance_brace.modulate = ThemeColors.BIO_GREEN
+			"flee": stance_flee.modulate = ThemeColors.SHELL_ORANGE
 
 	_refresh_participants()
 	_setup_engage_menu()
@@ -147,7 +147,7 @@ func _refresh_participants() -> void:
 		label.text = "%s  H:%d%% S:%d%%  [%s] Z:%s" % [pname, hull, shield, stance, zone]
 		label.add_theme_font_size_override("font_size", 12)
 		if p.get("player_id", "") == my_id:
-			label.modulate = Color(0.4, 0.8, 1.0)
+			label.modulate = ThemeColors.TEXT_ACCENT
 		participants_list.add_child(label)
 
 

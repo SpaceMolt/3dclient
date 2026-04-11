@@ -9,7 +9,7 @@ script = ExtResource("1")
 anchor_right = 1.0
 anchor_bottom = 1.0
 mouse_filter = 2
-color = Color(0.04, 0.04, 0.08, 1)
+color = Color(0.039, 0.055, 0.09, 1)
 
 [node name="Center" type="CenterContainer" parent="."]
 anchor_right = 1.0
@@ -28,14 +28,15 @@ theme_override_constants/margin_bottom = 32
 theme_override_constants/separation = 12
 
 [node name="Title" type="Label" parent="Center/Panel/Margin/VBox"]
+unique_name_in_owner = true
 text = "SpaceMolt"
 horizontal_alignment = 1
 theme_override_font_sizes/font_size = 32
 
 [node name="Subtitle" type="Label" parent="Center/Panel/Margin/VBox"]
+unique_name_in_owner = true
 text = "Sign in to play"
 horizontal_alignment = 1
-modulate = Color(0.7, 0.7, 0.7, 1)
 
 [node name="Spacer" type="Control" parent="Center/Panel/Margin/VBox"]
 custom_minimum_size = Vector2(0, 16)
@@ -49,8 +50,8 @@ custom_minimum_size = Vector2(0, 40)
 custom_minimum_size = Vector2(0, 8)
 
 [node name="KeyLabel" type="Label" parent="Center/Panel/Margin/VBox"]
+unique_name_in_owner = true
 text = "Paste your key:"
-modulate = Color(0.7, 0.7, 0.7, 1)
 
 [node name="KeyField" type="LineEdit" parent="Center/Panel/Margin/VBox"]
 unique_name_in_owner = true

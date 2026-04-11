@@ -53,7 +53,7 @@ func _refresh_available() -> void:
 		var empty := Label.new()
 		empty.text = "No missions available at this location."
 		empty.add_theme_font_size_override("font_size", 12)
-		empty.modulate = Color(0.5, 0.5, 0.5)
+		empty.modulate = ThemeColors.TEXT_MUTED
 		available_list.add_child(empty)
 		return
 
@@ -70,7 +70,7 @@ func _refresh_active() -> void:
 		var empty := Label.new()
 		empty.text = "No active missions."
 		empty.add_theme_font_size_override("font_size", 12)
-		empty.modulate = Color(0.5, 0.5, 0.5)
+		empty.modulate = ThemeColors.TEXT_MUTED
 		active_list.add_child(empty)
 		return
 
@@ -102,7 +102,7 @@ func _make_mission_card(mission: Dictionary, is_available: bool) -> PanelContain
 	var mtype := Label.new()
 	mtype.text = "[%s]" % mission.get("type", "?")
 	mtype.add_theme_font_size_override("font_size", 11)
-	mtype.modulate = Color(0.6, 0.7, 0.8)
+	mtype.modulate = ThemeColors.CHROME_SILVER
 	title_row.add_child(mtype)
 	vbox.add_child(title_row)
 
@@ -112,7 +112,7 @@ func _make_mission_card(mission: Dictionary, is_available: bool) -> PanelContain
 		var desc_label := Label.new()
 		desc_label.text = desc
 		desc_label.add_theme_font_size_override("font_size", 11)
-		desc_label.modulate = Color(0.7, 0.7, 0.7)
+		desc_label.modulate = ThemeColors.CHROME_SILVER
 		desc_label.autowrap_mode = TextServer.AUTOWRAP_WORD_SMART
 		vbox.add_child(desc_label)
 
@@ -128,7 +128,7 @@ func _make_mission_card(mission: Dictionary, is_available: bool) -> PanelContain
 		var reward_label := Label.new()
 		reward_label.text = "Reward: %s" % reward_text
 		reward_label.add_theme_font_size_override("font_size", 11)
-		reward_label.modulate = Color(1.0, 0.9, 0.4)
+		reward_label.modulate = ThemeColors.WARNING_YELLOW
 		vbox.add_child(reward_label)
 
 	# Progress (for active missions)
@@ -139,7 +139,7 @@ func _make_mission_card(mission: Dictionary, is_available: bool) -> PanelContain
 			var prog_label := Label.new()
 			prog_label.text = progress if not progress.is_empty() else status
 			prog_label.add_theme_font_size_override("font_size", 11)
-			prog_label.modulate = Color(0.4, 0.8, 1.0)
+			prog_label.modulate = ThemeColors.TEXT_ACCENT
 			vbox.add_child(prog_label)
 
 	# Action buttons
@@ -166,7 +166,7 @@ func _make_mission_card(mission: Dictionary, is_available: bool) -> PanelContain
 		var abandon_btn := Button.new()
 		abandon_btn.text = "Abandon"
 		abandon_btn.add_theme_font_size_override("font_size", 11)
-		abandon_btn.modulate = Color(0.8, 0.4, 0.4)
+		abandon_btn.modulate = ThemeColors.CLAW_RED
 		abandon_btn.pressed.connect(func(): _abandon_mission(mission_id))
 		btn_row.add_child(abandon_btn)
 

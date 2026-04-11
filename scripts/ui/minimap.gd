@@ -37,15 +37,15 @@ func _draw() -> void:
 	_calculate_bounds(pois)
 
 	# Background
-	draw_rect(Rect2(Vector2.ZERO, Vector2(MAP_SIZE, MAP_SIZE)), Color(0.0, 0.0, 0.0, 0.5))
-	draw_rect(Rect2(Vector2.ZERO, Vector2(MAP_SIZE, MAP_SIZE)), Color(0.2, 0.3, 0.5, 0.4), false, 1.0)
+	draw_rect(Rect2(Vector2.ZERO, Vector2(MAP_SIZE, MAP_SIZE)), ThemeColors.MINIMAP_BG)
+	draw_rect(Rect2(Vector2.ZERO, Vector2(MAP_SIZE, MAP_SIZE)), ThemeColors.MINIMAP_BORDER, false, 1.0)
 
 	# System name
 	var sys_name: String = StateManager.current_system.get("name", "")
 	if not sys_name.is_empty():
 		draw_string(ThemeDB.fallback_font, Vector2(4, 12), sys_name,
 			HORIZONTAL_ALIGNMENT_LEFT, MAP_SIZE - 8, LABEL_FONT_SIZE,
-			Color(0.6, 0.7, 0.9, 0.8))
+			Color(ThemeColors.CHROME_SILVER, 0.8))
 
 	# Draw POIs
 	var current_poi_id: String = StateManager.location.get("poi_id", "")
@@ -67,14 +67,14 @@ func _draw() -> void:
 			draw_string(ThemeDB.fallback_font,
 				screen_pos + Vector2(POI_RADIUS + 2, 3),
 				pname, HORIZONTAL_ALIGNMENT_LEFT, MAP_SIZE * 0.4,
-				LABEL_FONT_SIZE, Color(0.7, 0.8, 0.9, 0.6))
+				LABEL_FONT_SIZE, Color(ThemeColors.CHROME_SILVER, 0.6))
 
 	# Draw nearby players
 	for p in StateManager.nearby_players:
 		var p_pos: Dictionary = p.get("position", {})
 		if not p_pos.is_empty():
 			var sp := _world_to_map(Vector2(p_pos.get("x", 0.0), p_pos.get("y", 0.0)))
-			var pcolor := Color(0.3, 1.0, 0.3, 0.7)
+			var pcolor := Color(ThemeColors.BIO_GREEN, 0.7)
 			var pc: String = p.get("primary_color", "")
 			if not pc.is_empty():
 				pcolor = Color.from_string(pc, pcolor)
@@ -86,12 +86,12 @@ func _draw() -> void:
 		var pp: Dictionary = pirate.get("position", {})
 		if not pp.is_empty():
 			var sp := _world_to_map(Vector2(pp.get("x", 0.0), pp.get("y", 0.0)))
-			draw_circle(sp, 3.0, Color(1.0, 0.3, 0.3, 0.7))
+			draw_circle(sp, 3.0, Color(ThemeColors.CLAW_RED, 0.7))
 
 	# Draw player position
 	var player_pos := _get_player_map_pos()
-	draw_circle(player_pos, PLAYER_RADIUS, Color(0.3, 0.8, 1.0, 1.0))
-	draw_circle(player_pos, PLAYER_RADIUS + 1.0, Color(0.3, 0.8, 1.0, 0.4), false, 1.0)
+	draw_circle(player_pos, PLAYER_RADIUS, ThemeColors.PLASMA_CYAN)
+	draw_circle(player_pos, PLAYER_RADIUS + 1.0, Color(ThemeColors.PLASMA_CYAN, 0.4), false, 1.0)
 
 
 func _calculate_bounds(pois: Array) -> void:
@@ -157,16 +157,16 @@ func _get_player_map_pos() -> Vector2:
 func _poi_color(poi_type: String) -> Color:
 	match poi_type:
 		"station":
-			return Color(0.2, 0.6, 1.0, 0.9)
+			return Color(ThemeColors.LASER_BLUE, 0.9)
 		"asteroid_belt":
-			return Color(0.6, 0.5, 0.3, 0.8)
+			return Color(ThemeColors.SHELL_ORANGE, 0.8)
 		"ice_field":
-			return Color(0.6, 0.85, 1.0, 0.8)
+			return Color(ThemeColors.PLASMA_CYAN, 0.8)
 		"gas_cloud":
-			return Color(0.8, 0.6, 0.3, 0.7)
+			return Color(ThemeColors.SHELL_ORANGE, 0.7)
 		"planet":
-			return Color(0.3, 0.5, 0.7, 0.8)
+			return Color(ThemeColors.HULL_GREY, 0.8)
 		"wormhole", "jump_gate":
-			return Color(0.8, 0.3, 1.0, 0.9)
+			return Color(ThemeColors.VOID_PURPLE, 0.9)
 		_:
-			return Color(0.5, 0.5, 0.5, 0.7)
+			return Color(ThemeColors.TEXT_MUTED, 0.7)
