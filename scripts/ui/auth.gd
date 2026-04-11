@@ -39,24 +39,24 @@ func _style_primary_button(btn: Button) -> void:
 	normal.bg_color = ThemeColors.SHELL_ORANGE
 	normal.border_color = ThemeColors.SHELL_ORANGE
 	normal.set_border_width_all(2)
-	normal.set_corner_radius_all(4)
-	normal.set_content_margin_all(6)
+	normal.set_corner_radius_all(6)
+	normal.set_content_margin_all(8)
 	btn.add_theme_stylebox_override("normal", normal)
 
 	var hover := StyleBoxFlat.new()
 	hover.bg_color = Color(ThemeColors.SHELL_ORANGE, 0.85)
 	hover.border_color = ThemeColors.SHELL_ORANGE
 	hover.set_border_width_all(2)
-	hover.set_corner_radius_all(4)
-	hover.set_content_margin_all(6)
+	hover.set_corner_radius_all(6)
+	hover.set_content_margin_all(8)
 	btn.add_theme_stylebox_override("hover", hover)
 
 	var pressed := StyleBoxFlat.new()
 	pressed.bg_color = Color(ThemeColors.SHELL_ORANGE, 0.7)
 	pressed.border_color = ThemeColors.SHELL_ORANGE
 	pressed.set_border_width_all(2)
-	pressed.set_corner_radius_all(4)
-	pressed.set_content_margin_all(6)
+	pressed.set_corner_radius_all(6)
+	pressed.set_content_margin_all(8)
 	btn.add_theme_stylebox_override("pressed", pressed)
 
 	btn.add_theme_color_override("font_color", ThemeColors.STAR_WHITE)

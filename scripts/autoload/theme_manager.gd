@@ -23,6 +23,7 @@ func _ready() -> void:
 	_apply_theme()
 
 
+
 func _load_fonts() -> void:
 	font_jetbrains = load("res://assets/fonts/JetBrainsMono-Regular.ttf")
 	font_jetbrains_bold = load("res://assets/fonts/JetBrainsMono-Bold.ttf")
@@ -90,7 +91,7 @@ func _theme_button() -> void:
 	theme.set_color("font_disabled_color", "Button", ThemeColors.DIM_GREY)
 
 	# Normal state
-	var normal := _make_stylebox(ThemeColors.DEEP_VOID, ThemeColors.HULL_GREY)
+	var normal := _make_stylebox(ThemeColors.DEEP_VOID, ThemeColors.DIM_GREY)
 	theme.set_stylebox("normal", "Button", normal)
 
 	# Hover state — border brightens to cyan
@@ -114,7 +115,7 @@ func _theme_button() -> void:
 	# Disabled
 	var disabled := _make_stylebox(
 		Color(ThemeColors.DEEP_VOID, 0.5),
-		Color(ThemeColors.HULL_GREY, 0.3)
+		Color(ThemeColors.DIM_GREY, 0.3)
 	)
 	theme.set_stylebox("disabled", "Button", disabled)
 
@@ -131,15 +132,15 @@ func _theme_line_edit() -> void:
 	theme.set_color("caret_color", "LineEdit", ThemeColors.PLASMA_CYAN)
 	theme.set_color("selection_color", "LineEdit", Color(ThemeColors.PLASMA_CYAN, 0.25))
 
-	var normal := _make_stylebox(ThemeColors.SPACE_BLACK, ThemeColors.HULL_GREY)
+	var normal := _make_stylebox(Color(ThemeColors.SPACE_BLACK, 0.6), ThemeColors.DIM_GREY)
 	theme.set_stylebox("normal", "LineEdit", normal)
 
-	var focus := _make_stylebox(ThemeColors.SPACE_BLACK, ThemeColors.PLASMA_CYAN)
+	var focus := _make_stylebox(Color(ThemeColors.SPACE_BLACK, 0.6), ThemeColors.PLASMA_CYAN)
 	theme.set_stylebox("focus", "LineEdit", focus)
 
 	var read_only := _make_stylebox(
 		Color(ThemeColors.SPACE_BLACK, 0.5),
-		Color(ThemeColors.HULL_GREY, 0.3)
+		Color(ThemeColors.DIM_GREY, 0.3)
 	)
 	theme.set_stylebox("read_only", "LineEdit", read_only)
 
@@ -156,15 +157,15 @@ func _theme_text_edit() -> void:
 	theme.set_color("caret_color", "TextEdit", ThemeColors.PLASMA_CYAN)
 	theme.set_color("selection_color", "TextEdit", Color(ThemeColors.PLASMA_CYAN, 0.25))
 
-	var normal := _make_stylebox(ThemeColors.SPACE_BLACK, ThemeColors.HULL_GREY)
+	var normal := _make_stylebox(Color(ThemeColors.SPACE_BLACK, 0.6), ThemeColors.DIM_GREY)
 	theme.set_stylebox("normal", "TextEdit", normal)
 
-	var focus := _make_stylebox(ThemeColors.SPACE_BLACK, ThemeColors.PLASMA_CYAN)
+	var focus := _make_stylebox(Color(ThemeColors.SPACE_BLACK, 0.6), ThemeColors.PLASMA_CYAN)
 	theme.set_stylebox("focus", "TextEdit", focus)
 
 	var read_only := _make_stylebox(
 		Color(ThemeColors.SPACE_BLACK, 0.5),
-		Color(ThemeColors.HULL_GREY, 0.3)
+		Color(ThemeColors.DIM_GREY, 0.3)
 	)
 	theme.set_stylebox("read_only", "TextEdit", read_only)
 
@@ -173,20 +174,20 @@ func _theme_text_edit() -> void:
 
 func _theme_panel() -> void:
 	var panel_style := StyleBoxFlat.new()
-	panel_style.bg_color = Color(ThemeColors.NEBULA_BLUE, ThemeColors.PANEL_BG_ALPHA)
-	panel_style.border_color = ThemeColors.BORDER_SUBTLE
+	panel_style.bg_color = Color(ThemeColors.DEEP_VOID, 0.95)
+	panel_style.border_color = ThemeColors.DIM_GREY
 	panel_style.set_border_width_all(1)
-	panel_style.set_corner_radius_all(4)
+	panel_style.set_corner_radius_all(8)
 	panel_style.set_content_margin_all(0)
 	theme.set_stylebox("panel", "Panel", panel_style)
 
 
 func _theme_panel_container() -> void:
 	var panel_style := StyleBoxFlat.new()
-	panel_style.bg_color = Color(ThemeColors.NEBULA_BLUE, ThemeColors.PANEL_BG_ALPHA)
-	panel_style.border_color = ThemeColors.BORDER_SUBTLE
+	panel_style.bg_color = Color(ThemeColors.DEEP_VOID, 0.95)
+	panel_style.border_color = ThemeColors.DIM_GREY
 	panel_style.set_border_width_all(1)
-	panel_style.set_corner_radius_all(4)
+	panel_style.set_corner_radius_all(8)
 	panel_style.set_content_margin_all(6)
 	theme.set_stylebox("panel", "PanelContainer", panel_style)
 
@@ -239,13 +240,13 @@ func _theme_tab_container() -> void:
 	tabbar_bg.bg_color = Color(ThemeColors.SPACE_BLACK, 0.95)
 	tabbar_bg.set_border_width_all(0)
 	tabbar_bg.border_width_bottom = 1
-	tabbar_bg.border_color = Color(ThemeColors.HULL_GREY, 0.4)
+	tabbar_bg.border_color = ThemeColors.DIM_GREY
 	theme.set_stylebox("tabbar_background", "TabContainer", tabbar_bg)
 
 	# Content panel
 	var panel := StyleBoxFlat.new()
 	panel.bg_color = Color(ThemeColors.DEEP_VOID, 0.8)
-	panel.border_color = Color(ThemeColors.HULL_GREY, 0.2)
+	panel.border_color = Color(ThemeColors.DIM_GREY, 0.5)
 	panel.set_border_width_all(1)
 	panel.border_width_top = 0
 	panel.set_corner_radius_all(0)
@@ -305,7 +306,7 @@ func _theme_option_button() -> void:
 	theme.set_color("font_hover_color", "OptionButton", ThemeColors.PLASMA_CYAN)
 	theme.set_color("font_focus_color", "OptionButton", ThemeColors.PLASMA_CYAN)
 
-	var normal := _make_stylebox(ThemeColors.DEEP_VOID, ThemeColors.HULL_GREY)
+	var normal := _make_stylebox(ThemeColors.DEEP_VOID, ThemeColors.DIM_GREY)
 	theme.set_stylebox("normal", "OptionButton", normal)
 
 	var hover := _make_stylebox(
@@ -358,9 +359,9 @@ func _theme_item_list() -> void:
 
 	var panel := StyleBoxFlat.new()
 	panel.bg_color = Color(ThemeColors.DEEP_VOID, 0.8)
-	panel.border_color = Color(ThemeColors.HULL_GREY, 0.3)
+	panel.border_color = Color(ThemeColors.DIM_GREY, 0.6)
 	panel.set_border_width_all(1)
-	panel.set_corner_radius_all(4)
+	panel.set_corner_radius_all(6)
 	theme.set_stylebox("panel", "ItemList", panel)
 
 
@@ -376,9 +377,9 @@ func _theme_popup_menu() -> void:
 
 	var panel := StyleBoxFlat.new()
 	panel.bg_color = Color(ThemeColors.DEEP_VOID, 0.96)
-	panel.border_color = ThemeColors.HULL_GREY
+	panel.border_color = ThemeColors.DIM_GREY
 	panel.set_border_width_all(1)
-	panel.set_corner_radius_all(4)
+	panel.set_corner_radius_all(8)
 	panel.set_content_margin_all(4)
 	theme.set_stylebox("panel", "PopupMenu", panel)
 
@@ -398,9 +399,9 @@ func _theme_tooltip() -> void:
 
 	var panel := StyleBoxFlat.new()
 	panel.bg_color = Color(ThemeColors.DEEP_VOID, 0.95)
-	panel.border_color = ThemeColors.PLASMA_CYAN
+	panel.border_color = ThemeColors.DIM_GREY
 	panel.set_border_width_all(1)
-	panel.set_corner_radius_all(4)
+	panel.set_corner_radius_all(6)
 	panel.set_content_margin_all(6)
 	theme.set_stylebox("panel", "TooltipPanel", panel)
 
@@ -434,20 +435,20 @@ func _theme_progress_bar() -> void:
 
 	var bg := StyleBoxFlat.new()
 	bg.bg_color = Color(ThemeColors.SPACE_BLACK, 0.8)
-	bg.border_color = Color(ThemeColors.HULL_GREY, 0.4)
+	bg.border_color = Color(ThemeColors.DIM_GREY, 0.6)
 	bg.set_border_width_all(1)
-	bg.set_corner_radius_all(2)
+	bg.set_corner_radius_all(3)
 	theme.set_stylebox("background", "ProgressBar", bg)
 
 	var fill := StyleBoxFlat.new()
 	fill.bg_color = ThemeColors.PLASMA_CYAN
-	fill.set_corner_radius_all(2)
+	fill.set_corner_radius_all(3)
 	theme.set_stylebox("fill", "ProgressBar", fill)
 
 
 # ── Helpers ──────────────────────────────────────────────────────────
 
-func _make_stylebox(bg: Color, border: Color, radius: int = 4, margin: int = 6) -> StyleBoxFlat:
+func _make_stylebox(bg: Color, border: Color, radius: int = 6, margin: int = 6) -> StyleBoxFlat:
 	var sb := StyleBoxFlat.new()
 	sb.bg_color = bg
 	sb.border_color = border

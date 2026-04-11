@@ -23,6 +23,10 @@ StateManager="*res://scripts/autoload/state_manager.gd"
 UIManager="*res://scripts/autoload/ui_manager.gd"
 AssetLoader="*res://scripts/autoload/asset_loader.gd"
 
+[gui]
+
+theme/custom_font="res://assets/fonts/JetBrainsMono-Regular.ttf"
+
 [display]
 
 window/size/viewport_width=1280

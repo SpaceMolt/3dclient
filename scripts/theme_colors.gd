@@ -39,9 +39,9 @@ const BG_PANEL := NEBULA_BLUE
 const BG_HOVER := Color(0.0, 0.831, 1.0, 0.08)          # plasma_cyan @ 8%
 const BG_SELECTED := Color(0.0, 0.831, 1.0, 0.12)        # plasma_cyan @ 12%
 
-const BORDER_DEFAULT := HULL_GREY
+const BORDER_DEFAULT := DIM_GREY
 const BORDER_ACCENT := PLASMA_CYAN
-const BORDER_SUBTLE := Color(0.0, 0.831, 1.0, 0.2)       # plasma_cyan @ 20%
+const BORDER_SUBTLE := DIM_GREY
 
 const SEPARATOR := Color(0.165, 0.227, 0.290, 0.6)        # dim_grey @ 60%
 
