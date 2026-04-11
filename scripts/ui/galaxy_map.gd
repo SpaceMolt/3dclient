@@ -2,6 +2,9 @@ extends CanvasLayer
 
 ## Galaxy map overlay — 2D node graph of all systems with connections.
 ## Opened via G key or Map button. Click a system to select, then Jump to travel.
+## Supports multi-jump route planning with auto-travel execution.
+
+const ROUTE_BANNER_SCENE := preload("res://scenes/ui/route_banner.tscn")
 
 @onready var map_panel: Panel = $MapPanel
 @onready var map_canvas: Control = $MapPanel/MapCanvas
@@ -9,6 +12,9 @@ extends CanvasLayer
 @onready var system_name_label: Label = $MapPanel/InfoPanel/VBox/SystemNameLabel
 @onready var system_details_label: Label = $MapPanel/InfoPanel/VBox/SystemDetailsLabel
 @onready var jump_button: Button = $MapPanel/InfoPanel/VBox/JumpButton
+@onready var route_info_label: Label = $MapPanel/InfoPanel/VBox/RouteInfoLabel
+@onready var begin_route_button: Button = $MapPanel/InfoPanel/VBox/BeginRouteButton
+@onready var cancel_route_button: Button = $MapPanel/InfoPanel/VBox/CancelRouteButton
 @onready var close_button: Button = $MapPanel/CloseButton
 @onready var search_field: LineEdit = $MapPanel/TopBar/SearchField
 @onready var zoom_label: Label = $MapPanel/TopBar/ZoomLabel
@@ -16,6 +22,15 @@ extends CanvasLayer
 var _systems: Array = []
 var _system_lookup: Dictionary = {}  # system_id -> system dict
 var _selected_id: String = ""
+
+# Route planning
+var _planned_route: Array = []  # Array of {system_id, name} for the planned route
+var _route_system_ids: Array = []  # Just the system_id strings for fast lookup during draw
+var _is_requesting_route: bool = false
+
+# Auto-travel
+var _auto_travel: AutoTravel = null
+var _route_banner: PanelContainer = null
 
 # View transform
 var _offset := Vector2.ZERO  # Pan offset in map coordinates
@@ -33,11 +48,16 @@ func _ready() -> void:
 	visible = false
 	close_button.pressed.connect(func(): hide())
 	jump_button.pressed.connect(_on_jump)
+	begin_route_button.pressed.connect(_on_begin_route)
+	cancel_route_button.pressed.connect(_clear_route)
 	search_field.text_submitted.connect(_on_search)
 	map_canvas.draw.connect(_draw_map)
 	map_canvas.gui_input.connect(_on_canvas_input)
 	StateManager.galaxy_map_loaded.connect(_on_map_loaded)
 	info_panel.hide()
+	route_info_label.hide()
+	begin_route_button.hide()
+	cancel_route_button.hide()
 
 	if not StateManager.galaxy_map.is_empty():
 		_on_map_loaded()
@@ -149,6 +169,8 @@ func _draw_map() -> void:
 			color = ThemeColors.BIO_GREEN
 		elif sid == _selected_id:
 			color = ThemeColors.WARNING_YELLOW
+		elif sid in _route_system_ids:
+			color = ThemeColors.PLASMA_CYAN
 		elif s.get("visited", false):
 			color = ThemeColors.LASER_BLUE
 
@@ -168,8 +190,10 @@ func _draw_map() -> void:
 			map_canvas.draw_string(font, screen_pos + Vector2(r + 3, 4),
 				name_text, HORIZONTAL_ALIGNMENT_LEFT, -1, label_size, Color(ThemeColors.CHROME_SILVER, 0.8))
 
-	# Draw path from current to selected
-	if not _selected_id.is_empty() and _selected_id != cur_system_id:
+	# Draw planned route (multi-hop) or simple line to selected
+	if not _planned_route.is_empty():
+		_draw_planned_route(cur_system_id)
+	elif not _selected_id.is_empty() and _selected_id != cur_system_id:
 		if _system_lookup.has(cur_system_id) and _system_lookup.has(_selected_id):
 			var from_pos: Dictionary = _system_lookup[cur_system_id].get("position", {})
 			var to_pos: Dictionary = _system_lookup[_selected_id].get("position", {})
@@ -213,6 +237,7 @@ func _on_canvas_input(event: InputEvent) -> void:
 		elif event.button_index == MOUSE_BUTTON_RIGHT:
 			if event.pressed:
 				_selected_id = ""
+				_clear_route()
 				info_panel.hide()
 				map_canvas.queue_redraw()
 
@@ -260,7 +285,6 @@ func _select_system(system_id: String) -> void:
 		details += "  |  Visited"
 	system_details_label.text = details
 
-	# Can only jump to connected systems (or allow any jump?)
 	var cur_id := StateManager.get_current_system_id()
 	var is_current := system_id == cur_id
 	var is_connected := false
@@ -268,9 +292,22 @@ func _select_system(system_id: String) -> void:
 	if system_id in cur_sys.get("connections", []):
 		is_connected = true
 
-	jump_button.visible = not is_current
-	jump_button.text = "Jump" if is_connected else "Jump (distant)"
-	jump_button.disabled = is_current or StateManager.is_docked() or StateManager.is_traveling
+	var busy := StateManager.is_docked() or StateManager.is_traveling or _is_auto_traveling()
+
+	if is_current:
+		jump_button.hide()
+		_hide_route_ui()
+	elif is_connected:
+		# Adjacent system -- direct jump only, no route needed
+		jump_button.text = "Jump"
+		jump_button.disabled = busy
+		jump_button.show()
+		_hide_route_ui()
+	else:
+		# Distant system -- request a route from the server
+		jump_button.hide()
+		_request_route(system_id)
+
 	info_panel.show()
 	map_canvas.queue_redraw()
 
@@ -325,3 +362,182 @@ func _unhandled_key_input(event: InputEvent) -> void:
 					_offset = -Vector2(pos.get("x", 0.0), pos.get("y", 0.0))
 					map_canvas.queue_redraw()
 				get_viewport().set_input_as_handled()
+
+
+# ── Route Planning ──────────────────────────────────────────────────────
+
+func _request_route(target_system_id: String) -> void:
+	if _is_requesting_route:
+		return
+	_is_requesting_route = true
+	route_info_label.text = "Calculating route..."
+	route_info_label.modulate = ThemeColors.TEXT_MUTED
+	route_info_label.show()
+	begin_route_button.hide()
+	cancel_route_button.hide()
+
+	NetworkManager.send_command("find_route", {"target_system": target_system_id}, func(content: Dictionary):
+		_is_requesting_route = false
+		var route: Array = content.get("route", [])
+		if route.is_empty():
+			route_info_label.text = "No route found."
+			route_info_label.modulate = ThemeColors.TEXT_ERROR
+			route_info_label.show()
+			begin_route_button.hide()
+			cancel_route_button.show()
+			return
+		_set_planned_route(route, content)
+	)
+
+
+func _set_planned_route(route: Array, content: Dictionary) -> void:
+	_planned_route = route
+	_route_system_ids.clear()
+	for waypoint in route:
+		_route_system_ids.append(waypoint.get("system_id", ""))
+
+	var total_jumps: int = content.get("total_jumps", route.size())
+	var fuel_cost: int = content.get("fuel_cost", 0)
+
+	var info_parts: Array = []
+	info_parts.append("%d jumps" % total_jumps)
+	if fuel_cost > 0:
+		info_parts.append("fuel: %d" % fuel_cost)
+		# Warn if fuel is low
+		var current_fuel: int = StateManager.ship.get("fuel", 0)
+		if current_fuel < fuel_cost:
+			info_parts.append("[LOW FUEL]")
+			route_info_label.modulate = ThemeColors.WARNING_YELLOW
+		else:
+			route_info_label.modulate = ThemeColors.PLASMA_CYAN
+	else:
+		route_info_label.modulate = ThemeColors.PLASMA_CYAN
+
+	route_info_label.text = "Route: " + " | ".join(info_parts)
+	route_info_label.show()
+
+	var busy := StateManager.is_docked() or StateManager.is_traveling or _is_auto_traveling()
+	begin_route_button.disabled = busy
+	begin_route_button.show()
+	cancel_route_button.show()
+	map_canvas.queue_redraw()
+
+
+func _clear_route() -> void:
+	_planned_route.clear()
+	_route_system_ids.clear()
+	_is_requesting_route = false
+	_hide_route_ui()
+	map_canvas.queue_redraw()
+
+
+func _hide_route_ui() -> void:
+	route_info_label.hide()
+	begin_route_button.hide()
+	cancel_route_button.hide()
+
+
+func _draw_planned_route(cur_system_id: String) -> void:
+	# Build the full chain: current system -> each waypoint in order
+	var chain: Array = [cur_system_id]
+	for waypoint in _planned_route:
+		chain.append(waypoint.get("system_id", ""))
+
+	var route_color := Color(ThemeColors.PLASMA_CYAN, 0.8)
+	for i in range(chain.size() - 1):
+		var from_id: String = chain[i]
+		var to_id: String = chain[i + 1]
+		if not _system_lookup.has(from_id) or not _system_lookup.has(to_id):
+			continue
+		var from_pos: Dictionary = _system_lookup[from_id].get("position", {})
+		var to_pos: Dictionary = _system_lookup[to_id].get("position", {})
+		var from_screen := _map_to_screen(Vector2(from_pos.get("x", 0.0), from_pos.get("y", 0.0)))
+		var to_screen := _map_to_screen(Vector2(to_pos.get("x", 0.0), to_pos.get("y", 0.0)))
+		map_canvas.draw_line(from_screen, to_screen, route_color, 2.5, true)
+
+		# Draw a small direction indicator at the midpoint
+		var mid := (from_screen + to_screen) * 0.5
+		map_canvas.draw_circle(mid, 2.0, route_color)
+
+
+# ── Auto-Travel ─────────────────────────────────────────────────────────
+
+func _on_begin_route() -> void:
+	if _planned_route.is_empty():
+		return
+	if _is_auto_traveling():
+		return
+
+	# Lock UI
+	begin_route_button.disabled = true
+	begin_route_button.text = "Traveling..."
+
+	# Create AutoTravel node
+	_auto_travel = AutoTravel.new()
+	_auto_travel.name = "AutoTravel"
+	add_child(_auto_travel)
+
+	# Create route banner
+	_route_banner = ROUTE_BANNER_SCENE.instantiate()
+	# Add as sibling CanvasLayer child so it appears above the HUD
+	get_parent().add_child(_route_banner)
+	_route_banner.abort_requested.connect(_on_route_abort)
+
+	# Wire signals
+	_auto_travel.route_started.connect(_on_auto_route_started)
+	_auto_travel.jump_completed.connect(_on_auto_jump_completed)
+	_auto_travel.route_completed.connect(_on_auto_route_completed)
+	_auto_travel.route_aborted.connect(_on_auto_route_aborted)
+	_auto_travel.route_failed.connect(_on_auto_route_failed)
+
+	# Copy the route and start
+	var route_copy := _planned_route.duplicate(true)
+	_clear_route()
+	hide()
+	_auto_travel.start_route(route_copy)
+
+
+func _on_route_abort() -> void:
+	if _auto_travel:
+		_auto_travel.abort()
+
+
+func _on_auto_route_started(total_jumps: int) -> void:
+	if _route_banner:
+		_route_banner.show_route(total_jumps)
+
+
+func _on_auto_jump_completed(current: int, total: int, system_name: String) -> void:
+	if _route_banner:
+		_route_banner.update_progress(current, total, system_name)
+
+
+func _on_auto_route_completed() -> void:
+	UIManager.show_info("Route complete -- arrived at destination.")
+	_cleanup_auto_travel()
+
+
+func _on_auto_route_aborted(reason: String) -> void:
+	UIManager.show_info("Route aborted: %s" % reason)
+	_cleanup_auto_travel()
+
+
+func _on_auto_route_failed(reason: String) -> void:
+	UIManager.show_error("Route failed: %s" % reason)
+	_cleanup_auto_travel()
+
+
+func _cleanup_auto_travel() -> void:
+	if _route_banner:
+		_route_banner.queue_free()
+		_route_banner = null
+	if _auto_travel:
+		_auto_travel.queue_free()
+		_auto_travel = null
+	# Reset button state
+	begin_route_button.text = "Begin Route"
+	begin_route_button.disabled = false
+
+
+func _is_auto_traveling() -> bool:
+	return _auto_travel != null and _auto_travel.is_active()

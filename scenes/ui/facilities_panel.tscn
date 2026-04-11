@@ -1,0 +1,60 @@
+[gd_scene load_steps=2 format=3]
+
+[ext_resource type="Script" path="res://scripts/ui/facilities_panel.gd" id="1"]
+
+[node name="FacilitiesPanel" type="PanelContainer"]
+script = ExtResource("1")
+custom_minimum_size = Vector2(320, 0)
+size_flags_vertical = 3
+
+[node name="Margin" type="MarginContainer" parent="."]
+theme_override_constants/margin_left = 8
+theme_override_constants/margin_right = 8
+theme_override_constants/margin_top = 6
+theme_override_constants/margin_bottom = 6
+
+[node name="VBox" type="VBoxContainer" parent="Margin"]
+theme_override_constants/separation = 4
+
+[node name="Header" type="HBoxContainer" parent="Margin/VBox"]
+theme_override_constants/separation = 8
+
+[node name="Title" type="Label" parent="Margin/VBox/Header"]
+text = "Facilities"
+theme_override_font_sizes/font_size = 14
+modulate = Color(0.4, 0.8, 1.0, 1)
+
+[node name="FacilityStatus" type="Label" parent="Margin/VBox/Header"]
+unique_name_in_owner = true
+size_flags_horizontal = 3
+horizontal_alignment = 2
+theme_override_font_sizes/font_size = 11
+modulate = Color(0.6, 0.6, 0.6, 1)
+
+[node name="FacilityTabs" type="TabContainer" parent="Margin/VBox"]
+unique_name_in_owner = true
+size_flags_vertical = 3
+
+[node name="Station" type="ScrollContainer" parent="Margin/VBox/FacilityTabs"]
+size_flags_vertical = 3
+
+[node name="StationList" type="VBoxContainer" parent="Margin/VBox/FacilityTabs/Station"]
+unique_name_in_owner = true
+size_flags_horizontal = 3
+theme_override_constants/separation = 2
+
+[node name="Owned" type="ScrollContainer" parent="Margin/VBox/FacilityTabs"]
+size_flags_vertical = 3
+
+[node name="OwnedList" type="VBoxContainer" parent="Margin/VBox/FacilityTabs/Owned"]
+unique_name_in_owner = true
+size_flags_horizontal = 3
+theme_override_constants/separation = 2
+
+[node name="Build" type="ScrollContainer" parent="Margin/VBox/FacilityTabs"]
+size_flags_vertical = 3
+
+[node name="BuildList" type="VBoxContainer" parent="Margin/VBox/FacilityTabs/Build"]
+unique_name_in_owner = true
+size_flags_horizontal = 3
+theme_override_constants/separation = 2

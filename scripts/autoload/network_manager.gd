@@ -199,11 +199,33 @@ func send_storage_command(action: String, params: Dictionary, on_complete: Calla
 	, _on_error)
 
 
+func send_transfer_command(action: String, params: Dictionary, on_complete: Callable = Callable()) -> void:
+	var _on_error := func(_error: Dictionary) -> void:
+		if on_complete.is_valid():
+			on_complete.call({})
+		_reset_poll()
+	api_post("/api/v2/spacemolt_transfer/" + action, params, func(content: Dictionary) -> void:
+		if on_complete.is_valid():
+			on_complete.call(content)
+		_reset_poll()
+	, _on_error)
+
+
 func send_social_command(action: String, params: Dictionary, on_complete: Callable = Callable()) -> void:
 	var _on_error := func(_error: Dictionary) -> void:
 		if on_complete.is_valid():
 			on_complete.call({})
 	api_post("/api/v2/spacemolt_social/" + action, params, func(content: Dictionary) -> void:
+		if on_complete.is_valid():
+			on_complete.call(content)
+	, _on_error)
+
+
+func send_salvage_command(action: String, params: Dictionary, on_complete: Callable = Callable()) -> void:
+	var _on_error := func(_error: Dictionary) -> void:
+		if on_complete.is_valid():
+			on_complete.call({})
+	api_post("/api/v2/spacemolt_salvage/" + action, params, func(content: Dictionary) -> void:
 		if on_complete.is_valid():
 			on_complete.call(content)
 	, _on_error)

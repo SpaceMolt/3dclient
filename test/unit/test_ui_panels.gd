@@ -98,3 +98,45 @@ func test_action_log_panel_script_loads() -> void:
 	var script: GDScript = load("res://scripts/ui/action_log_panel.gd")
 	assert_that(script).is_not_null()
 	assert_bool(script.can_instantiate()).is_true()
+
+
+func test_facilities_panel_script_loads() -> void:
+	var script: GDScript = load("res://scripts/ui/facilities_panel.gd")
+	assert_that(script).is_not_null()
+	assert_bool(script.can_instantiate()).is_true()
+
+
+func test_info_panel_script_loads() -> void:
+	var script: GDScript = load("res://scripts/ui/info_panel.gd")
+	assert_that(script).is_not_null()
+	assert_bool(script.can_instantiate()).is_true()
+
+
+func test_faction_panel_script_loads() -> void:
+	var script: GDScript = load("res://scripts/ui/faction_panel.gd")
+	assert_that(script).is_not_null()
+	assert_bool(script.can_instantiate()).is_true()
+
+
+func test_skills_panel_script_loads() -> void:
+	var script: GDScript = load("res://scripts/ui/skills_panel.gd")
+	assert_that(script).is_not_null()
+	assert_bool(script.can_instantiate()).is_true()
+
+
+func test_wreck_panel_script_loads() -> void:
+	var script: GDScript = load("res://scripts/ui/wreck_panel.gd")
+	assert_that(script).is_not_null()
+	assert_bool(script.can_instantiate()).is_true()
+
+
+func test_trades_panel_script_loads() -> void:
+	var script: GDScript = load("res://scripts/ui/trades_panel.gd")
+	assert_that(script).is_not_null()
+	assert_bool(script.can_instantiate()).is_true()
+
+
+func test_route_banner_script_loads() -> void:
+	var script: GDScript = load("res://scripts/ui/route_banner.gd")
+	assert_that(script).is_not_null()
+	assert_bool(script.can_instantiate()).is_true()

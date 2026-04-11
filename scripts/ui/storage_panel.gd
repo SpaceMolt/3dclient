@@ -123,7 +123,8 @@ func _refresh_cargo() -> void:
 		cargo_list.add_child(empty)
 		return
 
-	cargo_list.add_child(_make_header(["ITEM", "QTY", ""]))
+	var is_docked := StateManager.is_docked()
+	cargo_list.add_child(_make_header(["ITEM", "QTY", "", ""]))
 
 	for item in StateManager.cargo:
 		var iname: String = item.get("item_name", item.get("name", "Unknown"))
@@ -145,12 +146,21 @@ func _refresh_cargo() -> void:
 		qty_lbl.add_theme_font_size_override("font_size", 12)
 		row.add_child(qty_lbl)
 
-		var btn := Button.new()
-		btn.text = "Store"
-		btn.add_theme_font_size_override("font_size", 10)
-		btn.custom_minimum_size.x = 50
-		btn.pressed.connect(_on_deposit_pressed.bind(item_id, iname, qty))
-		row.add_child(btn)
+		if is_docked:
+			var store_btn := Button.new()
+			store_btn.text = "Store"
+			store_btn.add_theme_font_size_override("font_size", 10)
+			store_btn.custom_minimum_size.x = 50
+			store_btn.pressed.connect(_on_deposit_pressed.bind(item_id, iname, qty))
+			row.add_child(store_btn)
+
+		var dump_btn := Button.new()
+		dump_btn.text = "Dump"
+		dump_btn.add_theme_font_size_override("font_size", 10)
+		dump_btn.custom_minimum_size.x = 50
+		dump_btn.modulate = ThemeColors.CLAW_RED
+		dump_btn.pressed.connect(_on_jettison_pressed.bind(item_id, iname, qty))
+		row.add_child(dump_btn)
 
 		cargo_list.add_child(row)
 
@@ -172,6 +182,28 @@ func _deposit(item_id: String, item_name: String, quantity: int) -> void:
 		_fetch_storage()
 		# Update cargo since items moved from ship
 		NetworkManager.send_command("get_status", {}, func(_c): pass)
+	)
+
+
+# ---------------------------------------------------------------------------
+# Jettison (dump cargo into space)
+# ---------------------------------------------------------------------------
+
+func _on_jettison_pressed(item_id: String, item_name: String, max_qty: int) -> void:
+	if max_qty == 1:
+		_jettison(item_id, item_name, 1)
+		return
+	_show_quantity_dialog("Jettison", item_name, max_qty, func(qty: int):
+		_jettison(item_id, item_name, qty)
+	)
+
+
+func _jettison(item_id: String, item_name: String, quantity: int) -> void:
+	status_label.text = "Jettisoning %s..." % item_name
+	NetworkManager.send_command("jettison", {"item_id": item_id, "quantity": quantity}, func(content: Dictionary) -> void:
+		var dumped: int = content.get("quantity", quantity)
+		status_label.text = "Jettisoned %dx %s." % [dumped, item_name]
+		# State refresh happens automatically via send_command
 	)
 
 

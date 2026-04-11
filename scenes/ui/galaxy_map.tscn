@@ -62,8 +62,8 @@ anchor_left = 1.0
 anchor_top = 1.0
 anchor_right = 1.0
 anchor_bottom = 1.0
-offset_left = -280.0
-offset_top = -120.0
+offset_left = -300.0
+offset_top = -200.0
 offset_right = -10.0
 offset_bottom = -10.0
 grow_horizontal = 0
@@ -72,8 +72,8 @@ grow_vertical = 0
 [node name="VBox" type="VBoxContainer" parent="MapPanel/InfoPanel"]
 offset_left = 8.0
 offset_top = 8.0
-offset_right = 262.0
-offset_bottom = 102.0
+offset_right = 282.0
+offset_bottom = 182.0
 theme_override_constants/separation = 6
 
 [node name="SystemNameLabel" type="Label" parent="MapPanel/InfoPanel/VBox"]
@@ -88,3 +88,17 @@ modulate = Color(0.7, 0.7, 0.7, 1)
 [node name="JumpButton" type="Button" parent="MapPanel/InfoPanel/VBox"]
 text = "Jump"
 theme_override_font_sizes/font_size = 13
+
+[node name="RouteInfoLabel" type="Label" parent="MapPanel/InfoPanel/VBox"]
+text = ""
+theme_override_font_sizes/font_size = 12
+modulate = Color(0.0, 0.831, 1.0, 1)
+
+[node name="BeginRouteButton" type="Button" parent="MapPanel/InfoPanel/VBox"]
+text = "Begin Route"
+theme_override_font_sizes/font_size = 10
+
+[node name="CancelRouteButton" type="Button" parent="MapPanel/InfoPanel/VBox"]
+text = "Cancel Route"
+theme_override_font_sizes/font_size = 10
+modulate = Color(1.0, 0.42, 0.208, 1)

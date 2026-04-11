@@ -1,10 +1,10 @@
 [gd_scene load_steps=2 format=3]
 
-[ext_resource type="Script" path="res://scripts/ui/ship_panel.gd" id="1"]
+[ext_resource type="Script" path="res://scripts/ui/faction_panel.gd" id="1"]
 
-[node name="ShipPanel" type="PanelContainer"]
+[node name="FactionPanel" type="PanelContainer"]
 script = ExtResource("1")
-custom_minimum_size = Vector2(340, 0)
+custom_minimum_size = Vector2(320, 0)
 size_flags_vertical = 3
 
 [node name="Margin" type="MarginContainer" parent="."]
@@ -20,57 +20,58 @@ theme_override_constants/separation = 4
 theme_override_constants/separation = 8
 
 [node name="Title" type="Label" parent="Margin/VBox/Header"]
-text = "Ships"
+text = "Faction"
 theme_override_font_sizes/font_size = 14
 modulate = Color(0.4, 0.8, 1.0, 1)
 
-[node name="ShipStatus" type="Label" parent="Margin/VBox/Header"]
+[node name="FactionStatus" type="Label" parent="Margin/VBox/Header"]
 unique_name_in_owner = true
 size_flags_horizontal = 3
 horizontal_alignment = 2
 theme_override_font_sizes/font_size = 11
 modulate = Color(0.6, 0.6, 0.6, 1)
 
-[node name="ShipTabs" type="TabContainer" parent="Margin/VBox"]
+[node name="FactionTabs" type="TabContainer" parent="Margin/VBox"]
 unique_name_in_owner = true
 size_flags_vertical = 3
 
-[node name="My Ships" type="ScrollContainer" parent="Margin/VBox/ShipTabs"]
+[node name="Info" type="ScrollContainer" parent="Margin/VBox/FactionTabs"]
 size_flags_vertical = 3
 
-[node name="MyShipsList" type="VBoxContainer" parent="Margin/VBox/ShipTabs/My Ships"]
-unique_name_in_owner = true
-size_flags_horizontal = 3
-theme_override_constants/separation = 2
-
-[node name="Shipyard" type="ScrollContainer" parent="Margin/VBox/ShipTabs"]
-size_flags_vertical = 3
-
-[node name="ShipyardList" type="VBoxContainer" parent="Margin/VBox/ShipTabs/Shipyard"]
+[node name="InfoList" type="VBoxContainer" parent="Margin/VBox/FactionTabs/Info"]
 unique_name_in_owner = true
 size_flags_horizontal = 3
 theme_override_constants/separation = 2
 
-[node name="Modules" type="ScrollContainer" parent="Margin/VBox/ShipTabs"]
+[node name="Members" type="ScrollContainer" parent="Margin/VBox/FactionTabs"]
 size_flags_vertical = 3
 
-[node name="ModulesList" type="VBoxContainer" parent="Margin/VBox/ShipTabs/Modules"]
+[node name="MembersList" type="VBoxContainer" parent="Margin/VBox/FactionTabs/Members"]
 unique_name_in_owner = true
 size_flags_horizontal = 3
 theme_override_constants/separation = 2
 
-[node name="Commissions" type="ScrollContainer" parent="Margin/VBox/ShipTabs"]
+[node name="Intel" type="VBoxContainer" parent="Margin/VBox/FactionTabs"]
+size_flags_vertical = 3
+theme_override_constants/separation = 4
+
+[node name="IntelSearch" type="LineEdit" parent="Margin/VBox/FactionTabs/Intel"]
+unique_name_in_owner = true
+placeholder_text = "Search by system name..."
+theme_override_font_sizes/font_size = 11
+
+[node name="IntelScroll" type="ScrollContainer" parent="Margin/VBox/FactionTabs/Intel"]
 size_flags_vertical = 3
 
-[node name="CommissionsList" type="VBoxContainer" parent="Margin/VBox/ShipTabs/Commissions"]
+[node name="IntelList" type="VBoxContainer" parent="Margin/VBox/FactionTabs/Intel/IntelScroll"]
 unique_name_in_owner = true
 size_flags_horizontal = 3
 theme_override_constants/separation = 2
 
-[node name="Market" type="ScrollContainer" parent="Margin/VBox/ShipTabs"]
+[node name="Invites" type="ScrollContainer" parent="Margin/VBox/FactionTabs"]
 size_flags_vertical = 3
 
-[node name="MarketList" type="VBoxContainer" parent="Margin/VBox/ShipTabs/Market"]
+[node name="InvitesList" type="VBoxContainer" parent="Margin/VBox/FactionTabs/Invites"]
 unique_name_in_owner = true
 size_flags_horizontal = 3
 theme_override_constants/separation = 2

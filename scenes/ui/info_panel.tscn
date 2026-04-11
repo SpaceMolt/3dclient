@@ -1,0 +1,84 @@
+[gd_scene load_steps=2 format=3]
+
+[ext_resource type="Script" path="res://scripts/ui/info_panel.gd" id="1"]
+
+[node name="InfoPanel" type="PanelContainer"]
+script = ExtResource("1")
+custom_minimum_size = Vector2(320, 0)
+size_flags_vertical = 3
+
+[node name="Margin" type="MarginContainer" parent="."]
+theme_override_constants/margin_left = 8
+theme_override_constants/margin_right = 8
+theme_override_constants/margin_top = 6
+theme_override_constants/margin_bottom = 6
+
+[node name="VBox" type="VBoxContainer" parent="Margin"]
+theme_override_constants/separation = 4
+
+[node name="Header" type="HBoxContainer" parent="Margin/VBox"]
+theme_override_constants/separation = 8
+
+[node name="Title" type="Label" parent="Margin/VBox/Header"]
+text = "Info"
+theme_override_font_sizes/font_size = 14
+modulate = Color(0.4, 0.8, 1.0, 1)
+
+[node name="InfoStatus" type="Label" parent="Margin/VBox/Header"]
+unique_name_in_owner = true
+size_flags_horizontal = 3
+horizontal_alignment = 2
+theme_override_font_sizes/font_size = 11
+modulate = Color(0.6, 0.6, 0.6, 1)
+
+[node name="InfoTabs" type="TabContainer" parent="Margin/VBox"]
+unique_name_in_owner = true
+size_flags_vertical = 3
+
+[node name="Notes" type="VBoxContainer" parent="Margin/VBox/InfoTabs"]
+theme_override_constants/separation = 4
+
+[node name="NewNoteButton" type="Button" parent="Margin/VBox/InfoTabs/Notes"]
+unique_name_in_owner = true
+text = "New Note"
+theme_override_font_sizes/font_size = 10
+
+[node name="NotesScroll" type="ScrollContainer" parent="Margin/VBox/InfoTabs/Notes"]
+size_flags_vertical = 3
+
+[node name="NotesList" type="VBoxContainer" parent="Margin/VBox/InfoTabs/Notes/NotesScroll"]
+unique_name_in_owner = true
+size_flags_horizontal = 3
+theme_override_constants/separation = 2
+
+[node name="Log" type="VBoxContainer" parent="Margin/VBox/InfoTabs"]
+theme_override_constants/separation = 4
+
+[node name="LogCategoryFilter" type="OptionButton" parent="Margin/VBox/InfoTabs/Log"]
+unique_name_in_owner = true
+theme_override_font_sizes/font_size = 11
+
+[node name="LogScroll" type="ScrollContainer" parent="Margin/VBox/InfoTabs/Log"]
+size_flags_vertical = 3
+
+[node name="LogList" type="VBoxContainer" parent="Margin/VBox/InfoTabs/Log/LogScroll"]
+unique_name_in_owner = true
+size_flags_horizontal = 3
+theme_override_constants/separation = 2
+
+[node name="LoadMoreButton" type="Button" parent="Margin/VBox/InfoTabs/Log"]
+unique_name_in_owner = true
+text = "Load More"
+theme_override_font_sizes/font_size = 10
+visible = false
+
+[node name="Help" type="ScrollContainer" parent="Margin/VBox/InfoTabs"]
+size_flags_vertical = 3
+
+[node name="HelpText" type="RichTextLabel" parent="Margin/VBox/InfoTabs/Help"]
+unique_name_in_owner = true
+size_flags_horizontal = 3
+size_flags_vertical = 3
+theme_override_font_sizes/font_size = 12
+fit_content = true
+scroll_active = false

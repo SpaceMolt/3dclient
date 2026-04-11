@@ -71,7 +71,11 @@ func _refresh() -> void:
 		catalog_list.add_child(card)
 
 
-func _make_item_card(item: Dictionary) -> HBoxContainer:
+func _make_item_card(item: Dictionary) -> VBoxContainer:
+	var card := VBoxContainer.new()
+	card.add_theme_constant_override("separation", 2)
+
+	# Top row: name + category + craft button
 	var row := HBoxContainer.new()
 	row.add_theme_constant_override("separation", 8)
 
@@ -92,9 +96,47 @@ func _make_item_card(item: Dictionary) -> HBoxContainer:
 	if not desc.is_empty():
 		name_label.tooltip_text = desc
 
-	# Craft button (only for recipes)
+	# Recipe-specific: show details, craftability, and craft button
 	if _current_type == "recipes":
+		var can_craft := true
 		var item_id: String = item.get("id", "")
+
+		# Skill requirement
+		var req_skill: String = item.get("required_skill", "")
+		var req_level: int = item.get("required_level", 0)
+		if not req_skill.is_empty() and req_level > 0:
+			var player_level: int = _get_player_skill_level(req_skill)
+			var has_skill := player_level >= req_level
+			if not has_skill:
+				can_craft = false
+
+			var skill_label := Label.new()
+			skill_label.text = "  Skill: %s Lv%d (you: %d)" % [req_skill, req_level, player_level]
+			skill_label.add_theme_font_size_override("font_size", 10)
+			skill_label.modulate = ThemeColors.BIO_GREEN if has_skill else ThemeColors.CLAW_RED
+			card.add_child(skill_label)
+
+		# Material requirements
+		var inputs: Array = item.get("inputs", [])
+		for mat in inputs:
+			var mat_id: String = mat.get("item_id", "")
+			var mat_name: String = mat.get("item_name", mat.get("name", mat_id))
+			var needed: int = mat.get("quantity", 1)
+			var have: int = _get_cargo_quantity(mat_id)
+			var has_enough := have >= needed
+			if not has_enough:
+				can_craft = false
+
+			var mat_label := Label.new()
+			mat_label.text = "  %s: %d/%d" % [mat_name, have, needed]
+			mat_label.add_theme_font_size_override("font_size", 10)
+			mat_label.modulate = ThemeColors.BIO_GREEN if has_enough else ThemeColors.CLAW_RED
+			card.add_child(mat_label)
+
+		# Craftability indicator on the name
+		name_label.modulate = ThemeColors.BIO_GREEN if can_craft else ThemeColors.CLAW_RED
+
+		# Craft button
 		var craft_btn := Button.new()
 		craft_btn.text = "Craft"
 		craft_btn.add_theme_font_size_override("font_size", 10)
@@ -102,7 +144,26 @@ func _make_item_card(item: Dictionary) -> HBoxContainer:
 		craft_btn.pressed.connect(func(): _craft_item(item_id, item.get("name", "?")))
 		row.add_child(craft_btn)
 
-	return row
+	card.add_child(row)
+	# Move the row to the top (it was added after skill/mat labels)
+	card.move_child(row, 0)
+
+	return card
+
+
+func _get_player_skill_level(skill_id: String) -> int:
+	# Skills dict may have skill data keyed by ID or name
+	var skill_data = StateManager.skills.get(skill_id, {})
+	if skill_data is Dictionary:
+		return skill_data.get("level", 0)
+	return 0
+
+
+func _get_cargo_quantity(item_id: String) -> int:
+	for item in StateManager.cargo:
+		if item.get("item_id", item.get("id", "")) == item_id:
+			return item.get("quantity", 0)
+	return 0
 
 
 func _craft_item(recipe_id: String, item_name: String) -> void:
@@ -119,7 +180,13 @@ func _set_buttons_disabled(disabled: bool) -> void:
 	prev_button.disabled = disabled or _current_page <= 1
 	next_button.disabled = disabled or _current_page >= _total_pages
 	for child in catalog_list.get_children():
-		if child is HBoxContainer:
+		if child is VBoxContainer:
+			for sub in child.get_children():
+				if sub is HBoxContainer:
+					for btn in sub.get_children():
+						if btn is Button:
+							btn.disabled = disabled
+		elif child is HBoxContainer:
 			for btn in child.get_children():
 				if btn is Button:
 					btn.disabled = disabled

@@ -10,6 +10,12 @@ const ACTION_LOG_PANEL_SCENE := preload("res://scenes/ui/action_log_panel.tscn")
 const SHIP_PANEL_SCENE := preload("res://scenes/ui/ship_panel.tscn")
 const GALAXY_MAP_SCENE := preload("res://scenes/ui/galaxy_map.tscn")
 const SETTINGS_PANEL_SCENE := preload("res://scenes/ui/settings_panel.tscn")
+const TRADES_PANEL_SCENE := preload("res://scenes/ui/trades_panel.tscn")
+const FACTION_PANEL_SCENE := preload("res://scenes/ui/faction_panel.tscn")
+const SKILLS_PANEL_SCENE := preload("res://scenes/ui/skills_panel.tscn")
+const FACILITIES_PANEL_SCENE := preload("res://scenes/ui/facilities_panel.tscn")
+const INFO_PANEL_SCENE := preload("res://scenes/ui/info_panel.tscn")
+const WRECK_PANEL_SCENE := preload("res://scenes/ui/wreck_panel.tscn")
 
 @onready var player_name_label: Label = %PlayerNameLabel
 @onready var system_label: Label = %SystemLabel
@@ -33,11 +39,17 @@ const SETTINGS_PANEL_SCENE := preload("res://scenes/ui/settings_panel.tscn")
 var _battle_panel: PanelContainer = null
 var _market_panel: PanelContainer = null
 var _storage_panel: PanelContainer = null
+var _trades_panel: PanelContainer = null
 var _chat_panel: PanelContainer = null
 var _missions_panel: PanelContainer = null
 var _crafting_panel: PanelContainer = null
 var _action_log_panel: PanelContainer = null
 var _ship_panel: PanelContainer = null
+var _faction_panel: PanelContainer = null
+var _skills_panel: PanelContainer = null
+var _facilities_panel: PanelContainer = null
+var _info_panel: PanelContainer = null
+var _wreck_panel: PanelContainer = null
 var _galaxy_map: CanvasLayer = null
 var _settings_panel: CanvasLayer = null
 var _was_docked: bool = false
@@ -128,6 +140,27 @@ func _unhandled_key_input(event: InputEvent) -> void:
 			if StateManager.is_docked():
 				_toggle_panel("storage")
 				get_viewport().set_input_as_handled()
+		KEY_P:
+			if StateManager.is_docked():
+				_toggle_panel("trades")
+				get_viewport().set_input_as_handled()
+		KEY_F:
+			_toggle_panel("faction")
+			get_viewport().set_input_as_handled()
+		KEY_X:
+			_toggle_panel("skills")
+			get_viewport().set_input_as_handled()
+		KEY_N:
+			_toggle_panel("info")
+			get_viewport().set_input_as_handled()
+		KEY_B:
+			if StateManager.is_docked():
+				_toggle_panel("facilities")
+				get_viewport().set_input_as_handled()
+		KEY_W:
+			if not StateManager.is_docked():
+				_toggle_panel("wreck")
+				get_viewport().set_input_as_handled()
 
 
 func _toggle_panel(panel_name: String) -> void:
@@ -189,6 +222,54 @@ func _toggle_panel(panel_name: String) -> void:
 				_storage_panel = STORAGE_PANEL_SCENE.instantiate()
 				mid_row.add_child(_storage_panel)
 				mid_row.move_child(_storage_panel, 0)
+		"trades":
+			if _trades_panel:
+				_trades_panel.queue_free()
+				_trades_panel = null
+			else:
+				_trades_panel = TRADES_PANEL_SCENE.instantiate()
+				mid_row.add_child(_trades_panel)
+				mid_row.move_child(_trades_panel, 0)
+		"faction":
+			if _faction_panel:
+				_faction_panel.queue_free()
+				_faction_panel = null
+			else:
+				_faction_panel = FACTION_PANEL_SCENE.instantiate()
+				mid_row.add_child(_faction_panel)
+				mid_row.move_child(_faction_panel, mid_row.get_child_count() - 2)
+		"skills":
+			if _skills_panel:
+				_skills_panel.queue_free()
+				_skills_panel = null
+			else:
+				_skills_panel = SKILLS_PANEL_SCENE.instantiate()
+				mid_row.add_child(_skills_panel)
+				mid_row.move_child(_skills_panel, mid_row.get_child_count() - 2)
+		"facilities":
+			if _facilities_panel:
+				_facilities_panel.queue_free()
+				_facilities_panel = null
+			else:
+				_facilities_panel = FACILITIES_PANEL_SCENE.instantiate()
+				mid_row.add_child(_facilities_panel)
+				mid_row.move_child(_facilities_panel, 0)
+		"info":
+			if _info_panel:
+				_info_panel.queue_free()
+				_info_panel = null
+			else:
+				_info_panel = INFO_PANEL_SCENE.instantiate()
+				mid_row.add_child(_info_panel)
+				mid_row.move_child(_info_panel, mid_row.get_child_count() - 2)
+		"wreck":
+			if _wreck_panel:
+				_wreck_panel.queue_free()
+				_wreck_panel = null
+			else:
+				_wreck_panel = WRECK_PANEL_SCENE.instantiate()
+				mid_row.add_child(_wreck_panel)
+				mid_row.move_child(_wreck_panel, mid_row.get_child_count() - 2)
 
 
 func _toggle_galaxy_map() -> void:
@@ -296,6 +377,12 @@ func _close_dock_panels() -> void:
 	if _storage_panel:
 		_storage_panel.queue_free()
 		_storage_panel = null
+	if _trades_panel:
+		_trades_panel.queue_free()
+		_trades_panel = null
+	if _facilities_panel:
+		_facilities_panel.queue_free()
+		_facilities_panel = null
 
 
 func _show_battle_panel() -> void:

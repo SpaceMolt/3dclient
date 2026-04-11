@@ -1,0 +1,32 @@
+[gd_scene load_steps=2 format=3]
+
+[ext_resource type="Script" path="res://scripts/ui/route_banner.gd" id="1"]
+
+[node name="RouteBanner" type="PanelContainer"]
+anchors_preset = 10
+anchor_right = 1.0
+offset_top = 4.0
+offset_bottom = 38.0
+grow_horizontal = 2
+script = ExtResource("1")
+
+[node name="HBox" type="HBoxContainer" parent="."]
+offset_left = 8.0
+offset_top = 4.0
+offset_right = 1144.0
+offset_bottom = 30.0
+theme_override_constants/separation = 12
+alignment = 1
+
+[node name="RouteProgressLabel" type="Label" parent="HBox"]
+unique_name_in_owner = true
+text = "Auto-travel: ... (0/0)"
+theme_override_font_sizes/font_size = 12
+modulate = Color(0.91, 0.957, 0.973, 1)
+
+[node name="RouteAbortButton" type="Button" parent="HBox"]
+unique_name_in_owner = true
+custom_minimum_size = Vector2(80, 0)
+text = "Abort"
+theme_override_font_sizes/font_size = 10
+modulate = Color(1.0, 0.42, 0.208, 1)

@@ -260,6 +260,10 @@ text = "Attack ▼"
 unique_name_in_owner = true
 text = "Scan"
 
+[node name="SurveyButton" type="Button" parent="Layout/BottomBar/ActionBarContainer/ActionMargin/ActionRow"]
+unique_name_in_owner = true
+text = "Survey"
+
 [node name="MineButton" type="Button" parent="Layout/BottomBar/ActionBarContainer/ActionMargin/ActionRow"]
 unique_name_in_owner = true
 text = "Mine"

@@ -3,6 +3,7 @@ extends PanelContainer
 @onready var travel_button: MenuButton = %TravelButton
 @onready var attack_button: MenuButton = %AttackButton
 @onready var scan_button: Button = %ScanButton
+@onready var survey_button: Button = %SurveyButton
 @onready var dock_button: Button = %DockButton
 @onready var undock_button: Button = %UndockButton
 @onready var mine_button: Button = %MineButton
@@ -19,8 +20,8 @@ static func _system_jump_id(system_data: Dictionary) -> String:
 
 
 func _ready() -> void:
-	_all_buttons = [travel_button, attack_button, scan_button, dock_button,
-					undock_button, mine_button, repair_button, refuel_button]
+	_all_buttons = [travel_button, attack_button, scan_button, survey_button,
+					dock_button, undock_button, mine_button, repair_button, refuel_button]
 
 	NetworkManager.request_started.connect(_lock)
 	NetworkManager.request_completed.connect(_unlock)
@@ -29,6 +30,7 @@ func _ready() -> void:
 	StateManager.state_updated.connect(_refresh_visibility)
 
 	scan_button.pressed.connect(_on_scan)
+	survey_button.pressed.connect(_on_survey)
 	dock_button.pressed.connect(_on_dock)
 	undock_button.pressed.connect(_on_undock)
 	mine_button.pressed.connect(_on_mine)
@@ -70,6 +72,7 @@ func _refresh_visibility() -> void:
 	travel_button.visible = not docked and not in_combat
 	attack_button.visible = not docked and not in_combat
 	scan_button.visible = not docked and not in_combat
+	survey_button.visible = not docked and not in_combat
 	mine_button.visible = not docked and not in_combat and at_minable
 	dock_button.visible = not docked and not in_combat and at_dockable
 	undock_button.visible = docked and not in_combat
@@ -212,6 +215,13 @@ func _on_scan() -> void:
 	)
 
 
+func _on_survey() -> void:
+	_set_status("Surveying system...")
+	NetworkManager.send_command("survey_system", {}, func(_content: Dictionary):
+		_set_status("Survey complete.")
+	)
+
+
 func _on_dock() -> void:
 	var poi_id: String = StateManager.location.get("poi_id", "")
 	if poi_id.is_empty():
@@ -278,6 +288,9 @@ func _unhandled_key_input(event: InputEvent) -> void:
 		KEY_V:
 			if scan_button.visible and not scan_button.disabled:
 				_on_scan()
+		KEY_Y:
+			if survey_button.visible and not survey_button.disabled:
+				_on_survey()
 
 
 func _lock() -> void:
