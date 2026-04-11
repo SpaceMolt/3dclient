@@ -9,12 +9,18 @@ ifeq ($(GODOT),)
 $(error Godot not found. Install it or set GODOT=/path/to/godot)
 endif
 
-.PHONY: run test validate coverage help
+.PHONY: run test validate coverage help import
 
 help: ## Show this help
 	@grep -E '^[a-z][a-z_-]+:.*## ' $(MAKEFILE_LIST) | awk -F ':.*## ' '{printf "  make %-12s %s\n", $$1, $$2}'
 
-run: ## Launch the game client (logs to output.log)
+import: ## Build .godot/ import cache (class_name registration, resource import)
+	@if [ ! -d .godot ]; then \
+		echo "Building import cache..."; \
+		$(GODOT) --headless --import; \
+	fi
+
+run: import ## Launch the game client (logs to output.log)
 	$(GODOT) --path . 2>&1 | tee output.log
 
 test: ## Run all tests (unit + integration)
