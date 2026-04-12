@@ -290,7 +290,8 @@ func api_post(path: String, body: Dictionary, on_success: Callable, on_error: Ca
 				Log.w("<< ERROR %s http=%d error=%s" % [path, response_code, JSON.stringify(data["error"])])
 				_handle_error(data["error"])
 				if on_error.is_valid():
-					on_error.call(data.get("error", {}))
+					var err = data.get("error", {})
+					on_error.call(err if err is Dictionary else {"message": err})
 				return
 
 			Log.i("<< OK %s http=%d" % [path, response_code])
@@ -389,7 +390,8 @@ func _api_get_with_key(path: String, on_success: Callable, on_error: Callable = 
 			if data is Dictionary and data.has("error") and data["error"] != null:
 				Log.w("<< ERROR %s: %s" % [path, JSON.stringify(data["error"])])
 				if on_error.is_valid():
-					on_error.call(data.get("error", {}))
+					var err = data.get("error", {})
+					on_error.call(err if err is Dictionary else {"message": err})
 				return
 			Log.i("<< OK %s http=%d" % [path, response_code])
 			on_success.call(data)
@@ -424,7 +426,8 @@ func _api_post_with_key(path: String, body: Dictionary, on_success: Callable, on
 			if data is Dictionary and data.has("error") and data["error"] != null:
 				Log.w("<< ERROR %s: %s" % [path, JSON.stringify(data["error"])])
 				if on_error.is_valid():
-					on_error.call(data.get("error", {}))
+					var err = data.get("error", {})
+					on_error.call(err if err is Dictionary else {"message": err})
 				return
 			Log.i("<< OK %s http=%d" % [path, response_code])
 			on_success.call(data)
