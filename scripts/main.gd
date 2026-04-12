@@ -54,10 +54,13 @@ func _apply_saved_display_settings() -> void:
 			DisplayServer.window_set_vsync_mode(DisplayServer.VSYNC_DISABLED)
 	# HiDPI: default off for performance on retina displays
 	var hidpi: bool = cfg.get_value("display", "hidpi", false) if has_config else false
-	if not hidpi:
-		var screen_scale := DisplayServer.screen_get_scale()
-		if screen_scale > 1.0:
-			get_viewport().scaling_3d_scale = 1.0 / screen_scale
+	var screen_scale := DisplayServer.screen_get_scale()
+	if hidpi or screen_scale <= 1.0:
+		get_viewport().scaling_3d_scale = 1.0
+		get_window().content_scale_factor = screen_scale
+	else:
+		get_viewport().scaling_3d_scale = 1.0 / screen_scale
+		get_window().content_scale_factor = 1.0
 
 
 func _switch_to(node: Node) -> void:

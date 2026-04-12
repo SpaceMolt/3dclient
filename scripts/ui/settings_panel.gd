@@ -162,13 +162,14 @@ func _apply_display() -> void:
 	else:
 		DisplayServer.window_set_vsync_mode(DisplayServer.VSYNC_DISABLED)
 
-	# HiDPI rendering — scale 3D resolution on retina displays
-	if hidpi_checkbox.button_pressed:
+	# HiDPI rendering — scale resolution on retina displays
+	var screen_scale := DisplayServer.screen_get_scale()
+	if hidpi_checkbox.button_pressed or screen_scale <= 1.0:
 		get_viewport().scaling_3d_scale = 1.0
+		get_window().content_scale_factor = screen_scale
 	else:
-		var screen_scale := DisplayServer.screen_get_scale()
-		if screen_scale > 1.0:
-			get_viewport().scaling_3d_scale = 1.0 / screen_scale
+		get_viewport().scaling_3d_scale = 1.0 / screen_scale
+		get_window().content_scale_factor = 1.0
 
 
 func _apply_network_url() -> void:
