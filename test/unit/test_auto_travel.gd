@@ -62,7 +62,7 @@ func test_abort_emits_signal() -> void:
 	at._route = [{"system_id": "s1", "name": "Test"}]
 	var signal_monitor := monitor_signals(at)
 	at.abort()
-	assert_signal(at).is_emitted("route_aborted", ["Aborted by player"])
+	await assert_signal(at).is_emitted("route_aborted", ["Aborted by player"])
 	at.free()
 
 
@@ -71,7 +71,7 @@ func test_abort_when_inactive_does_nothing() -> void:
 	at._is_active = false
 	at.abort()
 	assert_bool(at.is_active()).is_false()
-	assert_signal(at).is_not_emitted("route_aborted")
+	await assert_signal(at).is_not_emitted("route_aborted")
 	at.free()
 
 

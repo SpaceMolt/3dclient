@@ -4,6 +4,11 @@ extends GdUnitTestSuite
 # HTTP behaviour is covered by integration tests with a local dev server.
 
 
+func after_test() -> void:
+	NetworkManager.api_key = ""
+	NetworkManager._delete_saved_auth()
+
+
 func test_session_id_empty_on_init() -> void:
 	# Verify clean initial state — session requires explicit creation
 	assert_str(NetworkManager.session_id).is_empty()

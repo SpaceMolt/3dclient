@@ -55,7 +55,7 @@ func test_empty_key_shows_error_color() -> void:
 	var label := _runner.scene().get_node("%StatusLabel") as Label
 	_runner.scene().get_node("%KeyField").text = ""
 	_runner.scene().get_node("%SubmitButton").pressed.emit()
-	assert_object(label.modulate).is_equal(Color.RED)
+	assert_object(label.modulate).is_equal(ThemeColors.TEXT_ERROR)
 
 
 func test_show_player_select_signal_exists() -> void:
