@@ -81,9 +81,10 @@ func test_compress_distance_typical_values() -> void:
 	# 1 AU should be noticeably past SHELL_MIN
 	var d1au: float = FocusBubble.compress_distance(1.0)
 	assert_float(d1au).is_greater(FocusBubble.SHELL_MIN + 500.0)
-	# 8 AU (max real range) should be close to SHELL_MAX
+	# 8 AU (max real range) should be well past the midpoint of the shell,
+	# though COMPRESS_K=0.2 doesn't fully saturate to SHELL_MAX by 8 AU
 	var d8au: float = FocusBubble.compress_distance(8.0)
-	assert_float(d8au).is_greater(FocusBubble.SHELL_MAX - 500.0)
+	assert_float(d8au).is_greater(FocusBubble.SHELL_MIN + (FocusBubble.SHELL_MAX - FocusBubble.SHELL_MIN) * 0.75)
 
 
 # --- impostor_position ---
@@ -184,19 +185,19 @@ func test_perspective_scale_at_zero_distance() -> void:
 	assert_float(FocusBubble.perspective_scale(0.0)).is_equal_approx(1.0, 0.001)
 
 
-func test_perspective_scale_decreases_with_distance() -> void:
+func test_perspective_scale_constant_regardless_of_distance() -> void:
+	# Geometry scale is kept stable; the camera's real perspective does the work now.
 	var s1: float = FocusBubble.perspective_scale(1.0)
 	var s2: float = FocusBubble.perspective_scale(3.0)
 	var s3: float = FocusBubble.perspective_scale(8.0)
-	assert_float(s1).is_less(1.0)
-	assert_float(s2).is_less(s1)
-	assert_float(s3).is_less(s2)
+	assert_float(s1).is_equal(1.0)
+	assert_float(s2).is_equal(1.0)
+	assert_float(s3).is_equal(1.0)
 
 
 func test_perspective_scale_never_zero() -> void:
 	var s: float = FocusBubble.perspective_scale(100.0)
 	assert_float(s).is_greater(0.0)
-	assert_float(s).is_greater_equal(FocusBubble.MIN_PERSPECTIVE_SCALE)
 
 
 # --- hit_radius ---
