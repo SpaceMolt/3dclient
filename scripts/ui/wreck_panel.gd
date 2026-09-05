@@ -17,7 +17,7 @@ func _ready() -> void:
 
 func _fetch_wrecks() -> void:
 	status_label.text = "Scanning for wrecks..."
-	NetworkManager.send_command("get_wrecks", {}, func(content: Dictionary) -> void:
+	NetworkManager.send_salvage_command("wrecks", {}, func(content: Dictionary) -> void:
 		_wrecks = content.get("wrecks", [])
 		_refresh()
 		status_label.text = "%d wreck%s found" % [_wrecks.size(), "" if _wrecks.size() == 1 else "s"]
@@ -42,7 +42,7 @@ func _refresh() -> void:
 
 
 func _make_wreck_card(wreck: Dictionary) -> VBoxContainer:
-	var wreck_id: String = wreck.get("wreck_id", "")
+	var wreck_id: String = wreck.get("id", wreck.get("wreck_id", ""))
 	var player_name: String = wreck.get("player_name", "Unknown")
 	var ship_class: String = wreck.get("ship_class", "Unknown")
 	var age_ticks: int = wreck.get("age_ticks", 0)
@@ -179,7 +179,7 @@ func _make_item_row(wreck_id: String, item: Dictionary) -> HBoxContainer:
 
 func _on_loot_pressed(wreck_id: String, item_id: String, item_name: String) -> void:
 	status_label.text = "Looting %s..." % item_name
-	NetworkManager.send_command("loot_wreck", {"wreck_id": wreck_id, "item_id": item_id}, func(content: Dictionary) -> void:
+	NetworkManager.send_salvage_command("loot", {"id": wreck_id, "item_id": item_id}, func(content: Dictionary) -> void:
 		var looted_name: String = content.get("item_name", item_name)
 		var looted_qty: int = content.get("quantity", 1)
 		status_label.text = "Looted %dx %s." % [looted_qty, looted_name]
@@ -210,7 +210,7 @@ func _on_salvage_pressed(wreck_id: String, owner_name: String) -> void:
 
 func _execute_salvage(wreck_id: String, owner_name: String) -> void:
 	status_label.text = "Salvaging %s's wreck..." % owner_name
-	NetworkManager.send_command("salvage_wreck", {"wreck_id": wreck_id}, func(content: Dictionary) -> void:
+	NetworkManager.send_salvage_command("scrap", {}, func(content: Dictionary) -> void:
 		var materials: Array = content.get("materials", [])
 		if materials.is_empty():
 			status_label.text = "Salvaged wreck (no materials)."
@@ -226,7 +226,7 @@ func _execute_salvage(wreck_id: String, owner_name: String) -> void:
 
 func _on_tow_pressed(wreck_id: String, owner_name: String) -> void:
 	status_label.text = "Towing %s's wreck..." % owner_name
-	NetworkManager.send_command("tow_wreck", {"wreck_id": wreck_id}, func(content: Dictionary) -> void:
+	NetworkManager.send_salvage_command("tow", {"id": wreck_id}, func(content: Dictionary) -> void:
 		var msg: String = content.get("message", "Wreck towed.")
 		status_label.text = msg
 		_fetch_wrecks()

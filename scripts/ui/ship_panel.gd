@@ -65,8 +65,9 @@ func _refresh_my_ships() -> void:
 		var ship_id: String = ship.get("ship_id", "")
 		var class_name_str: String = ship.get("class_name", "Unknown")
 		var is_active: bool = ship.get("is_active", false)
-		var hull: int = ship.get("hull", 0)
-		var fuel: int = ship.get("fuel", 0)
+		# list_ships reports hull and fuel as "current/max" strings
+		var hull := str(ship.get("hull", "?"))
+		var fuel := str(ship.get("fuel", "?"))
 		var cargo_used: int = ship.get("cargo_used", 0)
 		var location_str: String = ship.get("location", "")
 
@@ -106,13 +107,13 @@ func _refresh_my_ships() -> void:
 		stats_row.add_theme_constant_override("separation", 8)
 
 		var hull_label := Label.new()
-		hull_label.text = "Hull: %d" % hull
+		hull_label.text = "Hull: %s" % hull
 		hull_label.add_theme_font_size_override("font_size", 11)
 		hull_label.modulate = ThemeColors.CHROME_SILVER
 		stats_row.add_child(hull_label)
 
 		var fuel_label := Label.new()
-		fuel_label.text = "Fuel: %d" % fuel
+		fuel_label.text = "Fuel: %s" % fuel
 		fuel_label.add_theme_font_size_override("font_size", 11)
 		fuel_label.modulate = ThemeColors.CHROME_SILVER
 		stats_row.add_child(fuel_label)
@@ -161,7 +162,7 @@ func _fetch_shipyard() -> void:
 
 	status_label.text = "Browsing shipyard..."
 	NetworkManager.send_ship_command("browse_ships", {}, func(content: Dictionary) -> void:
-		_shipyard_ships = content.get("ships", [])
+		_shipyard_ships = content.get("listings", [])
 		_refresh_shipyard()
 		status_label.text = "%d ships available" % _shipyard_ships.size()
 	)
@@ -218,8 +219,8 @@ func _refresh_shipyard() -> void:
 	shipyard_list.add_child(header)
 
 	for ship in _shipyard_ships:
-		var class_id: String = ship.get("class_id", "")
-		var class_name_str: String = ship.get("class_name", ship.get("name", "Unknown"))
+		var listing_id: String = ship.get("listing_id", "")
+		var class_name_str: String = ship.get("ship_name", ship.get("class_id", "Unknown"))
 		var price: int = ship.get("price", 0)
 		var hull_max: int = ship.get("max_hull", ship.get("hull", 0))
 		var fuel_max: int = ship.get("max_fuel", ship.get("fuel", 0))
@@ -249,7 +250,7 @@ func _refresh_shipyard() -> void:
 		buy_btn.text = "Buy"
 		buy_btn.add_theme_font_size_override("font_size", 10)
 		buy_btn.custom_minimum_size.x = 40
-		buy_btn.pressed.connect(_on_buy_pressed.bind(class_id, class_name_str, price))
+		buy_btn.pressed.connect(_on_buy_pressed.bind(listing_id, class_name_str, price))
 		top_row.add_child(buy_btn)
 
 		card.add_child(top_row)
@@ -290,7 +291,7 @@ func _refresh_shipyard() -> void:
 		shipyard_list.add_child(card)
 
 
-func _on_buy_pressed(class_id: String, ship_name: String, price: int) -> void:
+func _on_buy_pressed(listing_id: String, ship_name: String, price: int) -> void:
 	# Confirm dialog
 	var dialog := AcceptDialog.new()
 	dialog.title = "Buy Ship"
@@ -298,7 +299,7 @@ func _on_buy_pressed(class_id: String, ship_name: String, price: int) -> void:
 	dialog.size = Vector2i(280, 120)
 
 	dialog.confirmed.connect(func():
-		_buy_ship(class_id, ship_name)
+		_buy_ship(listing_id, ship_name)
 		dialog.queue_free()
 	)
 	dialog.canceled.connect(func(): dialog.queue_free())
@@ -307,9 +308,9 @@ func _on_buy_pressed(class_id: String, ship_name: String, price: int) -> void:
 	dialog.popup_centered()
 
 
-func _buy_ship(class_id: String, ship_name: String) -> void:
+func _buy_ship(listing_id: String, ship_name: String) -> void:
 	status_label.text = "Buying %s..." % ship_name
-	NetworkManager.send_ship_command("buy_ship", {"class_id": class_id}, func(_content: Dictionary) -> void:
+	NetworkManager.send_ship_command("buy_listed_ship", {"id": listing_id}, func(_content: Dictionary) -> void:
 		status_label.text = "Bought %s!" % ship_name
 		_fetch_my_ships()
 		_fetch_shipyard()
@@ -441,14 +442,6 @@ func _build_installed_module_card(mod: Dictionary, docked: bool) -> VBoxContaine
 		uninstall_btn.pressed.connect(_on_uninstall_module.bind(mod_id, mod_name))
 		btn_row.add_child(uninstall_btn)
 
-		if wear_pct > 0:
-			var repair_btn := Button.new()
-			repair_btn.text = "Repair"
-			repair_btn.add_theme_font_size_override("font_size", 10)
-			repair_btn.custom_minimum_size.x = 55
-			repair_btn.pressed.connect(_on_repair_module.bind(mod_id, mod_name))
-			btn_row.add_child(repair_btn)
-
 		card.add_child(btn_row)
 
 	# Separator
@@ -527,14 +520,6 @@ func _on_uninstall_module(module_id: String, module_name: String) -> void:
 	)
 
 
-func _on_repair_module(module_id: String, module_name: String) -> void:
-	status_label.text = "Repairing %s..." % module_name
-	NetworkManager.send_command("repair_module", {"module_id": module_id}, func(_content: Dictionary) -> void:
-		status_label.text = "Repaired %s." % module_name
-		_refresh_modules()
-	)
-
-
 ## Returns cargo items that are modules (type contains "module" or category is module-like).
 static func get_installable_modules_from_cargo() -> Array:
 	var result: Array = []
@@ -567,7 +552,7 @@ func _fetch_commissions() -> void:
 		return
 
 	status_label.text = "Loading commissions..."
-	NetworkManager.send_command("commission_status", {}, func(content: Dictionary) -> void:
+	NetworkManager.send_ship_command("commission_status", {}, func(content: Dictionary) -> void:
 		_commissions = content.get("commissions", [])
 		_refresh_commissions()
 		status_label.text = "%d commissions" % _commissions.size()
@@ -653,14 +638,6 @@ func _build_commission_card(commission: Dictionary) -> VBoxContainer:
 	var btn_row := HBoxContainer.new()
 	btn_row.add_theme_constant_override("separation", 4)
 
-	if comm_status == "complete" or comm_status == "ready":
-		var claim_btn := Button.new()
-		claim_btn.text = "Claim"
-		claim_btn.add_theme_font_size_override("font_size", 10)
-		claim_btn.custom_minimum_size.x = 50
-		claim_btn.pressed.connect(_on_commission_claim.bind(comm_id, ship_name))
-		btn_row.add_child(claim_btn)
-
 	if comm_status != "complete" and comm_status != "ready" and comm_status != "cancelled":
 		var cancel_btn := Button.new()
 		cancel_btn.text = "Cancel"
@@ -680,15 +657,6 @@ func _build_commission_card(commission: Dictionary) -> VBoxContainer:
 	return card
 
 
-func _on_commission_claim(comm_id: String, ship_name: String) -> void:
-	status_label.text = "Claiming %s..." % ship_name
-	NetworkManager.send_command("commission_claim", {"commission_id": comm_id}, func(_content: Dictionary) -> void:
-		status_label.text = "Claimed %s!" % ship_name
-		_fetch_commissions()
-		NetworkManager.send_command("get_status", {})
-	)
-
-
 func _on_commission_cancel(comm_id: String, ship_name: String) -> void:
 	var dialog := AcceptDialog.new()
 	dialog.title = "Cancel Commission"
@@ -697,7 +665,7 @@ func _on_commission_cancel(comm_id: String, ship_name: String) -> void:
 
 	dialog.confirmed.connect(func():
 		status_label.text = "Cancelling %s..." % ship_name
-		NetworkManager.send_command("commission_cancel", {"commission_id": comm_id}, func(_content: Dictionary) -> void:
+		NetworkManager.send_ship_command("cancel_commission", {"id": comm_id}, func(_content: Dictionary) -> void:
 			status_label.text = "Cancelled %s." % ship_name
 			_fetch_commissions()
 		)
@@ -737,7 +705,7 @@ func _on_commission_quote_pressed() -> void:
 
 func _get_commission_quote(class_id: String) -> void:
 	status_label.text = "Getting quote..."
-	NetworkManager.send_command("commission_quote", {"ship_class": class_id}, func(content: Dictionary) -> void:
+	NetworkManager.send_ship_command("commission_quote", {"id": class_id}, func(content: Dictionary) -> void:
 		var cost: int = content.get("cost", 0)
 		var duration: String = content.get("duration", "unknown")
 		var requirements: String = content.get("requirements", "")
@@ -768,7 +736,7 @@ func _get_commission_quote(class_id: String) -> void:
 
 func _start_commission(class_id: String) -> void:
 	status_label.text = "Commissioning %s..." % class_id
-	NetworkManager.send_command("commission_ship", {"ship_class": class_id, "name": ""}, func(_content: Dictionary) -> void:
+	NetworkManager.send_ship_command("commission_ship", {"id": class_id}, func(_content: Dictionary) -> void:
 		status_label.text = "Commission started!"
 		_fetch_commissions()
 	)
@@ -786,7 +754,7 @@ func _fetch_market() -> void:
 		return
 
 	status_label.text = "Loading ship market..."
-	NetworkManager.send_command("browse_ships", {}, func(content: Dictionary) -> void:
+	NetworkManager.send_ship_command("browse_ships", {}, func(content: Dictionary) -> void:
 		_market_listings = content.get("listings", [])
 		_refresh_market()
 		status_label.text = "%d listings" % _market_listings.size()
@@ -900,7 +868,7 @@ func _on_buy_listed_ship(listing_id: String, ship_name: String, price: int) -> v
 
 	dialog.confirmed.connect(func():
 		status_label.text = "Buying %s..." % ship_name
-		NetworkManager.send_command("buy_listed_ship", {"listing_id": listing_id}, func(_content: Dictionary) -> void:
+		NetworkManager.send_ship_command("buy_listed_ship", {"id": listing_id}, func(_content: Dictionary) -> void:
 			status_label.text = "Bought %s!" % ship_name
 			_fetch_market()
 			NetworkManager.send_command("get_status", {})
@@ -915,7 +883,7 @@ func _on_buy_listed_ship(listing_id: String, ship_name: String, price: int) -> v
 
 func _on_cancel_listing(listing_id: String, ship_name: String) -> void:
 	status_label.text = "Cancelling listing for %s..." % ship_name
-	NetworkManager.send_command("cancel_ship_listing", {"listing_id": listing_id}, func(_content: Dictionary) -> void:
+	NetworkManager.send_ship_command("cancel_ship_listing", {"id": listing_id}, func(_content: Dictionary) -> void:
 		status_label.text = "Listing cancelled."
 		_fetch_market()
 	)
@@ -973,7 +941,7 @@ func _on_list_ship_for_sale_pressed() -> void:
 
 func _list_ship_for_sale(ship_id: String, price: int) -> void:
 	status_label.text = "Listing ship for sale..."
-	NetworkManager.send_command("list_ship_for_sale", {"ship_id": ship_id, "price": price}, func(_content: Dictionary) -> void:
+	NetworkManager.send_ship_command("list_ship_for_sale", {"id": ship_id, "price": price}, func(_content: Dictionary) -> void:
 		status_label.text = "Ship listed for %d cr." % price
 		_fetch_market()
 	)

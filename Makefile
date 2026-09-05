@@ -11,7 +11,7 @@ $(error Godot not found. Run "make godot" to download it, or set GODOT=/path/to/
 endif
 endif
 
-.PHONY: run test validate coverage help import godot dev
+.PHONY: run test validate coverage parity help import godot dev
 
 help: ## Show this help
 	@grep -E '^[a-z][a-z_-]+:.*## ' $(MAKEFILE_LIST) | awk -F ':.*## ' '{printf "  make %-12s %s\n", $$1, $$2}'
@@ -41,3 +41,6 @@ validate: ## Parse-check all GDScript files
 
 coverage: ## Check that all scripts have test files
 	./scripts/tools/check_test_coverage.sh
+
+parity: ## Check every tool/action the client sends against the live v2 OpenAPI spec
+	python3 scripts/tools/check_api_parity.py

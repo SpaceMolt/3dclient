@@ -295,6 +295,10 @@ func _handle_error(error: Dictionary) -> void:
 			UIManager.show_error("Rate limited. Try again in %ds." % int(retry_after))
 		"combat_interrupt":
 			UIManager.show_error("Action cancelled: you were pulled into combat.")
+		"not_in_battle":
+			StateManager.clear_battle()
+		"no_faction", "not_in_faction":
+			pass  # The faction panel shows its own no-faction view.
 		"in_combat":
 			UIManager.show_error("Cannot do that during combat.")
 		"not_in_combat":
@@ -491,6 +495,18 @@ func send_salvage_command(action: String, params: Dictionary, on_complete: Calla
 
 func send_ship_command(action: String, params: Dictionary, on_complete: Callable = Callable()) -> void:
 	_request("spacemolt_ship", action, params, on_complete)
+
+
+func send_faction_command(action: String, params: Dictionary, on_complete: Callable = Callable()) -> void:
+	_request("spacemolt_faction", action, params, on_complete)
+
+
+func send_facility_command(action: String, params: Dictionary, on_complete: Callable = Callable()) -> void:
+	_request("spacemolt_facility", action, params, on_complete)
+
+
+func send_intel_command(action: String, params: Dictionary, on_complete: Callable = Callable()) -> void:
+	_request("spacemolt_intel", action, params, on_complete)
 
 
 func send_catalog_command(params: Dictionary, on_complete: Callable = Callable()) -> void:

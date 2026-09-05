@@ -282,7 +282,7 @@ func _unhandled_key_input(event: InputEvent) -> void:
 		KEY_R:
 			if repair_button.visible and not repair_button.disabled:
 				_on_repair()
-		KEY_F:
+		KEY_U:
 			if refuel_button.visible and not refuel_button.disabled:
 				_on_refuel()
 		KEY_V:
