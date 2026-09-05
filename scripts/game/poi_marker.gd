@@ -13,6 +13,7 @@ var _uses_custom_model: bool = false
 var _beacon: Sprite3D = null
 
 const BEACON_HIDE_RADII := 30.0  # hide the beacon dot once the camera is this many radii away or closer
+const LABEL_HIDE_RADII := 3.0    # hide the name when the camera is right on top of the body
 
 @onready var name_label: Label3D = $NameLabel
 @onready var mesh_instance: MeshInstance3D = $MeshInstance3D
@@ -52,7 +53,9 @@ func _process(_delta: float) -> void:
 		var camera := get_viewport().get_camera_3d()
 		if camera:
 			var radius := FocusBubble.poi_radius(poi_type, poi_class)
-			_beacon.visible = camera.global_position.distance_to(global_position) > radius * BEACON_HIDE_RADII
+			var distance := camera.global_position.distance_to(global_position)
+			_beacon.visible = distance > radius * BEACON_HIDE_RADII
+			name_label.visible = distance > radius * LABEL_HIDE_RADII
 	match poi_type:
 		"wormhole", "wormhole_entrance", "wormhole_exit", "jump_gate":
 			rotate_y(_delta * 1.5)
@@ -125,6 +128,19 @@ func _ensure_beacon() -> void:
 	if _beacon:
 		_beacon.modulate = beacon_color()
 		return
+	_beacon = Sprite3D.new()
+	_beacon.name = "Beacon"
+	_beacon.texture = _glow_texture()
+	_beacon.billboard = BaseMaterial3D.BILLBOARD_ENABLED
+	_beacon.fixed_size = true
+	_beacon.no_depth_test = true
+	_beacon.pixel_size = 0.0012
+	_beacon.modulate = beacon_color()
+	add_child(_beacon)
+
+
+## 32 px radial white-to-transparent gradient, tinted by the sprite's modulate.
+static func _glow_texture() -> GradientTexture2D:
 	var gradient := Gradient.new()
 	gradient.set_color(0, Color(1.0, 1.0, 1.0, 1.0))
 	gradient.set_color(1, Color(1.0, 1.0, 1.0, 0.0))
@@ -135,15 +151,7 @@ func _ensure_beacon() -> void:
 	texture.fill_to = Vector2(0.5, 0.0)
 	texture.width = 32
 	texture.height = 32
-	_beacon = Sprite3D.new()
-	_beacon.name = "Beacon"
-	_beacon.texture = texture
-	_beacon.billboard = BaseMaterial3D.BILLBOARD_ENABLED
-	_beacon.fixed_size = true
-	_beacon.no_depth_test = true
-	_beacon.pixel_size = 0.0012
-	_beacon.modulate = beacon_color()
-	add_child(_beacon)
+	return texture
 
 
 func beacon_color() -> Color:
@@ -368,10 +376,19 @@ func _make_star() -> void:
 	mat.albedo_color = color
 	mat.emission = color
 	mat.emission_enabled = true
-	mat.emission_energy_multiplier = 3.0
+	mat.emission_energy_multiplier = 6.0  # hot enough to bloom through the glow pass
 	mat.shading_mode = BaseMaterial3D.SHADING_MODE_UNSHADED
 	mesh_instance.mesh = mesh
 	mesh_instance.material_override = mat
+	# Corona: a soft billboard glow a few radii wide, so the star reads from across the system
+	var corona := Sprite3D.new()
+	corona.texture = _glow_texture()
+	corona.billboard = BaseMaterial3D.BILLBOARD_ENABLED
+	corona.pixel_size = r * 3.5 / 32.0
+	corona.modulate = Color(color, 0.55)
+	corona.no_depth_test = true
+	corona.render_priority = -1
+	_add_visual_child(corona)
 	var light := OmniLight3D.new()
 	light.light_color = color
 	light.light_energy = 4.0
@@ -766,7 +783,12 @@ func _make_default() -> void:
 
 
 func _star_color() -> Color:
-	var spectral := poi_class.left(1).to_upper() if not poi_class.is_empty() else ""
+	return star_color_for(poi_class)
+
+
+## Approximate color of a star from the first letter of its spectral class.
+static func star_color_for(spectral_class: String) -> Color:
+	var spectral := spectral_class.left(1).to_upper() if not spectral_class.is_empty() else ""
 	match spectral:
 		"O", "B":
 			return Color(0.6, 0.7, 1.0)

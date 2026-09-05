@@ -9,10 +9,12 @@ The client must be started with SPACEMOLT_DEV_PORT set (scripts/tools/dev_run.sh
   devctl.py key <name> [shift] [ctrl]   press and release a key, e.g. key D, key Escape
   devctl.py click <x> <y> [button] [double]
   devctl.py scroll <x> <y> up|down [n]
+  devctl.py drag <x> <y> <x2> <y2> [button=2]   right-drag orbits/tilts the camera
   devctl.py type <text>
   devctl.py state [key]                 dump StateManager (optionally one field)
   devctl.py nodes [pattern]             visible controls with screen rects
   devctl.py call <node> <method> [json args...]   e.g. call /root/NetworkManager disconnect_from_server
+  devctl.py get <node> <property>       read a node property, e.g. get /root/Main/Game/GameView/Camera3D _orbit
   devctl.py quit
 """
 import json
@@ -67,6 +69,9 @@ def main(argv: list) -> None:
     elif name == "click":
         cmd = {"cmd": "click", "x": float(args[0]), "y": float(args[1]),
                "button": int(args[2]) if len(args) > 2 else 1, "double": "double" in args}
+    elif name == "drag":
+        cmd = {"cmd": "drag", "x": float(args[0]), "y": float(args[1]), "x2": float(args[2]), "y2": float(args[3]),
+               "button": int(args[4]) if len(args) > 4 else 2}
     elif name == "scroll":
         cmd = {"cmd": "scroll", "x": float(args[0]), "y": float(args[1]), "dir": args[2],
                "n": int(args[3]) if len(args) > 3 else 1}
@@ -74,6 +79,8 @@ def main(argv: list) -> None:
         cmd = {"cmd": "type", "text": " ".join(args)}
     elif name == "nodes":
         cmd = {"cmd": "nodes", "pattern": args[0] if args else ""}
+    elif name == "get":
+        cmd = {"cmd": "get", "node": args[0], "property": args[1]}
     elif name == "call":
         cmd = {"cmd": "call", "node": args[0], "method": args[1], "args": [json.loads(a) for a in args[2:]]}
     else:

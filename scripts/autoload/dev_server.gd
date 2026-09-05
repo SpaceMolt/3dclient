@@ -76,6 +76,8 @@ func handle(cmd: Dictionary) -> Dictionary:
 			return _click(cmd.get("x", 0.0), cmd.get("y", 0.0), int(cmd.get("button", 1)), cmd.get("double", false))
 		"scroll":
 			return _scroll(cmd.get("x", 0.0), cmd.get("y", 0.0), str(cmd.get("dir", "up")), int(cmd.get("n", 1)))
+		"drag":
+			return _drag(Vector2(cmd.get("x", 0.0), cmd.get("y", 0.0)), Vector2(cmd.get("x2", 0.0), cmd.get("y2", 0.0)), int(cmd.get("button", 2)), int(cmd.get("steps", 8)))
 		"type":
 			return _type(str(cmd.get("text", "")))
 		"state":
@@ -84,6 +86,11 @@ func handle(cmd: Dictionary) -> Dictionary:
 			return {"ok": true, "nodes": _nodes(str(cmd.get("pattern", "")))}
 		"call":
 			return _call(str(cmd.get("node", "")), str(cmd.get("method", "")), cmd.get("args", []))
+		"get":
+			var node := get_node_or_null(str(cmd.get("node", "")))
+			if node == null:
+				return {"ok": false, "error": "no node at %s" % cmd.get("node", "")}
+			return {"ok": true, "value": str(node.get(str(cmd.get("property", ""))))}
 		"quit":
 			get_tree().quit()
 			return {"ok": true}
@@ -131,6 +138,40 @@ func _click(x: float, y: float, button: int, double: bool) -> Dictionary:
 		ev.double_click = double and pressed
 		Input.parse_input_event(ev)
 	return {"ok": true}
+
+
+## Press a mouse button at one point, move in steps, release at another (right button orbits the camera).
+## The motion is spread over frames because Godot merges same-frame mouse motion into one event.
+func _drag(from: Vector2, to: Vector2, button: int, steps: int) -> Dictionary:
+	_drag_over_frames(from, to, button, steps)
+	return {"ok": true, "frames": maxi(steps, 1) + 2}
+
+
+func _drag_over_frames(from: Vector2, to: Vector2, button: int, steps: int) -> void:
+	var press := InputEventMouseButton.new()
+	press.position = from
+	press.global_position = from
+	press.button_index = button
+	press.pressed = true
+	Input.parse_input_event(press)
+	var last := from
+	for i in range(1, maxi(steps, 1) + 1):
+		await get_tree().process_frame
+		var pos := from.lerp(to, float(i) / float(maxi(steps, 1)))
+		var motion := InputEventMouseMotion.new()
+		motion.position = pos
+		motion.global_position = pos
+		motion.relative = pos - last
+		motion.button_mask = MOUSE_BUTTON_MASK_RIGHT if button == MOUSE_BUTTON_RIGHT else MOUSE_BUTTON_MASK_LEFT
+		Input.parse_input_event(motion)
+		last = pos
+	await get_tree().process_frame
+	var release := InputEventMouseButton.new()
+	release.position = to
+	release.global_position = to
+	release.button_index = button
+	release.pressed = false
+	Input.parse_input_event(release)
 
 
 func _scroll(x: float, y: float, dir: String, n: int) -> Dictionary:

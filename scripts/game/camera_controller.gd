@@ -62,6 +62,17 @@ func stop_following() -> void:
 	_following = false
 
 
+## Swings the orbit so the camera looks along direction (in the XZ plane), e.g. toward the star.
+func face_direction(direction: Vector3) -> void:
+	var flat := Vector2(direction.x, direction.z)
+	if flat.length_squared() < 0.0001:
+		return
+	# The camera sits at (sin(orbit), cos(orbit)) * horiz from the target and looks back at it.
+	_orbit = atan2(-flat.x, -flat.y)
+	if _following and _target:
+		_update_camera_position(1.0)
+
+
 func snap_to_target() -> void:
 	if _target and _following:
 		_update_camera_position(1.0)

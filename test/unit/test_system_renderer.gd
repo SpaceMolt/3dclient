@@ -591,3 +591,28 @@ func test_recompute_positions_all_markers() -> void:
 	assert_float(mars.scale.x).is_equal_approx(1.0, 0.01)
 	assert_float(earth.global_position.x).is_equal_approx(renderer._poi_world_pos(Vector2(1.0, 2.0)).x, 0.1)
 	assert_float(mars.global_position.z).is_equal_approx(renderer._poi_world_pos(Vector2(5.0, 8.0)).z, 0.1)
+
+
+# --- Sun light follows the system star ---
+
+func test_sun_direction_is_normalized_and_zero_at_the_star() -> void:
+	var d: Vector3 = SystemRenderer.sun_direction(Vector3.ZERO, Vector3(300.0, 0.0, 400.0))
+	assert_float(d.length()).is_equal_approx(1.0, 0.001)
+	assert_float(d.x).is_equal_approx(0.6, 0.001)
+	assert_object(SystemRenderer.sun_direction(Vector3(5, 5, 5), Vector3(5, 5, 5))).is_equal(Vector3.ZERO)
+
+
+func test_scene_sun_light_points_from_star_to_ship() -> void:
+	var sun_light := DirectionalLight3D.new()
+	sun_light.name = "SunLight"
+	add_child(sun_light)
+	StateManager.current_system["pois"].append({"id": "star", "name": "Sol", "type": "sun", "class": "K", "position": {"x": 0.0, "y": 0.0}})
+	_renderer = _make_renderer()
+	_renderer._sync_poi_markers()
+	var star_pos := Vector3.ZERO
+	var ship_pos: Vector3 = _renderer._current_ship_world_pos()
+	var expected: Vector3 = SystemRenderer.sun_direction(star_pos, ship_pos)
+	var light_dir: Vector3 = -sun_light.global_transform.basis.z
+	assert_float(light_dir.dot(expected)).is_greater(0.999)
+	assert_object(sun_light.light_color).is_equal(load("res://scripts/game/poi_marker.gd").star_color_for("K"))
+	sun_light.queue_free()

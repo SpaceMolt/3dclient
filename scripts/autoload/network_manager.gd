@@ -242,6 +242,8 @@ func _handle_frame(frame: Dictionary) -> void:
 			var content := _finish_login(payload)
 			if entry.has("on_complete") and entry["on_complete"].is_valid():
 				entry["on_complete"].call(content)
+		"ok":
+			Log.i("<< ok %s" % JSON.stringify(payload).left(200))  # v1-style ack; the action_result carries the outcome
 		"chat_message":
 			UIManager.add_chat(payload)
 		"player_died":

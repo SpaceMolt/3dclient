@@ -8,6 +8,7 @@ extends Node3D
 const FocusBubble := preload("res://scripts/game/focus_bubble.gd")
 const SHIP_SCENE := preload("res://scenes/game/ship.tscn")
 const POI_MARKER_SCENE := preload("res://scenes/game/poi_marker.tscn")
+const POIMarker := preload("res://scripts/game/poi_marker.gd")
 
 signal poi_selected(poi_id: String, poi_name: String, poi_type: String)
 signal poi_deselected
@@ -18,6 +19,7 @@ const SHIP_HIT_RADIUS := 3.0
 const AU_TO_WORLD := 100000.0
 const PRELAUNCH_ALIGN_TIME := 1.0
 const STAR_CLEARANCE_PADDING := 2000.0
+const STAR_VIEW_OFFSET_DEG := 35.0  # arrival camera looks a bit to the side of the star so the lit face shows
 const STATION_BERTH_MARGIN := 6.0
 const STATION_RING_CLEARANCE := 18.0
 const STATION_LAYER_SPACING := 18.0
@@ -209,6 +211,7 @@ func _on_location_changed(_old_poi: String, _new_poi: String) -> void:
 	if not _is_animating_travel:
 		_update_player_ship()
 		_recompute_poi_positions()
+		_aim_camera_at_star()
 
 	_refresh_remote_state()
 
@@ -219,6 +222,43 @@ func _recompute_poi_positions() -> void:
 		marker.global_position = _poi_world_pos(_get_poi_au_pos(id))
 		marker.scale = Vector3.ONE
 		marker.visible = true
+	_update_sun_light()
+
+
+## Points the scene's directional light from the system's star at the player's
+## position and tints it by spectral class, so bodies are lit from the real sun.
+func _update_sun_light() -> void:
+	var sun_light := get_parent().get_node_or_null("SunLight") as DirectionalLight3D if get_parent() else null
+	if sun_light == null:
+		return
+	for poi in StateManager.current_system.get("pois", []):
+		if poi.get("type", "") in ["sun", "star"]:
+			var star_pos := _poi_world_pos(FocusBubble.poi_au_pos(poi))
+			var direction := sun_direction(star_pos, _current_ship_world_pos())
+			if direction == Vector3.ZERO:
+				return
+			sun_light.global_transform = Transform3D(Basis.looking_at(direction, Vector3.UP), Vector3.ZERO)
+			sun_light.light_color = POIMarker.star_color_for(poi.get("class", ""))
+			return
+
+
+## On arrival, swing the following camera so the system's star sits just off-center.
+func _aim_camera_at_star() -> void:
+	var camera := get_viewport().get_camera_3d()
+	if camera == null or not camera.has_method("face_direction"):
+		return
+	for poi in StateManager.current_system.get("pois", []):
+		if poi.get("type", "") in ["sun", "star"]:
+			var toward_star := -sun_direction(_poi_world_pos(FocusBubble.poi_au_pos(poi)), _current_ship_world_pos())
+			if toward_star != Vector3.ZERO:
+				camera.face_direction(toward_star.rotated(Vector3.UP, deg_to_rad(STAR_VIEW_OFFSET_DEG)))
+			return
+
+
+## Direction light travels from the star to the lit position (zero when they coincide).
+static func sun_direction(star_pos: Vector3, lit_pos: Vector3) -> Vector3:
+	var delta := lit_pos - star_pos
+	return Vector3.ZERO if delta.length_squared() < 1.0 else delta.normalized()
 
 
 func _update_player_ship() -> void:
@@ -256,6 +296,7 @@ func _update_player_ship() -> void:
 			camera.follow(ship)
 			if camera.has_method("snap_to_target"):
 				camera.snap_to_target()
+		_aim_camera_at_star()
 
 
 func _sync_nearby_ships() -> void:
