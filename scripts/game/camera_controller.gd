@@ -17,7 +17,7 @@ const COMBAT_ZOOM := 45.0
 const COMBAT_ZOOM_DURATION := 1.0
 
 const DEFAULT_ORBIT := 0.0
-const DEFAULT_TILT := 0.85  # low angle so the docked station towers behind the ship
+const DEFAULT_TILT := 1.05  # low angle: the horizon (destinations, the star) stays in frame
 const MIN_TILT := 0.15      # nearly top-down
 const MAX_TILT := 1.2       # low angle
 

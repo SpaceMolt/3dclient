@@ -242,10 +242,17 @@ func _update_sun_light() -> void:
 			return
 
 
-## On arrival, swing the following camera so the system's star sits just off-center.
+## On arrival, swing the following camera: beside a station or other small body it looks
+## at that body, so the structure fills the backdrop; above a planet or star it looks a
+## little to the side of the system's star, so the lit face and the star are both in view.
 func _aim_camera_at_star() -> void:
 	var camera := get_viewport().get_camera_3d()
 	if camera == null or not camera.has_method("face_direction"):
+		return
+	var current := _get_current_poi()
+	if not current.is_empty() and current.get("type", "") not in ["sun", "star", "planet", "moon"]:
+		var toward_poi := _poi_world_pos(FocusBubble.poi_au_pos(current)) - _current_ship_world_pos()
+		camera.face_direction(toward_poi)
 		return
 	for poi in StateManager.current_system.get("pois", []):
 		if poi.get("type", "") in ["sun", "star"]:
@@ -884,6 +891,11 @@ func _on_travel_started(dest_poi_id: String, _dest_poi_name: String) -> void:
 
 	if _poi_markers.has(dest_poi_id):
 		_poi_markers[dest_poi_id].set_selected(true)
+
+	# Look along the route so the destination grows ahead of the ship during transit
+	var camera := get_viewport().get_camera_3d()
+	if camera and camera.has_method("face_direction"):
+		camera.face_direction(_travel_ship_end_pos - _travel_ship_start_pos)
 
 
 func _on_travel_ended() -> void:
