@@ -538,14 +538,17 @@ func _emissive_material(color: Color, energy: float) -> StandardMaterial3D:
 	return mat
 
 
-func _add_box(size: Vector3, pos: Vector3, mat: Material) -> MeshInstance3D:
+func _add_box(size: Vector3, pos: Vector3, mat: Material, parent: Node3D = null) -> MeshInstance3D:
 	var node := MeshInstance3D.new()
 	var mesh := BoxMesh.new()
 	mesh.size = size
 	node.mesh = mesh
 	node.material_override = mat
 	node.position = pos
-	_add_visual_child(node)
+	if parent:
+		parent.add_child(node)
+	else:
+		_add_visual_child(node)
 	return node
 
 
@@ -664,109 +667,133 @@ func _make_ice_field() -> void:
 
 
 func _make_gas_cloud() -> void:
+	# A cluster of soft billboard puffs reads as a volume from every angle.
 	var cloud_r: float = FocusBubble.poi_radius(poi_type, poi_class)
 	var rng := RandomNumberGenerator.new()
 	rng.seed = poi_name.hash()
-
-	var colors := [
-		Color(0.8, 0.5, 0.2, 0.3),
-		Color(0.9, 0.7, 0.3, 0.2),
-		Color(0.6, 0.3, 0.1, 0.25),
-	]
-
-	for i in 3:
-		var cloud := MeshInstance3D.new()
-		var mesh := SphereMesh.new()
-		mesh.radius = rng.randf_range(cloud_r * 0.4, cloud_r * 0.8)
-		mesh.height = mesh.radius * 2.0
-		cloud.mesh = mesh
-		var mat := StandardMaterial3D.new()
-		mat.albedo_color = colors[i]
-		mat.transparency = BaseMaterial3D.TRANSPARENCY_ALPHA
-		mat.emission_enabled = true
-		mat.emission = Color(colors[i].r, colors[i].g, colors[i].b)
-		mat.emission_energy_multiplier = 0.6
-		mat.cull_mode = BaseMaterial3D.CULL_DISABLED
-		cloud.material_override = mat
-		cloud.position = Vector3(
-			rng.randf_range(-cloud_r * 0.3, cloud_r * 0.3),
-			rng.randf_range(-cloud_r * 0.15, cloud_r * 0.15),
-			rng.randf_range(-cloud_r * 0.3, cloud_r * 0.3)
-		)
-		_add_visual_child(cloud)
-
-	# Main mesh — inner core
-	var main := SphereMesh.new()
-	main.radius = cloud_r * 0.25
-	main.height = cloud_r * 0.5
-	var mat := StandardMaterial3D.new()
-	mat.albedo_color = Color(1.0, 0.8, 0.4, 0.4)
+	var palette: Array[Color] = [Color(0.55, 0.3, 0.9), Color(0.3, 0.45, 1.0), Color(0.8, 0.4, 0.9)]  # nebula: cool
+	if poi_type == "gas_cloud":
+		palette = [Color(1.0, 0.62, 0.25), Color(0.95, 0.45, 0.2), Color(1.0, 0.8, 0.45)]  # gas cloud: warm
+	var texture := _glow_texture()
+	for i in 36:
+		var puff := Sprite3D.new()
+		puff.texture = texture
+		puff.billboard = BaseMaterial3D.BILLBOARD_ENABLED
+		puff.transparent = true
+		var spread := sqrt(rng.randf())  # even fill of the disc, not a pile-up at the center
+		var puff_r := cloud_r * lerpf(0.55, 0.2, spread)  # big soft puffs inside, small wisps at the rim
+		puff.pixel_size = puff_r * 2.0 / 32.0
+		var tint: Color = palette[i % palette.size()]
+		puff.modulate = Color(tint, rng.randf_range(0.06, 0.16))
+		# Flattened ellipsoid: wide and shallow
+		var angle := rng.randf() * TAU
+		puff.position = Vector3(cos(angle) * cloud_r * spread, rng.randf_range(-0.25, 0.25) * cloud_r * spread, sin(angle) * cloud_r * spread)
+		_add_visual_child(puff)
+	# Bright core so the cloud has a heart, and a light so ships inside pick up its color
+	var core := SphereMesh.new()
+	core.radius = cloud_r * 0.12
+	core.height = cloud_r * 0.24
+	var mat := _emissive_material(palette[0], 1.5)
+	mat.albedo_color = Color(palette[0], 0.5)
 	mat.transparency = BaseMaterial3D.TRANSPARENCY_ALPHA
-	mat.emission_enabled = true
-	mat.emission = Color(0.8, 0.5, 0.2)
-	mat.emission_energy_multiplier = 1.0
-	mesh_instance.mesh = main
+	mesh_instance.mesh = core
 	mesh_instance.material_override = mat
+	var light := OmniLight3D.new()
+	light.light_color = palette[0]
+	light.light_energy = 1.2
+	light.omni_range = cloud_r * 1.5
+	_add_visual_child(light)
 	name_label.position = Vector3(0, cloud_r * 0.6, 0)
-	name_label.font_size = 48
 
 
 func _make_wormhole() -> void:
+	# Two counter-tilted rings around a dark throat with a bright center: reads as a gate.
 	var r: float = FocusBubble.poi_radius(poi_type, poi_class)
 	var mesh := TorusMesh.new()
-	mesh.inner_radius = r * 0.5
+	mesh.inner_radius = r * 0.82
 	mesh.outer_radius = r
-	var mat := StandardMaterial3D.new()
-	mat.albedo_color = Color(0.8, 0.3, 1.0, 0.8)
+	var mat := _emissive_material(ThemeColors.VOID_PURPLE, 2.5)
+	mat.albedo_color = Color(ThemeColors.VOID_PURPLE, 0.85)
 	mat.transparency = BaseMaterial3D.TRANSPARENCY_ALPHA
-	mat.emission_enabled = true
-	mat.emission = Color(0.5, 0.1, 0.8)
-	mat.emission_energy_multiplier = 2.0
 	mesh_instance.mesh = mesh
 	mesh_instance.material_override = mat
-	# Inner glow
+	var inner := _add_torus(r * 0.55, r * 0.66, Vector3.ZERO, _emissive_material(ThemeColors.BIO_GREEN, 2.0))
+	inner.rotation = Vector3(0.35, 0.0, 0.2)
+	var throat := MeshInstance3D.new()
+	var disc := CylinderMesh.new()
+	disc.top_radius = r * 0.8
+	disc.bottom_radius = r * 0.8
+	disc.height = r * 0.02
+	throat.mesh = disc
+	var throat_mat := StandardMaterial3D.new()
+	throat_mat.albedo_color = Color(0.02, 0.0, 0.06, 0.9)
+	throat_mat.transparency = BaseMaterial3D.TRANSPARENCY_ALPHA
+	throat_mat.cull_mode = BaseMaterial3D.CULL_DISABLED
+	throat.material_override = throat_mat
+	_add_visual_child(throat)
+	var core := Sprite3D.new()
+	core.texture = _glow_texture()
+	core.billboard = BaseMaterial3D.BILLBOARD_ENABLED
+	core.pixel_size = r * 0.6 / 32.0
+	core.modulate = Color(0.85, 0.95, 1.0, 0.7)
+	core.render_priority = 2  # draw over the throat disc
+	_add_visual_child(core)
 	var light := OmniLight3D.new()
-	light.light_color = Color(0.6, 0.2, 1.0)
+	light.light_color = ThemeColors.VOID_PURPLE
 	light.light_energy = 2.5
-	light.omni_range = r * 1.5
+	light.omni_range = r * 2.0
 	_add_visual_child(light)
-	name_label.position = Vector3(0, r * 0.8, 0)
-	name_label.font_size = 48
+	name_label.position = Vector3(0, r * 1.1, 0)
 
 
 func _make_relic() -> void:
 	var r: float = FocusBubble.poi_radius(poi_type, poi_class)
-	var mat := StandardMaterial3D.new()
-	mat.metallic = 0.9
-	mat.roughness = 0.2
+	var hull := _metal_material(Color(0.28, 0.3, 0.36))
+	hull.roughness = 0.3
+	hull.emission_enabled = true
+	hull.emission = Color(0.05, 0.25, 0.3)
+	hull.emission_energy_multiplier = 0.35
+	var runes := _emissive_material(ThemeColors.PLASMA_CYAN, 2.0)
 	match poi_class:
 		"megastructure":
-			var mesh := SphereMesh.new()
-			mesh.radius = r
-			mesh.height = r * 2.0
-			mesh.radial_segments = 4
-			mesh.rings = 2
-			mesh_instance.mesh = mesh
-			mat.albedo_color = Color(0.4, 0.5, 0.6)
-			mat.emission_enabled = true
-			mat.emission = Color(0.2, 0.6, 0.8)
-			mat.emission_energy_multiplier = 1.5
+			# A dark faceted core inside two great tilted rings etched with lit runes
+			var core := SphereMesh.new()
+			core.radius = r * 0.45
+			core.height = r * 0.9
+			core.radial_segments = 6
+			core.rings = 3
+			mesh_instance.mesh = core
+			mesh_instance.material_override = hull
+			for tilt in [0.0, 1.1]:
+				var ring := _add_torus(r * 0.9, r, Vector3.ZERO, hull)
+				ring.rotation = Vector3(tilt, 0.0, tilt * 0.5)
+				for i in 16:
+					var angle := TAU * i / 16.0
+					var rune := _add_box(Vector3(r * 0.12, r * 0.05, r * 0.06), Vector3(cos(angle) * r * 0.95, 0.0, sin(angle) * r * 0.95), runes, ring)
+					rune.rotation.y = -angle
 		_:
-			var mesh := BoxMesh.new()
-			mesh.size = Vector3(r * 0.5, r, r * 0.5)
-			mesh_instance.mesh = mesh
-			mat.albedo_color = Color(0.5, 0.5, 0.6)
-			mat.emission_enabled = true
-			mat.emission = Color(0.3, 0.4, 0.8)
-			mat.emission_energy_multiplier = 1.0
-	mesh_instance.material_override = mat
+			# A tumbling monolith with lit seams and a few fragments drifting around it
+			var monolith := BoxMesh.new()
+			monolith.size = Vector3(r * 0.35, r * 1.4, r * 0.35)
+			mesh_instance.mesh = monolith
+			mesh_instance.material_override = hull
+			mesh_instance.rotation = Vector3(0.25, 0.0, 0.18)
+			for y in [-0.45, 0.0, 0.45]:
+				var seam := _add_box(Vector3(r * 0.37, r * 0.02, r * 0.37), Vector3(0.0, r * y, 0.0), runes)
+				seam.rotation = mesh_instance.rotation
+			var rng := RandomNumberGenerator.new()
+			rng.seed = poi_name.hash()
+			for i in 5:
+				var angle := rng.randf() * TAU
+				var dist := r * rng.randf_range(0.8, 1.3)
+				var shard := _add_box(Vector3.ONE * r * rng.randf_range(0.05, 0.12), Vector3(cos(angle) * dist, rng.randf_range(-0.4, 0.4) * r, sin(angle) * dist), hull)
+				shard.rotation = Vector3(rng.randf() * TAU, rng.randf() * TAU, 0.0)
 	var light := OmniLight3D.new()
-	light.light_color = Color(0.3, 0.6, 0.9)
+	light.light_color = ThemeColors.PLASMA_CYAN
 	light.light_energy = 1.5
-	light.omni_range = r * 1.5
+	light.omni_range = r * 2.0
 	_add_visual_child(light)
-	name_label.position = Vector3(0, r * 0.8, 0)
-	name_label.font_size = 48
+	name_label.position = Vector3(0, r * 1.2, 0)
 
 
 func _make_default() -> void:
