@@ -36,3 +36,6 @@ output.log
 # OS
 .DS_Store
 Thumbs.db
+
+# Screenshots from the dev loop and the POI gallery
+screenshots/

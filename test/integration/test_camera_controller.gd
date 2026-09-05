@@ -270,9 +270,12 @@ func test_home_key_resets_orbit() -> void:
 	await _runner.simulate_frames(5)
 
 	_runner.simulate_key_pressed(KEY_HOME)
-	await _runner.simulate_frames(60)
-
-	assert_float(_camera.global_position.x).is_equal_approx(0.0, 0.5)
+	await _runner.simulate_frames(5)
+	# The reset itself is immediate and deterministic; the position follows with smoothing.
+	assert_float(_camera._orbit).is_equal_approx(_camera.DEFAULT_ORBIT, 0.001)
+	assert_float(_camera._tilt).is_equal_approx(_camera.DEFAULT_TILT, 0.001)
+	await _runner.simulate_frames(90)
+	assert_float(_camera.global_position.x).is_equal_approx(0.0, 2.0)
 
 
 # --- No NaN ---
