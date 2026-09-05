@@ -1,7 +1,9 @@
 extends Node
 
 func _ready() -> void:
-	# Fetch system data immediately after login
+	# The login frame carries player/ship/system; get_status seeds cargo, skills,
+	# missions, and location. Later changes arrive as action_result deltas.
+	NetworkManager.send_command("get_status", {})
 	NetworkManager.send_command("get_system", {}, func(content):
 		StateManager.update_system(content)
 	)
