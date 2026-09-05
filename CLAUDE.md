@@ -76,6 +76,7 @@ dev control server (`scripts/autoload/dev_server.gd`), which listens on
 All scripts in `scripts/tools/`:
 
 - **`validate_scripts.sh`** — Parse-checks all GDScript files. Also runs as a pre-commit hook. Run after editing scripts.
+- **`run_tests.sh`** — Runs GdUnit4 suites (default: unit + integration) and exits non-zero on any failure. Agents: use this instead of piping GdUnit output through grep, which hides the exit code.
 - **`check_test_coverage.sh`** — Verifies every non-exempt script has a corresponding test file.
 - **`check_api_parity.py`** (`make parity`) — Checks every `send_*_command("action")` in the client against the live v2 OpenAPI spec. Run it before a PR: the server renames and removes actions between releases.
 - **`build_windows.sh`** — Validates scripts, then exports a Windows .exe.
