@@ -3,6 +3,7 @@ extends GdUnitTestSuite
 # Tests for poi_marker.gd — setup, selection, appearance dispatch
 
 const POI_MARKER_SCENE := preload("res://scenes/game/poi_marker.tscn")
+const FocusBubble := preload("res://scripts/game/focus_bubble.gd")
 
 
 func _make_marker(id: String, pname: String, ptype: String, pos: Vector3, pclass: String = "") -> Node3D:
@@ -62,10 +63,11 @@ func test_star_gets_glowing_surface_shader() -> void:
 	m.queue_free()
 
 
-func test_station_gets_metallic_material() -> void:
+func test_station_uses_the_sol_central_model() -> void:
 	var m := _make_marker("st1", "Hub", "station", Vector3.ZERO)
-	var mat: StandardMaterial3D = m.mesh_instance.material_override
-	assert_float(mat.metallic).is_greater(0.5)
+	assert_bool(m._uses_custom_model).is_true()
+	assert_bool(m.mesh_instance.visible).is_false()
+	assert_int(m.find_children("*", "MeshInstance3D", true, false).size()).is_greater(4)
 	m.queue_free()
 
 
@@ -101,13 +103,16 @@ func test_asteroid_uses_custom_model() -> void:
 	m.queue_free()
 
 
-func test_station_has_lit_windows_and_docking_beacons() -> void:
+func test_station_has_approach_beacons_on_every_arm() -> void:
 	var m := _make_marker("st1", "Hub", "station", Vector3.ZERO)
-	var emissive := 0
-	for child in m.get_children():
-		if child is MeshInstance3D and child.material_override is StandardMaterial3D and child.material_override.emission_enabled:
-			emissive += 1
-	assert_int(emissive).is_greater(30)
+	var beacons := m.find_children("ApproachBeacon*", "MeshInstance3D", false, false)
+	assert_int(beacons.size()).is_equal(4)
+	var r: float = FocusBubble.poi_radius("station", "")
+	for beacon in beacons:
+		assert_bool((beacon.material_override as StandardMaterial3D).emission_enabled).is_true()
+		# each beacon sits out on an arm, not at the hub
+		assert_float(beacon.position.length()).is_greater(r * 0.5)
+	assert_int(m.find_children("*", "OmniLight3D", false, false).size()).is_equal(5)
 	m.queue_free()
 
 

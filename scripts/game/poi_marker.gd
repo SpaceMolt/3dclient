@@ -16,6 +16,7 @@ const BEACON_HIDE_RADII := 30.0  # hide the beacon dot once the camera is this m
 const LABEL_HIDE_RADII := 3.0    # hide the name when the camera is right on top of the body
 const ATMOSPHERE_SHADER := preload("res://shaders/atmosphere.gdshader")
 const STAR_SURFACE_SHADER := preload("res://shaders/star_surface.gdshader")
+const STATION_MODEL := "res://assets/stations/sol_central.glb"  # Sol Central concept, Meshy image-to-3D
 const ATMOSPHERE_SHELL := 1.05   # halo shell radius as a multiple of the planet radius
 const BLINK_PERIOD := 1.6        # seconds between station approach-beacon flashes
 const BLINK_ON := 0.12           # seconds each flash stays lit
@@ -553,72 +554,45 @@ func _add_atmosphere(r: float) -> void:
 
 func _make_station() -> void:
 	var r: float = FocusBubble.poi_radius(poi_type, poi_class)
-	var hull := _metal_material(Color(0.34, 0.38, 0.44))
-	var trim := _metal_material(Color(0.17, 0.19, 0.24))
-	var windows := _emissive_material(ThemeColors.PLASMA_CYAN, 2.5)
+	var model := (load(STATION_MODEL) as PackedScene).instantiate() as Node3D
+	_add_visual_child(model)
+	_fit_model_to_radius(model, r)
+	mesh_instance.mesh = null
+	mesh_instance.material_override = null
+	mesh_instance.visible = false
+	_uses_custom_model = true
+
+	# Approach beacons on the four arm tips, flashing orange, each with its own small light;
+	# a cyan light over the hub picks out the sensor masts
+	var half := _compute_model_aabb(model).size * 0.5 * model.scale.x
 	var beacons := _emissive_material(ThemeColors.SHELL_ORANGE, 3.0)
 	_blink_material = beacons
-	var panels := _metal_material(Color(0.08, 0.14, 0.32))
-	panels.emission_enabled = true
-	panels.emission = Color(0.1, 0.2, 0.5)
-	panels.emission_energy_multiplier = 0.4
-
-	# Central hub stays on mesh_instance (click target, tests)
-	var hub := CylinderMesh.new()
-	hub.top_radius = r * 0.16
-	hub.bottom_radius = r * 0.2
-	hub.height = r * 0.7
-	mesh_instance.mesh = hub
-	mesh_instance.material_override = hull
-
-	# Spine through the hub
-	_add_cylinder(r * 0.05, r * 1.6, Vector3.ZERO, trim)
-
-	# Habitat ring with six spokes and a band of lit windows on its outer face
-	_add_torus(r * 0.82, r * 0.94, Vector3.ZERO, hull)
-	for i in 6:
-		var angle := TAU * i / 6.0
-		var spoke := _add_cylinder(r * 0.025, r * 0.84, Vector3(cos(angle) * r * 0.46, 0.0, sin(angle) * r * 0.46), trim)
-		spoke.rotation = Vector3(PI / 2.0, 0.0, 0.0)
-		spoke.rotate_y(angle + PI / 2.0)
-	for i in 32:
-		var angle := TAU * i / 32.0
-		var window := _add_box(Vector3(r * 0.05, r * 0.02, r * 0.012), Vector3(cos(angle) * r * 0.945, 0.0, sin(angle) * r * 0.945), windows)
-		window.rotation.y = -angle + PI / 2.0
-
-	# Smaller service ring above the hub
-	_add_torus(r * 0.42, r * 0.48, Vector3(0.0, r * 0.32, 0.0), trim)
-
-	# Four docking pylons below the hub, tipped with orange approach beacons
-	for i in 4:
-		var angle := TAU * i / 4.0 + PI / 4.0
-		var base := Vector3(cos(angle) * r * 0.28, -r * 0.45, sin(angle) * r * 0.28)
-		_add_box(Vector3(r * 0.06, r * 0.3, r * 0.06), base, trim)
-		var tip := MeshInstance3D.new()
-		var tip_mesh := SphereMesh.new()
-		tip_mesh.radius = r * 0.025
-		tip_mesh.height = r * 0.05
-		tip.mesh = tip_mesh
-		tip.material_override = beacons
-		tip.position = base + Vector3(0.0, -r * 0.17, 0.0)
-		_add_visual_child(tip)
-
-	# Solar arrays on arms at the top of the spine
-	for side in [-1.0, 1.0]:
-		_add_box(Vector3(r * 0.5, r * 0.012, r * 0.22), Vector3(side * r * 0.42, r * 0.7, 0.0), panels)
-		_add_box(Vector3(r * 0.3, r * 0.02, r * 0.02), Vector3(side * r * 0.15, r * 0.7, 0.0), trim)
-
-	# Nav lights: cyan on the ring, orange at the docks
-	for i in 4:
-		var angle := TAU * i / 4.0
+	var tips: Array[Vector3] = [Vector3(half.x, 0, 0), Vector3(-half.x, 0, 0), Vector3(0, 0, half.z), Vector3(0, 0, -half.z)]
+	for i in tips.size():
+		var tip := tips[i]
+		var beacon := MeshInstance3D.new()
+		beacon.name = "ApproachBeacon%d" % i
+		var beacon_mesh := SphereMesh.new()
+		beacon_mesh.radius = r * 0.02
+		beacon_mesh.height = r * 0.04
+		beacon.mesh = beacon_mesh
+		beacon.material_override = beacons
+		beacon.position = tip
+		_add_visual_child(beacon)
 		var light := OmniLight3D.new()
-		light.light_color = ThemeColors.PLASMA_CYAN if i % 2 == 0 else ThemeColors.SHELL_ORANGE
-		light.light_energy = 2.0
-		light.omni_range = r * 0.6
-		light.position = Vector3(cos(angle) * r * 0.9, r * 0.05, sin(angle) * r * 0.9)
+		light.light_color = ThemeColors.SHELL_ORANGE
+		light.light_energy = 1.5
+		light.omni_range = r * 0.5
+		light.position = tip
 		_add_visual_child(light)
+	var hub_light := OmniLight3D.new()
+	hub_light.light_color = ThemeColors.PLASMA_CYAN
+	hub_light.light_energy = 2.0
+	hub_light.omni_range = r * 0.9
+	hub_light.position = Vector3(0, half.y * 1.5, 0)
+	_add_visual_child(hub_light)
 
-	name_label.position = Vector3(0, r * 1.0, 0)
+	name_label.position = Vector3(0, half.y * 1.4, 0)
 
 
 ## Painted hull plating: metallic enough to catch the star, rough enough to show a lit side
@@ -651,19 +625,6 @@ func _add_box(size: Vector3, pos: Vector3, mat: Material, parent: Node3D = null)
 		parent.add_child(node)
 	else:
 		_add_visual_child(node)
-	return node
-
-
-func _add_cylinder(radius: float, height: float, pos: Vector3, mat: Material) -> MeshInstance3D:
-	var node := MeshInstance3D.new()
-	var mesh := CylinderMesh.new()
-	mesh.top_radius = radius
-	mesh.bottom_radius = radius
-	mesh.height = height
-	node.mesh = mesh
-	node.material_override = mat
-	node.position = pos
-	_add_visual_child(node)
 	return node
 
 
