@@ -64,13 +64,22 @@ You can change the server URL in Settings (e.g. for local development).
 | D | Dock / Undock |
 | M | Mine |
 | R | Repair |
-| F | Refuel |
+| U | Refuel |
 | V | Scan |
+| Y | Survey system |
 | C | Chat |
 | J | Missions |
 | K | Crafting |
 | L | Action Log |
 | S | Ship Panel |
+| T | Market (docked) |
+| I | Storage (docked) |
+| P | Trades |
+| F | Faction |
+| X | Skills |
+| N | Notes, action log, help |
+| B | Facilities |
+| W | Wrecks (undocked) |
 | G | Galaxy Map |
 | Home | Center camera |
 | Escape | Close panels / Deselect / Settings |
