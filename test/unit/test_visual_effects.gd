@@ -84,3 +84,16 @@ func test_game_script_loads() -> void:
 	var script: GDScript = load("res://scripts/game/game.gd")
 	assert_that(script).is_not_null()
 	assert_bool(script.can_instantiate()).is_true()
+
+
+func test_mining_beam_orients_at_large_world_coordinates() -> void:
+	# Real POIs sit at ~1e5 units; look_at(position + dir) fails there, Basis.looking_at does not.
+	var beam: MeshInstance3D = load("res://scenes/game/mining_beam.tscn").instantiate()
+	add_child(beam)
+	var from := Vector3(400000.0, 0.0, 100000.0)
+	var to := from + Vector3(30.0, 0.0, 0.0)
+	beam._orient_beam(from, to)
+	assert_float((beam.mesh as CylinderMesh).height).is_equal_approx(30.0, 0.01)
+	assert_float(absf(beam.global_transform.basis.y.dot(Vector3.RIGHT))).is_greater(0.99)
+	assert_float(beam.global_position.distance_to(from + Vector3(15.0, 0.0, 0.0))).is_less(1.0)
+	beam.queue_free()

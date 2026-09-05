@@ -3,7 +3,7 @@ extends MeshInstance3D
 ## Visual mining beam that stretches from the player ship to the current POI
 ## when mining is active. Listens to StateManager mining signals.
 
-const BEAM_RADIUS := 0.05
+const BEAM_RADIUS := 0.35  # thick enough to read from the chase camera
 const BEAM_COLOR := Color(0.7, 1.0, 0.3, 0.6)
 const EMISSION_COLOR := Color(0.6, 1.0, 0.2)
 const EMISSION_ENERGY := 2.5
@@ -78,9 +78,11 @@ func _orient_beam(from: Vector3, to: Vector3) -> void:
 	if absf(dir_norm.dot(up)) > 0.99:
 		up = Vector3.FORWARD
 
-	look_at(global_position + dir_norm, up)
-	# After look_at, the -Z axis points along dir_norm.
-	# Rotate 90 degrees around X so the cylinder's Y axis aligns with -Z.
+	# Build the basis from the direction alone. look_at(position + dir) fails at
+	# world coordinates of ~1e5 because its equality check scales with magnitude.
+	global_transform.basis = Basis.looking_at(dir_norm, up)
+	# The -Z axis now points along dir_norm. Rotate 90 degrees around X so the
+	# cylinder's Y axis aligns with -Z.
 	rotate_object_local(Vector3.RIGHT, deg_to_rad(90.0))
 
 	# Scale the cylinder height to match the distance

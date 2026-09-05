@@ -187,7 +187,15 @@ func test_chat_push_routes_to_ui_manager() -> void:
 func test_other_push_becomes_event() -> void:
 	var monitor := monitor_signals(UIManager, false)
 	NetworkManager._handle_frame({"type": "skill_level_up", "payload": {"skill": "mining", "level": 4}})
-	await assert_signal(monitor).is_emitted("event_received", [{"msg_type": "skill_level_up", "message": "", "data": {"skill": "mining", "level": 4}}])
+	await assert_signal(monitor).is_emitted("event_received", [{"msg_type": "skill_level_up", "message": "mining reached level 4", "data": {"skill": "mining", "level": 4}}])
+
+
+func test_push_messages_are_readable() -> void:
+	assert_str(NetworkManager.push_message("mining_yield", {"quantity": 3, "resource_name": "Vanadium Ore", "remaining_display": "3012 units"})).is_equal("+3 Vanadium Ore (3012 units remaining)")
+	assert_str(NetworkManager.push_message("mining_yield", {"quantity": 1, "resource_id": "iron_ore"})).is_equal("+1 iron_ore")
+	assert_str(NetworkManager.push_message("achievement_unlocked", {"achievements": [{"name": "First Ore"}, {"name": "Long Haul"}]})).is_equal("Achievement: First Ore, Long Haul")
+	assert_str(NetworkManager.push_message("server_restart_warning", {"message": "Restart in 5 min"})).is_equal("Restart in 5 min")
+	assert_str(NetworkManager.push_message("unknown_thing", {})).is_empty()
 
 
 func test_close_while_authenticated_expires_session_and_fails_pending() -> void:
