@@ -42,7 +42,7 @@ func test_set_players_creates_buttons() -> void:
 		{"id": "p1", "username": "Alice", "empire": "solarian"},
 		{"id": "p2", "username": "Bob", "empire": "voidborn"},
 	])
-	await _runner.await_idle_frame()
+	await await_idle_frame()
 	var list := _runner.scene().get_node("%PlayerList") as VBoxContainer
 	assert_int(list.get_child_count()).is_equal(2)
 
@@ -52,7 +52,7 @@ func test_set_players_button_text() -> void:
 	scene.set_players([
 		{"id": "p1", "username": "Alice", "empire": "solarian"},
 	])
-	await _runner.await_idle_frame()
+	await await_idle_frame()
 	var list := _runner.scene().get_node("%PlayerList") as VBoxContainer
 	var btn := list.get_child(0) as Button
 	assert_str(btn.text).is_equal("Alice  [Solarian]")

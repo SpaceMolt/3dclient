@@ -48,4 +48,4 @@ func test_empty_username_shows_error_color() -> void:
 	_runner.scene().get_node("%UsernameField").text = ""
 	_runner.scene().get_node("%CreateButton").pressed.emit()
 	var label := _runner.scene().get_node("%StatusLabel") as Label
-	assert_object(label.modulate).is_equal(Color.RED)
+	assert_object(label.modulate).is_equal(ThemeColors.TEXT_ERROR)
