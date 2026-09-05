@@ -1,118 +1,221 @@
 extends GdUnitTestSuite
 
-# Unit tests for NetworkManager logic that doesn't require live HTTP.
-# HTTP behaviour is covered by integration tests with a local dev server.
+# Unit tests for NetworkManager frame handling. No socket is opened: frames are
+# fed straight into _handle_frame with pending entries registered by hand.
+
+
+func before_test() -> void:
+	NetworkManager._pending.clear()
+	NetworkManager._update_pending_flag()
+	NetworkManager.is_authenticated = false
+	NetworkManager.device_code = ""
+	NetworkManager.api_key = ""
+	NetworkManager._registered = {}
+	StateManager.reset()
 
 
 func after_test() -> void:
-	NetworkManager.api_key = ""
+	NetworkManager._pending.clear()
+	NetworkManager._update_pending_flag()
+	NetworkManager.is_authenticated = false
+	NetworkManager.device_code = ""
+	NetworkManager.tick_duration = NetworkManager.DEFAULT_TICK_DURATION
 	NetworkManager._delete_saved_auth()
 
 
-func test_session_id_empty_on_init() -> void:
-	# Verify clean initial state — session requires explicit creation
-	assert_str(NetworkManager.session_id).is_empty()
+func _pend(request_id: String, on_complete: Callable, on_error: Callable = Callable()) -> void:
+	NetworkManager._pending[request_id] = {"on_complete": on_complete, "on_error": on_error}
+	NetworkManager._update_pending_flag()
 
 
-func test_is_authenticated_false_on_init() -> void:
+# --- Connection helpers ---
+
+func test_initial_state() -> void:
 	assert_bool(NetworkManager.is_authenticated).is_false()
+	assert_bool(NetworkManager.is_request_pending).is_false()
+	assert_bool(NetworkManager.is_connected_to_server()).is_false()
 
 
-func test_is_request_pending_false_on_init() -> void:
+func test_ws_url_from_https_base() -> void:
+	var original := NetworkManager.base_url
+	NetworkManager.base_url = "https://game.spacemolt.com/"
+	assert_str(NetworkManager.ws_url()).is_equal("wss://game.spacemolt.com/ws/v2")
+	NetworkManager.base_url = "http://localhost:9090"
+	assert_str(NetworkManager.ws_url()).is_equal("ws://localhost:9090/ws/v2")
+	NetworkManager.base_url = original
+
+
+func test_split_frames_handles_batched_messages() -> void:
+	var frames := NetworkManager.split_frames('{"type":"a"}\n{"type":"b"}\n\n')
+	assert_array(frames).contains_exactly(['{"type":"a"}', '{"type":"b"}'])
+
+
+func test_request_without_socket_reports_error() -> void:
+	var got: Array = []
+	NetworkManager.send_command("get_status", {}, func(content: Dictionary) -> void: got.append(content))
+	assert_array(got).contains_exactly([{}])
 	assert_bool(NetworkManager.is_request_pending).is_false()
 
 
-func test_poll_timer_exists_in_tree() -> void:
-	var timer := NetworkManager.get_node_or_null("PollTimer")
-	assert_object(timer).is_not_null()
-	assert_object(timer).is_instanceof(Timer)
+# --- Pending ack detection ---
+
+func test_pending_ack_top_level() -> void:
+	assert_bool(NetworkManager.is_pending_ack({"pending": true, "command": "mine"})).is_true()
 
 
-func test_poll_timer_interval_is_10s() -> void:
-	var timer := NetworkManager.get_node("PollTimer") as Timer
-	assert_float(timer.wait_time).is_equal_approx(10.0, 0.001)
+func test_pending_ack_nested_in_details() -> void:
+	assert_bool(NetworkManager.is_pending_ack({"details": {"pending": true}, "location": {}})).is_true()
 
 
-func test_poll_timer_not_running_before_auth() -> void:
-	# Timer should not be running until login succeeds
-	var timer := NetworkManager.get_node("PollTimer") as Timer
-	assert_bool(timer.is_stopped()).is_true()
+func test_pending_ack_false_for_final_results() -> void:
+	assert_bool(NetworkManager.is_pending_ack({"ship": {"hull": 10}})).is_false()
+	assert_bool(NetworkManager.is_pending_ack("text")).is_false()
+	assert_bool(NetworkManager.is_pending_ack(null)).is_false()
 
 
-func test_api_post_requires_session_id() -> void:
-	# api_post with no session_id should push an error rather than crashing
-	var original_session := NetworkManager.session_id
-	NetworkManager.session_id = ""
+# --- Frame routing ---
 
-	# Should not throw — just log an error internally
-	NetworkManager.api_post("/test", {}, func(_c): pass)
-
-	NetworkManager.session_id = original_session
-
-
-func test_save_and_load_auth() -> void:
-	NetworkManager.api_key = "sk_test_key123"
-	NetworkManager._save_auth()
-	NetworkManager.api_key = ""
-	NetworkManager._load_auth()
-	assert_str(NetworkManager.api_key).is_equal("sk_test_key123")
+func test_query_result_settles_pending_and_updates_state() -> void:
+	var got: Array = []
+	_pend("r1", func(content: Dictionary) -> void: got.append(content))
+	assert_bool(NetworkManager.is_request_pending).is_true()
+	var monitor := monitor_signals(NetworkManager, false)
+	NetworkManager._handle_frame({"type": "result", "request_id": "r1", "payload": {
+		"result": "text", "structuredContent": {"ship": {"hull": 42, "max_hull": 100}}}})
+	assert_int(got.size()).is_equal(1)
+	assert_int(int(got[0]["ship"]["hull"])).is_equal(42)
+	assert_int(int(StateManager.ship["hull"])).is_equal(42)
+	assert_bool(NetworkManager.is_request_pending).is_false()
+	await assert_signal(monitor).is_emitted("request_completed")
 
 
-func test_has_saved_auth_true() -> void:
-	NetworkManager.api_key = "sk_test_key123"
-	NetworkManager._save_auth()
-	assert_bool(NetworkManager.has_saved_auth()).is_true()
+func test_non_object_structured_content_is_wrapped() -> void:
+	var got: Array = []
+	_pend("r1", func(content: Dictionary) -> void: got.append(content))
+	NetworkManager._handle_frame({"type": "result", "request_id": "r1", "payload": {"result": "help text", "structuredContent": null}})
+	assert_str(got[0]["result"]).is_equal("help text")
 
 
-func test_has_saved_auth_false_when_no_file() -> void:
-	NetworkManager._delete_saved_auth()
-	assert_bool(NetworkManager.has_saved_auth()).is_false()
+func test_mutation_ack_keeps_pending_until_action_result() -> void:
+	var got: Array = []
+	_pend("r2", func(content: Dictionary) -> void: got.append(content))
+	NetworkManager._handle_frame({"type": "result", "request_id": "r2", "payload": {
+		"result": "pending", "structuredContent": {"pending": true, "command": "craft", "message": "..."}}})
+	assert_array(got).is_empty()
+	assert_bool(NetworkManager.is_request_pending).is_true()
+	NetworkManager._handle_frame({"type": "action_result", "request_id": "r2", "payload": {
+		"command": "craft", "tick": 7, "result": {
+			"ship": {"hull": 9}, "cargo": [{"item_id": "x"}], "message": "Crafted 1x Widget",
+			"details": {"output_name": "Widget", "quantity": 1}}}})
+	assert_int(got.size()).is_equal(1)
+	assert_str(got[0]["output_name"]).is_equal("Widget")
+	assert_int(int(StateManager.ship["hull"])).is_equal(9)
+	assert_int(StateManager.cargo.size()).is_equal(1)
+	assert_bool(NetworkManager.is_request_pending).is_false()
 
 
-func test_delete_saved_auth() -> void:
-	NetworkManager.api_key = "sk_test_key123"
-	NetworkManager._save_auth()
-	NetworkManager._delete_saved_auth()
-	assert_bool(NetworkManager.has_saved_auth()).is_false()
+func test_engine_action_result_without_details_passes_delta() -> void:
+	var got: Array = []
+	_pend("r3", func(content: Dictionary) -> void: got.append(content))
+	NetworkManager._handle_frame({"type": "action_result", "request_id": "r3", "payload": {
+		"command": "mine", "tick": 8, "result": {"cargo": [], "queue": {"has_pending": false}}}})
+	assert_bool(got[0].has("cargo")).is_true()
+	assert_bool(StateManager.has_pending).is_false()
 
 
-func test_initial_state_no_api_key() -> void:
-	assert_str(NetworkManager.api_key).is_equal("")
+func test_unmatched_action_result_still_applies_delta() -> void:
+	NetworkManager._handle_frame({"type": "action_result", "request_id": "stale", "payload": {
+		"command": "mine", "tick": 8, "result": {"ship": {"hull": 3}}}})
+	assert_int(int(StateManager.ship["hull"])).is_equal(3)
+
+
+func test_action_error_settles_with_empty_content() -> void:
+	var got: Array = []
+	_pend("r4", func(content: Dictionary) -> void: got.append(content))
+	NetworkManager._handle_frame({"type": "action_error", "request_id": "r4", "payload": {
+		"command": "jump", "tick": 9, "code": "invalid_target", "message": "no"}})
+	assert_array(got).contains_exactly([{}])
+	assert_bool(NetworkManager.is_request_pending).is_false()
+
+
+func test_error_prefers_on_error_callback() -> void:
+	var errors: Array = []
+	var completes: Array = []
+	_pend("r5", func(c: Dictionary) -> void: completes.append(c), func(e: Dictionary) -> void: errors.append(e))
+	NetworkManager._handle_frame({"type": "error", "request_id": "r5", "payload": {"code": "rate_limited", "message": "slow down"}})
+	assert_array(completes).is_empty()
+	assert_str(errors[0]["code"]).is_equal("rate_limited")
+
+
+func test_not_authenticated_error_expires_session() -> void:
+	NetworkManager.is_authenticated = true
+	var monitor := monitor_signals(NetworkManager, false)
+	NetworkManager._handle_frame({"type": "error", "payload": {"code": "not_authenticated", "message": "login first"}})
+	await assert_signal(monitor).is_emitted("session_expired")
 	assert_bool(NetworkManager.is_authenticated).is_false()
 
 
-# --- Device login (browser link) ---
+func test_welcome_sets_tick_duration_and_runs_open_callbacks() -> void:
+	var ran: Array = []
+	NetworkManager._on_open.append(func() -> void: ran.append(true))
+	NetworkManager._handle_frame({"type": "welcome", "payload": {"version": "1.0", "tick_rate": 5}})
+	assert_float(NetworkManager.tick_duration).is_equal_approx(5.0, 0.001)
+	assert_int(ran.size()).is_equal(1)
+	assert_bool(NetworkManager._welcomed).is_true()
+	NetworkManager._welcomed = false
+
+
+func test_logged_in_authenticates_and_merges_registered_credentials() -> void:
+	NetworkManager.device_code = "dev"
+	var got: Array = []
+	_pend("r6", func(content: Dictionary) -> void: got.append(content))
+	var monitor := monitor_signals(NetworkManager, false)
+	NetworkManager._handle_frame({"type": "registered", "payload": {"password": "secret", "player_id": "p1"}})
+	NetworkManager._handle_frame({"type": "logged_in", "request_id": "r6", "payload": {"player": {"username": "Vex"}, "ship": {}}})
+	await assert_signal(monitor).is_emitted("authenticated", [{"player": {"username": "Vex"}, "ship": {}, "password": "secret", "player_id": "p1"}])
+	assert_bool(NetworkManager.is_authenticated).is_true()
+	assert_str(NetworkManager.device_code).is_empty()
+	assert_str(got[0]["password"]).is_equal("secret")
+
+
+func test_chat_push_routes_to_ui_manager() -> void:
+	var monitor := monitor_signals(UIManager, false)
+	NetworkManager._handle_frame({"type": "chat_message", "payload": {"channel": "local", "sender": "Bob", "content": "hi"}})
+	await assert_signal(monitor).is_emitted("chat_received", [{"channel": "local", "sender": "Bob", "content": "hi"}])
+
+
+func test_other_push_becomes_event() -> void:
+	var monitor := monitor_signals(UIManager, false)
+	NetworkManager._handle_frame({"type": "skill_level_up", "payload": {"skill": "mining", "level": 4}})
+	await assert_signal(monitor).is_emitted("event_received", [{"msg_type": "skill_level_up", "message": "", "data": {"skill": "mining", "level": 4}}])
+
+
+func test_close_while_authenticated_expires_session_and_fails_pending() -> void:
+	NetworkManager.is_authenticated = true
+	var got: Array = []
+	_pend("r7", func(content: Dictionary) -> void: got.append(content))
+	var monitor := monitor_signals(NetworkManager, false)
+	NetworkManager._handle_close(1006, "gone")
+	await assert_signal(monitor).is_emitted("session_expired")
+	assert_array(got).contains_exactly([{}])
+	assert_bool(NetworkManager.is_authenticated).is_false()
+	assert_bool(NetworkManager.is_request_pending).is_false()
+
+
+# --- Device login polling ---
 
 func _device_timer() -> Timer:
 	return NetworkManager.get_node("DeviceLinkTimer") as Timer
 
 
-func _reset_device_login() -> void:
-	NetworkManager._clear_session()
-	NetworkManager._delete_saved_auth()
-
-
-func test_device_link_timer_is_one_shot() -> void:
-	var timer := _device_timer()
-	assert_object(timer).is_not_null()
-	assert_bool(timer.one_shot).is_true()
-	assert_bool(timer.is_stopped()).is_true()
-
-
-func test_pending_poll_reschedules_timer() -> void:
+func test_pending_poll_reschedules_timer_at_server_interval_or_floor() -> void:
 	NetworkManager.device_code = "dev123"
 	NetworkManager._on_device_link_polled({"status": "authorization_pending", "interval": 5})
 	assert_bool(_device_timer().is_stopped()).is_false()
 	assert_float(_device_timer().wait_time).is_equal_approx(5.0, 0.001)
-	assert_bool(NetworkManager.is_authenticated).is_false()
-	_reset_device_login()
-
-
-func test_pending_poll_clamps_tiny_interval() -> void:
-	NetworkManager.device_code = "dev123"
-	NetworkManager._on_device_link_polled({"status": "authorization_pending", "interval": 0})
-	assert_float(_device_timer().wait_time).is_equal_approx(1.0, 0.001)
-	_reset_device_login()
+	NetworkManager._on_device_link_polled({"status": "authorization_pending", "interval": 1})
+	assert_float(_device_timer().wait_time).is_equal_approx(NetworkManager.DEVICE_LINK_POLL_INTERVAL, 0.001)
+	_device_timer().stop()
 
 
 func test_denied_poll_emits_auth_error_and_stops() -> void:
@@ -121,8 +224,6 @@ func test_denied_poll_emits_auth_error_and_stops() -> void:
 	NetworkManager._on_device_link_polled({"status": "access_denied"})
 	await assert_signal(monitor).is_emitted("auth_error", ["Login declined in the browser."])
 	assert_str(NetworkManager.device_code).is_empty()
-	assert_bool(NetworkManager.is_authenticated).is_false()
-	_reset_device_login()
 
 
 func test_expired_poll_emits_auth_error() -> void:
@@ -130,47 +231,22 @@ func test_expired_poll_emits_auth_error() -> void:
 	var monitor := monitor_signals(NetworkManager, false)
 	NetworkManager._on_device_link_polled({"status": "expired_token"})
 	await assert_signal(monitor).is_emitted("auth_error", ["Login link expired. Try again."])
-	assert_str(NetworkManager.device_code).is_empty()
-	_reset_device_login()
 
 
-func test_approved_poll_logs_in_and_saves_session() -> void:
-	NetworkManager.device_code = "dev123"
-	NetworkManager.session_id = "sess_abc"
-	var monitor := monitor_signals(NetworkManager, false)
-	var login := {"player": {"username": "Vex"}, "ship": {"hull": 100}}
-	NetworkManager._on_device_link_polled(login)
-	await assert_signal(monitor).is_emitted("authenticated", [login])
-	assert_bool(NetworkManager.is_authenticated).is_true()
-	assert_str(NetworkManager.device_code).is_empty()
-	assert_bool(NetworkManager.get_node("PollTimer").is_stopped()).is_false()
-	# Session persists so a relaunch within the server's idle window skips the browser
-	NetworkManager.session_id = ""
-	NetworkManager._load_auth()
-	assert_str(NetworkManager.session_id).is_equal("sess_abc")
-	_reset_device_login()
+# --- Saved API key ---
 
-
-func test_stale_poll_result_ignored_after_cancel() -> void:
-	NetworkManager.device_code = ""
-	var monitor := monitor_signals(NetworkManager, false)
-	NetworkManager._on_device_link_polled({"player": {"username": "Vex"}})
-	await assert_signal(monitor).wait_until(200).is_not_emitted("authenticated")
-	assert_bool(NetworkManager.is_authenticated).is_false()
-
-
-func test_clear_session_stops_device_polling() -> void:
-	NetworkManager.device_code = "dev123"
-	NetworkManager._schedule_device_poll(3.0)
-	NetworkManager._clear_session()
-	assert_str(NetworkManager.device_code).is_empty()
-	assert_bool(_device_timer().is_stopped()).is_true()
-
-
-func test_save_and_load_session_id() -> void:
-	NetworkManager.session_id = "sess_xyz"
+func test_save_and_load_api_key() -> void:
+	NetworkManager.api_key = "sk_test_key123"
 	NetworkManager._save_auth()
-	NetworkManager.session_id = ""
+	NetworkManager.api_key = ""
 	NetworkManager._load_auth()
-	assert_str(NetworkManager.session_id).is_equal("sess_xyz")
-	_reset_device_login()
+	assert_str(NetworkManager.api_key).is_equal("sk_test_key123")
+	assert_bool(NetworkManager.has_saved_auth()).is_true()
+
+
+func test_clear_auth_deletes_saved_key() -> void:
+	NetworkManager.api_key = "sk_test_key123"
+	NetworkManager._save_auth()
+	NetworkManager.clear_auth()
+	assert_bool(NetworkManager.has_saved_auth()).is_false()
+	assert_str(NetworkManager.api_key).is_empty()

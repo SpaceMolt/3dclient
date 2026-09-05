@@ -768,7 +768,7 @@ func _travel_path_tangent(progress: float) -> Vector3:
 
 
 func _refresh_remote_state() -> void:
-	if NetworkManager.session_id.is_empty():
+	if not NetworkManager.is_authenticated:
 		return
 	NetworkManager.send_command("get_nearby", {}, func(content):
 		StateManager.update_nearby(content)
@@ -844,8 +844,6 @@ func _on_travel_started(dest_poi_id: String, _dest_poi_name: String) -> void:
 	if _poi_markers.has(dest_poi_id):
 		_poi_markers[dest_poi_id].set_selected(true)
 
-	NetworkManager.pause_poll()
-
 
 func _on_travel_ended() -> void:
 	if not _is_animating_travel:
@@ -890,7 +888,6 @@ func _on_travel_ended() -> void:
 
 	_recompute_poi_positions()
 
-	NetworkManager.resume_poll()
 
 
 func _on_travel_aborted(_origin_poi_id: String) -> void:
@@ -937,7 +934,6 @@ func _on_travel_aborted(_origin_poi_id: String) -> void:
 
 	_recompute_poi_positions()
 
-	NetworkManager.resume_poll()
 
 
 # --- Jump (inter-system) handlers ---

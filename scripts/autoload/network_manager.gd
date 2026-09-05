@@ -1,22 +1,33 @@
 extends Node
+## Game transport over WebSocket v2 (/ws/v2). Every game action is a frame
+## {tool, action, payload, request_id}; the server answers with a correlated
+## result / action_result / action_error / error frame and pushes events on its
+## own. Only the dashboard API-key flow still uses HTTP (player list, ws-token).
 
 const DEFAULT_BASE_URL = "https://game.spacemolt.com"
 const DEFAULT_TICK_DURATION = 10.0
-const POLL_INTERVAL = 10.0
 const AUTH_PATH = "user://auth.cfg"
 const DEVICE_LINK_POLL_INTERVAL = 3.0
 const MISSING_MODELS_LOG_NAME = "missing_ship_models.log"
+# get_map alone is ~140 KB, well past WebSocketPeer's 64 KB default.
+const INBOUND_BUFFER_SIZE = 16 * 1024 * 1024
+const CLOSE_SESSION_REPLACED = 4001
 
 var base_url: String = DEFAULT_BASE_URL
 var tick_duration: float = DEFAULT_TICK_DURATION
 
-var session_id: String = ""
 var is_authenticated: bool = false
 var is_request_pending: bool = false
-var _is_restoring_session: bool = false
 var api_key: String = ""
 var registration_code: String = ""
 var device_code: String = ""
+
+var _ws: WebSocketPeer = null
+var _welcomed: bool = false
+var _on_open: Array[Callable] = []
+var _pending: Dictionary = {}  # request_id -> {on_complete: Callable, on_error: Callable}
+var _next_request_id: int = 0
+var _registered: Dictionary = {}  # password/player_id from a `registered` frame, merged into login
 
 signal request_started
 signal request_completed
@@ -31,11 +42,6 @@ func _ready() -> void:
 	if not env_url.is_empty():
 		base_url = env_url.rstrip("/")
 	Log.i("NetworkManager ready, base_url=%s" % base_url)
-	var poll_timer := Timer.new()
-	poll_timer.name = "PollTimer"
-	poll_timer.wait_time = POLL_INTERVAL
-	poll_timer.timeout.connect(_poll_state)
-	add_child(poll_timer)
 	var link_timer := Timer.new()
 	link_timer.name = "DeviceLinkTimer"
 	link_timer.one_shot = true
@@ -44,15 +50,268 @@ func _ready() -> void:
 	add_child(link_timer)
 
 
-func create_session(on_complete: Callable) -> void:
-	_raw_post("/api/v2/session", {}, func(data: Dictionary) -> void:
-		if data.has("error") and data["error"] != null:
-			auth_error.emit(data["error"].get("message", "Session creation failed"))
-			return
-		session_id = data["session"]["id"]
-		on_complete.call()
-	)
+func _process(_delta: float) -> void:
+	if _ws == null:
+		return
+	_ws.poll()
+	match _ws.get_ready_state():
+		WebSocketPeer.STATE_OPEN:
+			while _ws.get_available_packet_count() > 0:
+				_handle_message(_ws.get_packet().get_string_from_utf8())
+		WebSocketPeer.STATE_CLOSED:
+			var code := _ws.get_close_code()
+			var reason := _ws.get_close_reason()
+			_ws = null
+			_handle_close(code, reason)
 
+
+# --- Connection ---
+
+func is_connected_to_server() -> bool:
+	return _ws != null and _welcomed and _ws.get_ready_state() == WebSocketPeer.STATE_OPEN
+
+
+func ws_url() -> String:
+	var url := base_url.rstrip("/")
+	if url.begins_with("https://"):
+		url = "wss://" + url.trim_prefix("https://")
+	elif url.begins_with("http://"):
+		url = "ws://" + url.trim_prefix("http://")
+	return url + "/ws/v2"
+
+
+## Runs callback once the socket is open and the welcome frame has arrived.
+func _connect_then(callback: Callable) -> void:
+	if is_connected_to_server():
+		callback.call()
+		return
+	_on_open.append(callback)
+	if _ws == null:
+		_ws = WebSocketPeer.new()
+		_ws.inbound_buffer_size = INBOUND_BUFFER_SIZE
+		_welcomed = false
+		var err := _ws.connect_to_url(ws_url())
+		Log.i("Connecting to %s" % ws_url())
+		if err != OK:
+			Log.e("connect_to_url failed: %d" % err)
+			_ws = null
+			_handle_close(-1, "connect failed (%d)" % err)
+
+
+func disconnect_from_server() -> void:
+	if _ws:
+		_ws.close()
+	_ws = null
+	_welcomed = false
+
+
+# --- Sending ---
+
+## Sends one frame and correlates the reply. on_complete receives the query's
+## structuredContent, or for mutations the outcome details once the action
+## executes. Errors go to on_error when given, otherwise on_complete({}).
+func _request(tool: String, action: String, params: Dictionary, on_complete: Callable = Callable(), on_error: Callable = Callable()) -> void:
+	if not is_connected_to_server():
+		Log.e("Not connected; dropping %s/%s" % [tool, action])
+		_deliver_error(on_complete, on_error, {"code": "not_connected", "message": "Not connected to the server."})
+		return
+	_next_request_id += 1
+	var request_id := "r%d" % _next_request_id
+	_pending[request_id] = {"on_complete": on_complete, "on_error": on_error}
+	_update_pending_flag()
+	var frame := {"tool": tool, "action": action, "payload": params, "request_id": request_id}
+	var logged := params.duplicate()
+	if logged.has("password"):
+		logged["password"] = "***"
+	Log.i(">> %s/%s %s %s" % [tool, action, request_id, JSON.stringify(logged)])
+	_ws.send_text(JSON.stringify(frame))
+
+
+func _deliver_error(on_complete: Callable, on_error: Callable, error: Dictionary) -> void:
+	if on_error.is_valid():
+		on_error.call(error)
+	elif on_complete.is_valid():
+		on_complete.call({})
+
+
+func _settle(request_id: String) -> Dictionary:
+	var entry: Dictionary = _pending.get(request_id, {})
+	_pending.erase(request_id)
+	_update_pending_flag()
+	return entry
+
+
+func _update_pending_flag() -> void:
+	var pending := not _pending.is_empty()
+	if pending == is_request_pending:
+		return
+	is_request_pending = pending
+	if pending:
+		request_started.emit()
+	else:
+		request_completed.emit()
+
+
+func _fail_all_pending(error: Dictionary) -> void:
+	var entries := _pending.values()
+	_pending.clear()
+	_update_pending_flag()
+	for entry in entries:
+		_deliver_error(entry["on_complete"], entry["on_error"], error)
+
+
+# --- Receiving ---
+
+## The server packs several frames into one message, newline separated.
+static func split_frames(text: String) -> Array[String]:
+	var frames: Array[String] = []
+	for line in text.split("\n"):
+		if not line.strip_edges().is_empty():
+			frames.append(line)
+	return frames
+
+
+func _handle_message(text: String) -> void:
+	for line in split_frames(text):
+		var frame = JSON.parse_string(line)
+		if frame is Dictionary and frame.has("type"):
+			_handle_frame(frame)
+		else:
+			Log.e("Dropped unparseable frame: %s" % line.left(200))
+
+
+## True when a `result` frame is only the pending acknowledgement of a queued
+## mutation. `jump` nests the marker under details; most actions keep it top level.
+static func is_pending_ack(content) -> bool:
+	if not content is Dictionary:
+		return false
+	if content.get("pending", false) == true:
+		return true
+	var details = content.get("details")
+	return details is Dictionary and details.get("pending", false) == true
+
+
+func _handle_frame(frame: Dictionary) -> void:
+	var type: String = frame.get("type", "")
+	var payload = frame.get("payload", {})
+	var request_id: String = frame.get("request_id", "")
+	if not payload is Dictionary:
+		payload = {"result": payload}
+	match type:
+		"welcome":
+			_on_welcome(payload)
+		"result":
+			if is_pending_ack(payload.get("structuredContent")):
+				Log.i("<< pending %s" % request_id)
+				return
+			Log.i("<< result %s" % request_id)
+			var content = payload.get("structuredContent")
+			if not content is Dictionary:
+				content = {"result": payload.get("result", "")}
+			StateManager.update_state(content)
+			var entry := _settle(request_id)
+			if entry.has("on_complete") and entry["on_complete"].is_valid():
+				entry["on_complete"].call(content)
+		"action_result":
+			var delta = payload.get("result", {})
+			if not delta is Dictionary:
+				delta = {}
+			Log.i("<< action_result %s %s tick=%s" % [request_id, payload.get("command", ""), payload.get("tick", "")])
+			StateManager.update_state(delta)
+			var message: String = str(delta.get("message", ""))
+			if not message.is_empty():
+				UIManager.add_event({"msg_type": payload.get("command", "result"), "message": message})
+			var entry := _settle(request_id)
+			if entry.has("on_complete") and entry["on_complete"].is_valid():
+				entry["on_complete"].call(delta.get("details", delta))
+		"action_error", "error":
+			Log.w("<< %s %s %s" % [type, request_id, JSON.stringify(payload)])
+			_handle_error(payload)
+			var entry := _settle(request_id)
+			if not entry.is_empty():
+				_deliver_error(entry["on_complete"], entry["on_error"], payload)
+		"registered":
+			_registered = payload
+		"logged_in":
+			var entry := _settle(request_id)
+			var content := _finish_login(payload)
+			if entry.has("on_complete") and entry["on_complete"].is_valid():
+				entry["on_complete"].call(content)
+		"chat_message":
+			UIManager.add_chat(payload)
+		"player_died":
+			UIManager.add_event({"msg_type": type, "data": payload})
+			_request("spacemolt", "get_status", {})
+		_:
+			UIManager.add_event({"msg_type": type, "message": str(payload.get("message", "")), "data": payload})
+
+
+func _on_welcome(payload: Dictionary) -> void:
+	_welcomed = true
+	var tick_rate := float(payload.get("tick_rate", 0))
+	if tick_rate > 0.0:
+		tick_duration = tick_rate
+	Log.i("Connected: server %s, tick %ss" % [payload.get("version", "?"), tick_duration])
+	var callbacks := _on_open.duplicate()
+	_on_open.clear()
+	for callback in callbacks:
+		callback.call()
+	if not device_code.is_empty():
+		_schedule_device_poll(DEVICE_LINK_POLL_INTERVAL)
+
+
+func _handle_close(code: int, reason: String) -> void:
+	_welcomed = false
+	_on_open.clear()
+	Log.w("Socket closed code=%d reason=%s" % [code, reason])
+	var was_authenticated := is_authenticated
+	_fail_all_pending({"code": "disconnected", "message": "Connection closed (%d)" % code})
+	if not device_code.is_empty():
+		# Device login outlives the 30 s unauthenticated socket limit: reconnect
+		# and keep polling the same device code.
+		await get_tree().create_timer(2.0).timeout
+		if not device_code.is_empty():
+			_connect_then(func() -> void: pass)
+		return
+	if was_authenticated:
+		is_authenticated = false
+		var message := "Logged in from another client." if code == CLOSE_SESSION_REPLACED else "Connection lost (%d)." % code
+		UIManager.show_error(message)
+		session_expired.emit()
+
+
+func _handle_error(error: Dictionary) -> void:
+	var code: String = error.get("code", "")
+	var message: String = error.get("message", "Unknown error")
+	match code:
+		"not_authenticated", "session_expired", "session_invalid":
+			if is_authenticated:
+				is_authenticated = false
+				UIManager.show_error("Session expired. Please log in again.")
+				session_expired.emit()
+		"rate_limited":
+			var retry_after: float = error.get("details", {}).get("retry_after", error.get("retry_after", 5.0))
+			UIManager.show_error("Rate limited. Try again in %ds." % int(retry_after))
+		"combat_interrupt":
+			UIManager.show_error("Action cancelled: you were pulled into combat.")
+		"in_combat":
+			UIManager.show_error("Cannot do that during combat.")
+		"not_in_combat":
+			UIManager.show_error("Not in combat.")
+		"insufficient_fuel":
+			UIManager.show_error("Not enough fuel.")
+		"already_docked":
+			UIManager.show_info("Already docked.")
+		"invalid_target":
+			UIManager.show_error("Invalid target. Refreshing...")
+			_request("spacemolt", "get_nearby", {}, func(content: Dictionary) -> void:
+				StateManager.update_nearby(content)
+			)
+		_:
+			UIManager.show_error(message)
+
+
+# --- Authentication ---
 
 func set_api_key(key: String) -> void:
 	api_key = key
@@ -62,21 +321,17 @@ func set_api_key(key: String) -> void:
 func get_players(on_success: Callable, on_error: Callable = Callable()) -> void:
 	_api_get_with_key("/api/registration-code", func(data: Dictionary) -> void:
 		registration_code = data.get("registration_code", "")
-		var players: Array = data.get("players", [])
-		on_success.call(players)
+		on_success.call(data.get("players", []))
 	, on_error)
 
 
 func create_player(username: String, empire: String, on_success: Callable, on_error: Callable = Callable()) -> void:
-	create_session(func() -> void:
-		api_post(
-			"/api/v2/spacemolt_auth/register",
+	_connect_then(func() -> void:
+		_request("spacemolt_auth", "register",
 			{"username": username, "empire": empire, "registration_code": registration_code},
-			func(content: Dictionary) -> void:
-				_finish_login(content)
-				on_success.call(content)
-		, on_error)
+			on_success, on_error)
 	)
+
 
 func select_player(player_id: String, on_success: Callable, on_error: Callable = Callable()) -> void:
 	_api_post_with_key("/api/player/" + player_id + "/ws-token", {}, func(data: Dictionary) -> void:
@@ -85,22 +340,16 @@ func select_player(player_id: String, on_success: Callable, on_error: Callable =
 			if on_error.is_valid():
 				on_error.call({"code": "no_token", "message": "Failed to get auth token"})
 			return
-		create_session(func() -> void:
-			api_post(
-				"/api/v2/spacemolt_auth/login_token",
-				{"token": token},
-				func(content: Dictionary) -> void:
-					_finish_login(content)
-					on_success.call(content)
-			, on_error)
+		_connect_then(func() -> void:
+			_request("spacemolt_auth", "login_token", {"token": token}, on_success, on_error)
 		)
 	, on_error)
 
 
 ## Password login for scripted dev runs (SPACEMOLT_USERNAME / SPACEMOLT_PASSWORD).
 func login_password(username: String, password: String, on_error: Callable = Callable()) -> void:
-	create_session(func() -> void:
-		api_post("/api/v2/spacemolt_auth/login", {"username": username, "password": password}, _finish_login, on_error)
+	_connect_then(func() -> void:
+		_request("spacemolt_auth", "login", {"username": username, "password": password}, Callable(), on_error)
 	)
 
 
@@ -108,8 +357,8 @@ func login_password(username: String, password: String, on_error: Callable = Cal
 ## on_link(url, user_code) fires when the link is ready; approval or failure
 ## arrives through the authenticated / auth_error signals.
 func start_device_login(on_link: Callable, on_error: Callable = Callable()) -> void:
-	create_session(func() -> void:
-		api_post("/api/v2/spacemolt_auth/login_link", {}, func(content: Dictionary) -> void:
+	_connect_then(func() -> void:
+		_request("spacemolt_auth", "login_link", {}, func(content: Dictionary) -> void:
 			device_code = content.get("device_code", "")
 			var url: String = content.get("verification_uri_complete", "")
 			Log.i("Device login link: %s" % url)
@@ -120,14 +369,16 @@ func start_device_login(on_link: Callable, on_error: Callable = Callable()) -> v
 
 
 func _schedule_device_poll(interval: float) -> void:
-	var timer := get_node("DeviceLinkTimer") as Timer
-	timer.start(maxf(interval, 1.0))
+	# Unauthenticated frames are capped at 20/min per IP; never poll faster than the server asks.
+	(get_node("DeviceLinkTimer") as Timer).start(maxf(interval, DEVICE_LINK_POLL_INTERVAL))
 
 
 func _poll_device_link() -> void:
-	if device_code.is_empty():
+	if device_code.is_empty() or not is_connected_to_server():
 		return
-	api_post("/api/v2/spacemolt_auth/login_link_poll", {"device_code": device_code}, _on_device_link_polled)
+	_request("spacemolt_auth", "login_link_poll", {"device_code": device_code}, _on_device_link_polled, func(_error: Dictionary) -> void:
+		_schedule_device_poll(DEVICE_LINK_POLL_INTERVAL)
+	)
 
 
 func _on_device_link_polled(content: Dictionary) -> void:
@@ -143,57 +394,40 @@ func _on_device_link_polled(content: Dictionary) -> void:
 			device_code = ""
 			auth_error.emit("Login link expired. Try again.")
 		_:
-			# No status means the human approved: this is a LoginResponse.
-			device_code = ""
-			_finish_login(content)
+			pass  # Approval arrives as a logged_in frame, handled in _handle_frame.
 
 
-func _finish_login(content: Dictionary) -> void:
+## Marks the connection logged in and emits the initial state, with the
+## password/player_id from a preceding `registered` frame merged in.
+func _finish_login(payload: Dictionary) -> Dictionary:
 	is_authenticated = true
-	_save_auth()
-	_start_poll()
+	device_code = ""
+	(get_node("DeviceLinkTimer") as Timer).stop()
+	var content := payload.duplicate()
+	content.merge(_registered)
+	_registered = {}
 	authenticated.emit(content)
+	return content
 
 
 func logout() -> void:
-	if session_id.is_empty():
-		return
-	api_post("/api/v2/spacemolt_auth/logout", {}, func(_content: Dictionary) -> void:
-		pass
-	)
-	_clear_session()
+	if is_connected_to_server():
+		_request("spacemolt_auth", "logout", {})
+	is_authenticated = false
+	device_code = ""
 	clear_auth()
 	StateManager.reset()
+	disconnect_from_server()
 	session_expired.emit()
 
 
-## Restores a saved session (device login) or a saved API key (dashboard key).
-## A live session skips player select: on_success is not called because the
-## authenticated signal already carries the game state.
+## Restores a saved dashboard API key: on_success gets the player list.
 func try_restore_auth(on_success: Callable, on_failure: Callable) -> void:
 	_load_auth()
-	if not session_id.is_empty():
-		_is_restoring_session = true
-		api_post("/api/v2/spacemolt/get_status", {}, func(content: Dictionary) -> void:
-			_is_restoring_session = false
-			StateManager.update_state(content)
-			_finish_login(content)
-		, func(_error: Dictionary = {}) -> void:
-			_is_restoring_session = false
-			_save_auth()  # session_id was cleared by _handle_error; keep the API key
-			_restore_api_key(on_success, on_failure)
-		)
-		return
-	_restore_api_key(on_success, on_failure)
-
-
-func _restore_api_key(on_success: Callable, on_failure: Callable) -> void:
 	if api_key.is_empty():
 		on_failure.call()
 		return
-	get_players(func(players: Array) -> void:
-		on_success.call(players)
-	, func(_error: Dictionary = {}) -> void:
+	get_players(on_success, func(_error: Dictionary = {}) -> void:
 		clear_auth()
 		on_failure.call()
 	)
@@ -209,39 +443,20 @@ func has_saved_auth() -> bool:
 	return FileAccess.file_exists(AUTH_PATH)
 
 
+# --- Game commands (tool wrappers) ---
+
 func send_command(action: String, params: Dictionary, on_complete: Callable = Callable()) -> void:
-	var _on_error := func(_error: Dictionary) -> void:
-		# Even on error, refresh state (server may have changed) and notify caller
-		_refresh_state_then(func():
-			if on_complete.is_valid():
-				on_complete.call({})
-		)
-		_reset_poll()
-	api_post("/api/v2/spacemolt/" + action, params, func(content: Dictionary) -> void:
-		# Try to update state from the response (works for get_status, get_nearby, etc.)
-		StateManager.update_state(content)
-		# Mutation responses (travel, dock, undock, mine, etc.) don't include
-		# V2GameState fields, so refresh state after every command.
-		if action != "get_status" and action != "get_nearby" and not action.begins_with("get_"):
-			_refresh_state_then(func():
-				if on_complete.is_valid():
-					on_complete.call(content)
-			)
-		else:
-			if on_complete.is_valid():
-				on_complete.call(content)
-		_reset_poll()
-	, _on_error)
+	_request("spacemolt", action, params, on_complete)
 
 
 func execute_jump(target_system_id: String, on_complete: Callable) -> void:
-	send_command("jump", {"id": target_system_id}, func(_content: Dictionary):
+	send_command("jump", {"id": target_system_id}, func(_content: Dictionary) -> void:
 		if StateManager.get_current_system_id() != target_system_id:
 			on_complete.call(false)
 			return
-		send_command("get_system", {}, func(sys_content: Dictionary):
+		send_command("get_system", {}, func(sys_content: Dictionary) -> void:
 			StateManager.update_system(sys_content)
-			send_command("get_nearby", {}, func(nearby_content: Dictionary):
+			send_command("get_nearby", {}, func(nearby_content: Dictionary) -> void:
 				StateManager.update_nearby(nearby_content)
 				on_complete.call(true)
 			)
@@ -250,209 +465,38 @@ func execute_jump(target_system_id: String, on_complete: Callable) -> void:
 
 
 func send_battle_command(action: String, params: Dictionary, on_complete: Callable = Callable()) -> void:
-	var _on_error := func(_error: Dictionary) -> void:
-		if on_complete.is_valid():
-			on_complete.call({})
-		_reset_poll()
-	api_post("/api/v2/spacemolt_battle/" + action, params, func(content: Dictionary) -> void:
-		if on_complete.is_valid():
-			on_complete.call(content)
-		_reset_poll()
-	, _on_error)
+	_request("spacemolt_battle", action, params, on_complete)
 
 
 func send_market_command(action: String, params: Dictionary, on_complete: Callable = Callable()) -> void:
-	var _on_error := func(_error: Dictionary) -> void:
-		if on_complete.is_valid():
-			on_complete.call({})
-		_reset_poll()
-	api_post("/api/v2/spacemolt_market/" + action, params, func(content: Dictionary) -> void:
-		if on_complete.is_valid():
-			on_complete.call(content)
-		_reset_poll()
-	, _on_error)
+	_request("spacemolt_market", action, params, on_complete)
 
 
 func send_storage_command(action: String, params: Dictionary, on_complete: Callable = Callable()) -> void:
-	var _on_error := func(_error: Dictionary) -> void:
-		if on_complete.is_valid():
-			on_complete.call({})
-	api_post("/api/v2/spacemolt_storage/" + action, params, func(content: Dictionary) -> void:
-		if on_complete.is_valid():
-			on_complete.call(content)
-	, _on_error)
+	_request("spacemolt_storage", action, params, on_complete)
 
 
 func send_transfer_command(action: String, params: Dictionary, on_complete: Callable = Callable()) -> void:
-	var _on_error := func(_error: Dictionary) -> void:
-		if on_complete.is_valid():
-			on_complete.call({})
-		_reset_poll()
-	api_post("/api/v2/spacemolt_transfer/" + action, params, func(content: Dictionary) -> void:
-		if on_complete.is_valid():
-			on_complete.call(content)
-		_reset_poll()
-	, _on_error)
+	_request("spacemolt_transfer", action, params, on_complete)
 
 
 func send_social_command(action: String, params: Dictionary, on_complete: Callable = Callable()) -> void:
-	var _on_error := func(_error: Dictionary) -> void:
-		if on_complete.is_valid():
-			on_complete.call({})
-	api_post("/api/v2/spacemolt_social/" + action, params, func(content: Dictionary) -> void:
-		if on_complete.is_valid():
-			on_complete.call(content)
-	, _on_error)
+	_request("spacemolt_social", action, params, on_complete)
 
 
 func send_salvage_command(action: String, params: Dictionary, on_complete: Callable = Callable()) -> void:
-	var _on_error := func(_error: Dictionary) -> void:
-		if on_complete.is_valid():
-			on_complete.call({})
-	api_post("/api/v2/spacemolt_salvage/" + action, params, func(content: Dictionary) -> void:
-		if on_complete.is_valid():
-			on_complete.call(content)
-	, _on_error)
+	_request("spacemolt_salvage", action, params, on_complete)
 
 
 func send_ship_command(action: String, params: Dictionary, on_complete: Callable = Callable()) -> void:
-	var _on_error := func(_error: Dictionary) -> void:
-		if on_complete.is_valid():
-			on_complete.call({})
-	api_post("/api/v2/spacemolt_ship/" + action, params, func(content: Dictionary) -> void:
-		if on_complete.is_valid():
-			on_complete.call(content)
-	, _on_error)
+	_request("spacemolt_ship", action, params, on_complete)
 
 
 func send_catalog_command(params: Dictionary, on_complete: Callable = Callable()) -> void:
-	var _on_error := func(_error: Dictionary) -> void:
-		if on_complete.is_valid():
-			on_complete.call({})
-	api_post("/api/v2/spacemolt_catalog", params, func(content: Dictionary) -> void:
-		if on_complete.is_valid():
-			on_complete.call(content)
-	, _on_error)
+	_request("spacemolt_catalog", "", params, on_complete)
 
 
-func api_post(path: String, body: Dictionary, on_success: Callable, on_error: Callable = Callable()) -> void:
-	if session_id.is_empty():
-		Log.e("api_post called without session_id for %s" % path)
-		if on_error.is_valid():
-			on_error.call({"code": "no_session", "message": "No session"})
-		return
-
-	var logged_body := body.duplicate()
-	if logged_body.has("password"):
-		logged_body["password"] = "***"
-	Log.i(">> POST %s %s" % [path, JSON.stringify(logged_body)])
-	is_request_pending = true
-	request_started.emit()
-
-	var http := HTTPRequest.new()
-	add_child(http)
-	http.request_completed.connect(
-		func(result: int, response_code: int, _headers: PackedStringArray, body_bytes: PackedByteArray) -> void:
-			http.queue_free()
-			is_request_pending = false
-			request_completed.emit()
-
-			if result != HTTPRequest.RESULT_SUCCESS:
-				Log.e("<< NETWORK ERROR %s result=%d" % [path, result])
-				UIManager.show_error("Network error (code %d)" % result)
-				if on_error.is_valid():
-					on_error.call({})
-				return
-
-			var raw_text := body_bytes.get_string_from_utf8()
-			var data = JSON.parse_string(raw_text)
-			if data == null:
-				Log.e("<< PARSE ERROR %s http=%d body=%s" % [path, response_code, raw_text.left(500)])
-				UIManager.show_error("Invalid response from server")
-				if on_error.is_valid():
-					on_error.call({})
-				return
-
-			if data.has("error") and data["error"] != null:
-				Log.w("<< ERROR %s http=%d error=%s" % [path, response_code, JSON.stringify(data["error"])])
-				_handle_error(data["error"])
-				if on_error.is_valid():
-					var err = data.get("error", {})
-					on_error.call(err if err is Dictionary else {"message": err})
-				return
-
-			Log.i("<< OK %s http=%d" % [path, response_code])
-
-			if data.has("notifications") and data["notifications"] is Array:
-				_handle_notifications(data["notifications"])
-
-			# Show the narrative result text in event log (if present and non-empty)
-			var result_text: String = data.get("result", "")
-			if not result_text.is_empty():
-				UIManager.add_event({"msg_type": "result", "message": result_text})
-
-			on_success.call(data.get("structuredContent", {}))
-	)
-
-	var headers := PackedStringArray([
-		"Content-Type: application/json",
-		"X-Session-Id: " + session_id,
-	])
-	http.request(base_url + path, headers, HTTPClient.METHOD_POST, JSON.stringify(body))
-
-
-func _handle_error(error: Dictionary) -> void:
-	var code: String = error.get("code", "")
-	var message: String = error.get("message", "Unknown error")
-	Log.w("HANDLE_ERROR code=%s message=%s" % [code, message])
-
-	match code:
-		"session_expired", "session_invalid", "not_authenticated":
-			Log.w("SESSION LOST — emitting session_expired, returning to login")
-			_clear_session()
-			if _is_restoring_session:
-				return
-			UIManager.show_error("Session expired. Please log in again.")
-			session_expired.emit()
-		"rate_limited":
-			var retry_after: float = error.get("retry_after", 5.0)
-			UIManager.show_error("Rate limited. Try again in %ds." % int(retry_after))
-		"in_combat":
-			UIManager.show_error("Cannot do that during combat.")
-		"not_in_combat":
-			UIManager.show_error("Not in combat.")
-		"insufficient_fuel":
-			UIManager.show_error("Not enough fuel.")
-		"already_docked":
-			UIManager.show_info("Already docked.")
-		"invalid_target":
-			UIManager.show_error("Invalid target. Refreshing...")
-			# Refresh nearby data since our target list is stale
-			send_command("get_nearby", {}, func(content: Dictionary) -> void:
-				StateManager.update_nearby(content)
-			)
-		_:
-			UIManager.show_error(message)
-
-
-func _raw_post(path: String, body: Dictionary, callback: Callable) -> void:
-	var http := HTTPRequest.new()
-	add_child(http)
-	http.request_completed.connect(
-		func(result: int, _code: int, _headers: PackedStringArray, body_bytes: PackedByteArray) -> void:
-			http.queue_free()
-			if result != HTTPRequest.RESULT_SUCCESS:
-				UIManager.show_error("Network error during session creation")
-				return
-			var data = JSON.parse_string(body_bytes.get_string_from_utf8())
-			if data == null:
-				UIManager.show_error("Invalid response from server")
-				return
-			callback.call(data)
-	)
-	var headers := PackedStringArray(["Content-Type: application/json"])
-	http.request(base_url + path, headers, HTTPClient.METHOD_POST, JSON.stringify(body))
-
+# --- Dashboard API key HTTP calls (player list, ws-token) ---
 
 func _api_get_with_key(path: String, on_success: Callable, on_error: Callable = Callable()) -> void:
 	Log.i(">> GET %s (with API key)" % path)
@@ -527,71 +571,12 @@ func _api_post_with_key(path: String, body: Dictionary, on_success: Callable, on
 	http.request(base_url + path, headers, HTTPClient.METHOD_POST, JSON.stringify(body))
 
 
-func _refresh_state_then(callback: Callable) -> void:
-	api_post("/api/v2/spacemolt/get_status", {}, func(state: Dictionary) -> void:
-		StateManager.update_state(state)
-		callback.call()
-	)
 
-
-
-
-func _poll_state() -> void:
-	if not is_authenticated or is_request_pending:
-		return
-	api_post("/api/v2/spacemolt/get_status", {}, func(content: Dictionary) -> void:
-		StateManager.update_state(content)
-	)
-
-
-func _handle_notifications(notifications: Array) -> void:
-	for notif in notifications:
-		match notif.get("msg_type", ""):
-			"chat_message":
-				UIManager.add_chat(notif.get("data", {}))
-			_:
-				UIManager.add_event(notif)
-
-
-func pause_poll() -> void:
-	_stop_poll()
-
-
-func resume_poll() -> void:
-	_reset_poll()
-
-
-func _start_poll() -> void:
-	var timer := get_node_or_null("PollTimer") as Timer
-	if timer:
-		timer.start()
-
-
-func _reset_poll() -> void:
-	var timer := get_node_or_null("PollTimer") as Timer
-	if timer:
-		timer.stop()
-		timer.start()
-
-
-func _stop_poll() -> void:
-	var timer := get_node_or_null("PollTimer") as Timer
-	if timer:
-		timer.stop()
-
-
-func _clear_session() -> void:
-	is_authenticated = false
-	session_id = ""
-	device_code = ""
-	(get_node("DeviceLinkTimer") as Timer).stop()
-	_stop_poll()
-
+# --- Saved auth ---
 
 func _save_auth() -> void:
 	var cfg := ConfigFile.new()
 	cfg.set_value("auth", "api_key", api_key)
-	cfg.set_value("auth", "session_id", session_id)
 	cfg.save(AUTH_PATH)
 
 
@@ -600,7 +585,6 @@ func _load_auth() -> void:
 	if cfg.load(AUTH_PATH) != OK:
 		return
 	api_key = cfg.get_value("auth", "api_key", "")
-	session_id = cfg.get_value("auth", "session_id", "")
 
 
 func _delete_saved_auth() -> void:

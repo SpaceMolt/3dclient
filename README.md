@@ -111,7 +111,7 @@ addons/         GdUnit4 testing framework
 ### Architecture
 
 - **GDScript** throughout -- no C#
-- **REST API** for all game actions (no WebSocket)
+- **WebSocket v2** (`/ws/v2`) for all game actions and live server pushes
 - Key autoloads: `NetworkManager`, `StateManager`, `UIManager`, `AssetLoader`
 - StateManager is the source of truth; UI reads from it and listens to its signals
 

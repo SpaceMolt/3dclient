@@ -11,7 +11,6 @@ const LOCAL_URL := "http://localhost:9090"
 const TIMEOUT := 30000  # 30s — 1s ticks mean operations finish fast
 
 var _original_base_url: String = ""
-var _original_session: String = ""
 var _original_auth: bool = false
 var _username: String = ""
 var _password: String = ""
@@ -37,22 +36,19 @@ func _is_server_available() -> bool:
 
 func before() -> void:
 	_original_base_url = NetworkManager.base_url
-	_original_session = NetworkManager.session_id
 	_original_auth = NetworkManager.is_authenticated
 
 	# Point NetworkManager at local server (1s ticks instead of 10s)
+	NetworkManager.disconnect_from_server()
 	NetworkManager.base_url = LOCAL_URL
 	NetworkManager.tick_duration = 1.0
-	NetworkManager.session_id = ""
 	NetworkManager.is_authenticated = false
-	NetworkManager._stop_poll()
 
 
 func after() -> void:
-	NetworkManager._stop_poll()
+	NetworkManager.disconnect_from_server()
 	NetworkManager.base_url = _original_base_url
 	NetworkManager.tick_duration = NetworkManager.DEFAULT_TICK_DURATION
-	NetworkManager.session_id = _original_session
 	NetworkManager.is_authenticated = _original_auth
 	StateManager.reset()
 
@@ -131,31 +127,18 @@ func _await_catalog_command(params: Dictionary = {}) -> Dictionary:
 	return state[1]
 
 
-func _create_session() -> void:
-	var done: Array = [false]
-	NetworkManager.create_session(func(): done[0] = true)
-	var start := Time.get_ticks_msec()
-	while not done[0] and (Time.get_ticks_msec() - start) < 5000:
-		await get_tree().process_frame
-	assert_bool(done[0]).is_true()
-	assert_str(NetworkManager.session_id).is_not_empty()
-
-
 func _register_character() -> void:
 	# Generate a unique throwaway name
 	var name_suffix := str(Time.get_ticks_msec()).right(6)
 	_username = "TestPilot_%s" % name_suffix
 
 	var done: Array = [false, {}]
-	NetworkManager.api_post(
-		"/api/v2/spacemolt_auth/register",
-		{"username": _username, "empire": "voidborn", "registration_code": "localtest"},
-		func(content: Dictionary) -> void:
-			NetworkManager.is_authenticated = true
-			_password = content.get("password", "")
-			StateManager.set_initial_state(content)
-			done[1] = content
-			done[0] = true
+	NetworkManager.registration_code = "localtest"
+	NetworkManager.create_player(_username, "voidborn", func(content: Dictionary) -> void:
+		_password = content.get("password", "")
+		StateManager.set_initial_state(content)
+		done[1] = content
+		done[0] = true
 	)
 	var start := Time.get_ticks_msec()
 	while not done[0] and (Time.get_ticks_msec() - start) < 10000:
@@ -168,7 +151,6 @@ func _register_character() -> void:
 func _ensure_authenticated() -> void:
 	if NetworkManager.is_authenticated:
 		return
-	await _create_session()
 	await _register_character()
 	# Fetch system data
 	var sys_done: Array = [false]
@@ -203,7 +185,6 @@ func test_01_register_and_login() -> void:
 		push_warning("Local server not available — skipping local tests")
 		return
 
-	await _create_session()
 	await _register_character()
 
 	# Verify state populated

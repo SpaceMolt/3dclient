@@ -166,7 +166,7 @@ func _state() -> Dictionary:
 		"base_url": NetworkManager.base_url,
 		"is_authenticated": NetworkManager.is_authenticated,
 		"is_request_pending": NetworkManager.is_request_pending,
-		"has_session": not NetworkManager.session_id.is_empty(),
+		"connected": NetworkManager.is_connected_to_server(),
 	}
 	return out
 

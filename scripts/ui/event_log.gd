@@ -19,7 +19,7 @@ func add_info(message: String) -> void:
 
 func add_chat(data: Dictionary) -> void:
 	var sender: String = data.get("username", data.get("sender", "?"))
-	var text: String = data.get("message", data.get("text", ""))
+	var text: String = data.get("content", data.get("message", data.get("text", "")))
 	var channel: String = data.get("channel", "local")
 	_append("[color=yellow][%s][/color] [b]%s[/b]: %s" % [channel, sender, text])
 

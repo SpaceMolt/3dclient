@@ -12,7 +12,6 @@ const TIMEOUT := 120000 # 2min per command — travel/mine block server-side for
 
 var _username: String = ""
 var _password: String = ""
-var _original_session: String = ""
 var _original_auth: bool = false
 
 
@@ -32,14 +31,12 @@ func _load_credentials() -> bool:
 
 func before() -> void:
 	# Save original NetworkManager state so we can restore after tests
-	_original_session = NetworkManager.session_id
 	_original_auth = NetworkManager.is_authenticated
 
 
 func after() -> void:
 	# Restore original state — don't leave test session active
-	NetworkManager._stop_poll()
-	NetworkManager.session_id = _original_session
+	NetworkManager.disconnect_from_server()
 	NetworkManager.is_authenticated = _original_auth
 	StateManager.reset()
 
@@ -83,25 +80,17 @@ func test_01_login_and_state_populated() -> void:
 	if not _load_credentials():
 		return
 
-	# Create session
-	var session_state: Array = [false]
-	NetworkManager.create_session(func(): session_state[0] = true)
-	await await_millis(5000)
-	assert_bool(session_state[0]).is_true()
-	assert_str(NetworkManager.session_id).is_not_empty()
-
-	# Login
+	# Login over the socket; the logged_in frame carries the initial state
 	var login_state: Array = [false, {}] # [done, content]
-	NetworkManager.api_post(
-		"/api/v2/spacemolt_auth/login",
-		{"username": _username, "password": _password},
-		func(content: Dictionary) -> void:
-			NetworkManager.is_authenticated = true
-			StateManager.set_initial_state(content)
-			login_state[0] = true
-			login_state[1] = content
-	)
-	await await_millis(5000)
+	var on_auth := func(content: Dictionary) -> void:
+		StateManager.set_initial_state(content)
+		login_state[0] = true
+		login_state[1] = content
+	NetworkManager.authenticated.connect(on_auth, CONNECT_ONE_SHOT)
+	NetworkManager.login_password(_username, _password)
+	var start := Time.get_ticks_msec()
+	while not login_state[0] and (Time.get_ticks_msec() - start) < 10000:
+		await get_tree().process_frame
 	assert_bool(login_state[0]).is_true()
 
 	# Verify StateManager got populated from LoginResponse
@@ -366,20 +355,12 @@ func _do_login() -> void:
 	if not _load_credentials():
 		return
 
-	var session_state: Array = [false]
-	NetworkManager.create_session(func(): session_state[0] = true)
-	while not session_state[0]:
-		await get_tree().process_frame
-
 	var login_state: Array = [false]
-	NetworkManager.api_post(
-		"/api/v2/spacemolt_auth/login",
-		{"username": _username, "password": _password},
-		func(content: Dictionary) -> void:
-			NetworkManager.is_authenticated = true
-			StateManager.set_initial_state(content)
-			login_state[0] = true
-	)
+	NetworkManager.authenticated.connect(func(content: Dictionary) -> void:
+		StateManager.set_initial_state(content)
+		login_state[0] = true
+	, CONNECT_ONE_SHOT)
+	NetworkManager.login_password(_username, _password)
 	while not login_state[0]:
 		await get_tree().process_frame
 

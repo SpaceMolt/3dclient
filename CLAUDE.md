@@ -4,7 +4,7 @@
 - **Godot 4.4+** (GdUnit4 v6 requires 4.5+, use the latest stable Godot you have)
 - **GDScript** throughout — no C#
 - **GdUnit4 v6** for testing (`addons/gdUnit4/`)
-- **REST API** only — no WebSocket for game actions (see PLAN.md and STARTING_POINT.md)
+- **WebSocket v2** (`/ws/v2`) for all game actions and server pushes. HTTP is used only by the dashboard API-key flow (player list, ws-token). Protocol reference: `gameserver/internal/docs/websocket-v2.md` (served at `/ws.md`).
 
 ## Testing Policy (Non-Negotiable)
 
@@ -35,10 +35,12 @@ Key autoloads (singletons): `NetworkManager`, `StateManager`, `UIManager`, `Asse
 **StateManager is the source of truth.** UI reads from it and listens to its signals. Nothing reads directly from the network response except NetworkManager and StateManager.
 
 ## API Conventions
-- Always use `structuredContent` from responses — never parse the `result` text field
-- Mutations block until complete; disable UI during in-flight requests
-- Poll `get_status` every 10 seconds; reset timer after each mutation response
-- Session ID stored in NetworkManager; passed as `X-Session-Id` header on every request
+- Every command is a frame `{tool, action, payload, request_id}`; NetworkManager correlates replies by `request_id`
+- Queries answer with a `result` frame; use `structuredContent`, never parse the `result` text
+- Mutations answer with a pending ack, then an `action_result` frame carrying a state delta (or `action_error`). NetworkManager applies the delta to StateManager and only then calls the caller's `on_complete` with the outcome `details`
+- There is no status polling: state changes arrive as deltas and push frames. Call `get_status` only to seed or resync
+- `request_started` / `request_completed` fire when the in-flight set becomes non-empty / empty; panels lock on them
+- Login: `login` (password), `login_token` (dashboard API key), or the `login_link` device flow, all over the socket. Unauthenticated sockets close after 30 s, so the device flow reconnects while it polls
 
 ## Runtime Log
 

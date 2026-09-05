@@ -182,9 +182,6 @@ func _apply_network_url() -> void:
 
 func _apply_network_tick() -> void:
 	NetworkManager.tick_duration = tick_slider.value
-	var poll_timer := NetworkManager.get_node_or_null("PollTimer") as Timer
-	if poll_timer:
-		poll_timer.wait_time = tick_slider.value
 
 
 func _update_volume_label() -> void:
