@@ -1,15 +1,19 @@
 #!/usr/bin/env bash
 # Launch the client for autonomous dev loops: env-var login, dev control port, fixed window.
-# Reads .test_credentials (gitignored) for SPACEMOLT_USERNAME / SPACEMOLT_PASSWORD.
+# Reads .test_credentials (gitignored), KEY=VALUE per line, for SPACEMOLT_USERNAME,
+# SPACEMOLT_PASSWORD, SPACEMOLT_API_KEY, and SPACEMOLT_PLAYER. A variable already set in the
+# environment wins, so `SPACEMOLT_USERNAME= make dev` forces the API-key path.
 # Any extra arguments are passed to Godot. Logs go to output.log.
 set -euo pipefail
 cd "$(dirname "$0")/../.."
 
 if [[ -f .test_credentials ]]; then
-	# shellcheck disable=SC1091
-	source .test_credentials
-	export SPACEMOLT_USERNAME="${SPACEMOLT_USERNAME:-${username:-}}"
-	export SPACEMOLT_PASSWORD="${SPACEMOLT_PASSWORD:-${password:-}}"
+	while IFS='=' read -r key value; do
+		[[ -z "$key" || "$key" == \#* ]] && continue
+		value="${value%\"}"
+		value="${value#\"}"
+		[[ -z "${!key+x}" ]] && export "$key=$value"
+	done < .test_credentials
 fi
 export SPACEMOLT_DEV_PORT="${SPACEMOLT_DEV_PORT:-7333}"
 export DISPLAY="${DISPLAY:-:0}"
