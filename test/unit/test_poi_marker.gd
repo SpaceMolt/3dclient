@@ -64,7 +64,16 @@ func test_star_gets_glowing_surface_shader() -> void:
 	m.queue_free()
 
 
-func test_station_uses_the_sol_central_model() -> void:
+func test_station_model_follows_the_empire() -> void:
+	var marker_script: GDScript = load("res://scripts/game/poi_marker.gd")
+	assert_str(marker_script.station_model_path("crimson")).is_equal("res://assets/stations/crimson.glb")
+	assert_str(marker_script.station_model_path("")).is_equal("res://assets/stations/solarian.glb")
+	assert_str(marker_script.station_model_path("pirates")).is_equal("res://assets/stations/solarian.glb")
+	for path in marker_script.STATION_MODELS.values():
+		assert_bool(ResourceLoader.exists(path)).is_true()
+
+
+func test_station_uses_a_capital_station_model() -> void:
 	var m := _make_marker("st1", "Hub", "station", Vector3.ZERO)
 	assert_bool(m._uses_custom_model).is_true()
 	assert_bool(m.mesh_instance.visible).is_false()
