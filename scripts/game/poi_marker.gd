@@ -411,6 +411,9 @@ func _make_star() -> void:
 	mat.set_shader_parameter("energy", 1.3)  # granule peaks pass 1.0 and bloom; the limb stays readable
 	mesh_instance.mesh = mesh
 	mesh_instance.material_override = mat
+	# The sun light is aimed from this very sphere, so as a caster it would eclipse the
+	# whole system. Stars shed light; they never cast shadow.
+	mesh_instance.cast_shadow = GeometryInstance3D.SHADOW_CASTING_SETTING_OFF
 	# Corona: a soft billboard glow a few radii wide, so the star reads from across the system
 	var corona := Sprite3D.new()
 	corona.texture = _glow_texture()

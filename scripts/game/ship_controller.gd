@@ -54,7 +54,7 @@ func setup(
 	is_player_ship = is_own
 	self.ship_class_name = ship_class_name
 	ship_class_id = AssetLoader.resolve_ship_class_id(class_id, ship_class_name)
-	global_position = position
+	self.position = position
 	_prev_pos = position
 	_next_pos = position
 
@@ -83,22 +83,22 @@ func update_ship_class(class_id: String, ship_class_name: String = "") -> void:
 
 func move_to(new_pos: Vector3) -> void:
 	# Snap instead of interpolate on large jumps (login, first spawn)
-	var dist := global_position.distance_to(new_pos)
+	var dist := position.distance_to(new_pos)
 	if dist > 20.0 and _travel_duration <= 0.0:
 		# Large move without travel animation — snap
-		global_position = new_pos
+		position = new_pos
 		_prev_pos = new_pos
 		_next_pos = new_pos
 		_tick_t = 1.0
 		return
-	if global_position.is_equal_approx(Vector3.ZERO) and dist > 1.0:
+	if position.is_equal_approx(Vector3.ZERO) and dist > 1.0:
 		# First placement — snap
-		global_position = new_pos
+		position = new_pos
 		_prev_pos = new_pos
 		_next_pos = new_pos
 		_tick_t = 1.0
 		return
-	_prev_pos = global_position
+	_prev_pos = position
 	_next_pos = new_pos
 	_tick_t = 0.0
 
@@ -106,7 +106,7 @@ func move_to(new_pos: Vector3) -> void:
 func travel_to(new_pos: Vector3) -> void:
 	# Smooth animated travel over 2 seconds regardless of distance
 	_travel_duration = 2.0
-	_prev_pos = global_position
+	_prev_pos = position
 	_next_pos = new_pos
 	_tick_t = 0.0
 
@@ -166,7 +166,7 @@ func _process(delta: float) -> void:
 	if _tick_t < 1.0:
 		var duration := _travel_duration if _travel_duration > 0.0 else NetworkManager.tick_duration
 		_tick_t = minf(_tick_t + delta / duration, 1.0)
-		global_position = _prev_pos.lerp(_next_pos, ease(_tick_t, -2.0))
+		position = _prev_pos.lerp(_next_pos, ease(_tick_t, -2.0))
 		# Brighter engine glow while moving
 		engine_glow.light_energy = lerpf(2.5, 1.0, _tick_t)
 		# Clear travel duration when done

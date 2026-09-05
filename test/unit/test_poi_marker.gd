@@ -60,6 +60,7 @@ func test_star_gets_glowing_surface_shader() -> void:
 	assert_that(mat.shader).is_equal(m.STAR_SURFACE_SHADER)
 	assert_object(mat.get_shader_parameter("star_color")).is_equal(m._star_color())
 	assert_float(mat.get_shader_parameter("energy")).is_greater(1.0)
+	assert_int(m.mesh_instance.cast_shadow).is_equal(GeometryInstance3D.SHADOW_CASTING_SETTING_OFF)
 	m.queue_free()
 
 
