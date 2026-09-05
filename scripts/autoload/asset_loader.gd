@@ -33,6 +33,27 @@ var _ship_data_aliases := {
 	"voidborn_liminal": "liminal",
 }
 var _ship_data_by_id: Dictionary = {}
+# Only a handful of hulls have models. Ships without one borrow a look-alike by role,
+# and miners borrow their empire's own starter hull.
+const FALLBACK_MODEL_BY_CLASS := {
+	"Fighter": "solarian_axiom", "Heavy Fighter": "solarian_axiom", "Assault": "solarian_axiom",
+	"Patrol": "solarian_axiom", "Raider": "solarian_axiom", "Interdictor": "solarian_axiom",
+	"Electronic Warfare": "solarian_axiom",
+	"Scout": "crimson_stiletto", "Recon": "crimson_stiletto", "Courier": "crimson_stiletto",
+	"Smuggler": "crimson_stiletto", "Explorer": "crimson_stiletto", "Intelligence": "crimson_stiletto",
+	"Research": "crimson_stiletto", "Yacht": "crimson_stiletto", "Shuttle": "crimson_stiletto",
+	"Freighter": "nebula_caravan", "Bulk Hauler": "nebula_caravan", "Hazmat Freighter": "nebula_caravan",
+	"Tanker": "nebula_caravan", "Liner": "nebula_caravan", "Logistics": "nebula_caravan",
+	"Medical": "nebula_caravan", "Repair": "nebula_caravan", "Construction": "nebula_caravan",
+	"Carrier": "nebula_caravan", "Battlecruiser": "nebula_caravan", "Dreadnought": "nebula_caravan",
+	"Command": "nebula_caravan", "Flagship": "nebula_caravan", "Cruiser": "nebula_caravan",
+	"Mobile Base": "nebula_caravan",
+}
+const MINER_MODEL_BY_EMPIRE := {
+	"solarian": "theoria", "voidborn": "prospector", "crimson": "shard",
+	"nebula": "prospect", "outerrim": "cobble",
+}
+const INDUSTRIAL_CLASSES := ["Miner", "Ice Harvester", "Gas Harvester", "Refinery", "Salvager"]
 
 
 func _ready() -> void:
@@ -123,12 +144,23 @@ func get_ship_scene(class_id: String, ship_class_name: String = "") -> PackedSce
 
 	var model_id: String = _ship_scene_aliases.get(resolved_class_id, resolved_class_id)
 	var path: String = "res://assets/ships/" + model_id + ".glb"
-	if ResourceLoader.exists(path):
-		var scene: PackedScene = load(path) as PackedScene
-		_ship_scenes[resolved_class_id] = scene
-		return scene
+	if not ResourceLoader.exists(path):
+		model_id = fallback_model_id(get_ship_definition(resolved_class_id, ship_class_name))
+		path = "res://assets/ships/" + model_id + ".glb"
+		if model_id.is_empty() or not ResourceLoader.exists(path):
+			return null
+		Log.i("No model for ship class %s; using %s" % [resolved_class_id, model_id])
+	var scene: PackedScene = load(path) as PackedScene
+	_ship_scenes[resolved_class_id] = scene
+	return scene
 
-	return null
+
+## Picks a stand-in model for a hull that has none of its own, by role and empire.
+static func fallback_model_id(ship_definition: Dictionary) -> String:
+	var ship_class: String = ship_definition.get("class", "")
+	if ship_class in INDUSTRIAL_CLASSES:
+		return MINER_MODEL_BY_EMPIRE.get(ship_definition.get("empire", ""), "deeprock_harvester")
+	return FALLBACK_MODEL_BY_CLASS.get(ship_class, "")
 
 
 func get_placeholder_mesh() -> BoxMesh:

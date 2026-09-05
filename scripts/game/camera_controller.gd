@@ -17,11 +17,11 @@ const COMBAT_ZOOM := 45.0
 const COMBAT_ZOOM_DURATION := 1.0
 
 const DEFAULT_ORBIT := 0.0
-const DEFAULT_TILT := 0.4   # horizontal distance = zoom * tilt
+const DEFAULT_TILT := 0.85  # low angle so the docked station towers behind the ship
 const MIN_TILT := 0.15      # nearly top-down
 const MAX_TILT := 1.2       # low angle
 
-const DEFAULT_ZOOM := 260.0
+const DEFAULT_ZOOM := 70.0  # close enough that the player ship reads as a ship
 const FAR_CLIP_DISTANCE := 5000000.0
 
 var _target: Node3D = null
@@ -143,7 +143,8 @@ func _input(event: InputEvent) -> void:
 			if drag_dist > 4.0:
 				_right_was_drag = true
 			_orbit -= event.relative.x * ROTATE_SPEED
-			_tilt = clampf(_tilt - event.relative.y * PITCH_SPEED, MIN_TILT, MAX_TILT)
+			# Dragging down lowers the camera toward the horizon (more tilt); up goes top-down.
+			_tilt = clampf(_tilt + event.relative.y * PITCH_SPEED, MIN_TILT, MAX_TILT)
 			if _following and _target:
 				_update_camera_position(1.0)
 

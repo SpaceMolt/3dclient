@@ -91,8 +91,8 @@ func test_tilt_state_dump() -> void:
 	_log_camera("AFTER RELEASE")
 
 	var tilt_val: float = _camera._tilt
-	print("  Final tilt value: %.4f (default=0.4, should be > 0.4)" % tilt_val)
-	assert_float(tilt_val).is_greater(0.4)
+	print("  Final tilt value: %.4f (default=%.2f, should be greater)" % [tilt_val, _camera.DEFAULT_TILT])
+	assert_float(tilt_val).is_greater(_camera.DEFAULT_TILT)
 
 	print("--- END TILT STATE DUMP ---\n")
 
@@ -126,8 +126,9 @@ func test_full_360_orbit() -> void:
 
 	# Camera should have orbited significantly
 	# Check that we ended up near the start position (full circle)
-	assert_float(_camera.global_position.x).is_equal_approx(0.0, 2.0)
-	assert_float(_camera.global_position.z).is_equal_approx(8.0, 2.0)
+	var horiz: float = sin(_camera.DEFAULT_TILT) * _camera.DEFAULT_ZOOM
+	assert_float(_camera.global_position.x).is_equal_approx(0.0, horiz * 0.1)
+	assert_float(_camera.global_position.z).is_equal_approx(horiz, horiz * 0.1)
 
 	print("--- END FULL 360 ---\n")
 
