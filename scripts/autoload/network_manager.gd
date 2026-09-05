@@ -4,6 +4,7 @@ const DEFAULT_BASE_URL = "https://game.spacemolt.com"
 const DEFAULT_TICK_DURATION = 10.0
 const POLL_INTERVAL = 10.0
 const AUTH_PATH = "user://auth.cfg"
+const DEVICE_LINK_POLL_INTERVAL = 3.0
 const MISSING_MODELS_LOG_NAME = "missing_ship_models.log"
 
 var base_url: String = DEFAULT_BASE_URL
@@ -15,6 +16,7 @@ var is_request_pending: bool = false
 var _is_restoring_session: bool = false
 var api_key: String = ""
 var registration_code: String = ""
+var device_code: String = ""
 
 signal request_started
 signal request_completed
@@ -31,6 +33,12 @@ func _ready() -> void:
 	poll_timer.wait_time = POLL_INTERVAL
 	poll_timer.timeout.connect(_poll_state)
 	add_child(poll_timer)
+	var link_timer := Timer.new()
+	link_timer.name = "DeviceLinkTimer"
+	link_timer.one_shot = true
+	link_timer.wait_time = DEVICE_LINK_POLL_INTERVAL
+	link_timer.timeout.connect(_poll_device_link)
+	add_child(link_timer)
 
 
 func create_session(on_complete: Callable) -> void:
@@ -62,9 +70,7 @@ func create_player(username: String, empire: String, on_success: Callable, on_er
 			"/api/v2/spacemolt_auth/register",
 			{"username": username, "empire": empire, "registration_code": registration_code},
 			func(content: Dictionary) -> void:
-				is_authenticated = true
-				_start_poll()
-				authenticated.emit(content)
+				_finish_login(content)
 				on_success.call(content)
 		, on_error)
 	)
@@ -81,13 +87,62 @@ func select_player(player_id: String, on_success: Callable, on_error: Callable =
 				"/api/v2/spacemolt_auth/login_token",
 				{"token": token},
 				func(content: Dictionary) -> void:
-					is_authenticated = true
-					_start_poll()
-					authenticated.emit(content)
+					_finish_login(content)
 					on_success.call(content)
 			, on_error)
 		)
 	, on_error)
+
+
+## Browser device login: the server hands back a link for the human to approve.
+## on_link(url, user_code) fires when the link is ready; approval or failure
+## arrives through the authenticated / auth_error signals.
+func start_device_login(on_link: Callable, on_error: Callable = Callable()) -> void:
+	create_session(func() -> void:
+		api_post("/api/v2/spacemolt_auth/login_link", {}, func(content: Dictionary) -> void:
+			device_code = content.get("device_code", "")
+			var url: String = content.get("verification_uri_complete", "")
+			Log.i("Device login link: %s" % url)
+			on_link.call(url, content.get("user_code", ""))
+			_schedule_device_poll(content.get("interval", DEVICE_LINK_POLL_INTERVAL))
+		, on_error)
+	)
+
+
+func _schedule_device_poll(interval: float) -> void:
+	var timer := get_node("DeviceLinkTimer") as Timer
+	timer.start(maxf(interval, 1.0))
+
+
+func _poll_device_link() -> void:
+	if device_code.is_empty():
+		return
+	api_post("/api/v2/spacemolt_auth/login_link_poll", {"device_code": device_code}, _on_device_link_polled)
+
+
+func _on_device_link_polled(content: Dictionary) -> void:
+	if device_code.is_empty():
+		return
+	match content.get("status", ""):
+		"authorization_pending":
+			_schedule_device_poll(content.get("interval", DEVICE_LINK_POLL_INTERVAL))
+		"access_denied":
+			device_code = ""
+			auth_error.emit("Login declined in the browser.")
+		"expired_token":
+			device_code = ""
+			auth_error.emit("Login link expired. Try again.")
+		_:
+			# No status means the human approved: this is a LoginResponse.
+			device_code = ""
+			_finish_login(content)
+
+
+func _finish_login(content: Dictionary) -> void:
+	is_authenticated = true
+	_save_auth()
+	_start_poll()
+	authenticated.emit(content)
 
 
 func logout() -> void:
@@ -102,8 +157,27 @@ func logout() -> void:
 	session_expired.emit()
 
 
+## Restores a saved session (device login) or a saved API key (dashboard key).
+## A live session skips player select: on_success is not called because the
+## authenticated signal already carries the game state.
 func try_restore_auth(on_success: Callable, on_failure: Callable) -> void:
 	_load_auth()
+	if not session_id.is_empty():
+		_is_restoring_session = true
+		api_post("/api/v2/spacemolt/get_status", {}, func(content: Dictionary) -> void:
+			_is_restoring_session = false
+			StateManager.update_state(content)
+			_finish_login(content)
+		, func(_error: Dictionary = {}) -> void:
+			_is_restoring_session = false
+			_save_auth()  # session_id was cleared by _handle_error; keep the API key
+			_restore_api_key(on_success, on_failure)
+		)
+		return
+	_restore_api_key(on_success, on_failure)
+
+
+func _restore_api_key(on_success: Callable, on_failure: Callable) -> void:
 	if api_key.is_empty():
 		on_failure.call()
 		return
@@ -322,9 +396,10 @@ func _handle_error(error: Dictionary) -> void:
 	match code:
 		"session_expired", "session_invalid", "not_authenticated":
 			Log.w("SESSION LOST — emitting session_expired, returning to login")
-			if not _is_restoring_session:
-				UIManager.show_error("Session expired. Please log in again.")
 			_clear_session()
+			if _is_restoring_session:
+				return
+			UIManager.show_error("Session expired. Please log in again.")
 			session_expired.emit()
 		"rate_limited":
 			var retry_after: float = error.get("retry_after", 5.0)
@@ -495,12 +570,15 @@ func _stop_poll() -> void:
 func _clear_session() -> void:
 	is_authenticated = false
 	session_id = ""
+	device_code = ""
+	(get_node("DeviceLinkTimer") as Timer).stop()
 	_stop_poll()
 
 
 func _save_auth() -> void:
 	var cfg := ConfigFile.new()
 	cfg.set_value("auth", "api_key", api_key)
+	cfg.set_value("auth", "session_id", session_id)
 	cfg.save(AUTH_PATH)
 
 
@@ -509,6 +587,7 @@ func _load_auth() -> void:
 	if cfg.load(AUTH_PATH) != OK:
 		return
 	api_key = cfg.get_value("auth", "api_key", "")
+	session_id = cfg.get_value("auth", "session_id", "")
 
 
 func _delete_saved_auth() -> void:

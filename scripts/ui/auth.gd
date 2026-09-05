@@ -1,7 +1,5 @@
 extends CanvasLayer
 
-const AUTH_LINK_URL = "https://game.spacemolt.com/auth/link"
-
 signal show_player_select(players: Array)
 
 @onready var key_field: LineEdit = %KeyField
@@ -11,6 +9,10 @@ signal show_player_select(players: Array)
 @onready var title_label: Label = %Title
 @onready var subtitle_label: Label = %Subtitle
 @onready var key_label: Label = %KeyLabel
+@onready var link_box: VBoxContainer = %LinkBox
+@onready var link_field: LineEdit = %LinkField
+@onready var open_link_button: Button = %OpenLinkButton
+@onready var copy_link_button: Button = %CopyLinkButton
 
 
 func _ready() -> void:
@@ -20,6 +22,12 @@ func _ready() -> void:
 	key_field.text_submitted.connect(func(_text: String) -> void: _on_submit())
 	NetworkManager.request_started.connect(func() -> void: submit_button.disabled = true)
 	NetworkManager.request_completed.connect(func() -> void: submit_button.disabled = false)
+	NetworkManager.auth_error.connect(_on_auth_error)
+	open_link_button.pressed.connect(func() -> void: OS.shell_open(link_field.text))
+	copy_link_button.pressed.connect(func() -> void:
+		DisplayServer.clipboard_set(link_field.text)
+		_set_status("Link copied. Approve the login in your browser.")
+	)
 
 
 func _apply_theme() -> void:
@@ -65,8 +73,27 @@ func _style_primary_button(btn: Button) -> void:
 
 
 func _on_sign_in() -> void:
-	OS.shell_open(AUTH_LINK_URL)
-	_set_status("Sign in via your browser, then paste the key here.")
+	sign_in_button.disabled = true
+	_set_status("Starting browser login...")
+	NetworkManager.start_device_login(_on_device_link, _on_auth_error)
+
+
+func _on_device_link(url: String, user_code: String) -> void:
+	link_field.text = url
+	link_box.visible = true
+	OS.shell_open(url)
+	_set_status("Approve the login in your browser.\nIf it did not open, use the link. Code: %s" % user_code)
+
+
+func _on_auth_error(_error = null) -> void:
+	sign_in_button.disabled = false
+	link_box.visible = false
+	var message := "Login failed. Try again."
+	if _error is String:
+		message = _error
+	elif _error is Dictionary and _error.has("message"):
+		message = str(_error["message"])
+	_set_status(message, true)
 
 
 func _on_submit() -> void:
