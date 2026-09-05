@@ -44,6 +44,28 @@ Key autoloads (singletons): `NetworkManager`, `StateManager`, `UIManager`, `Asse
 
 `make run` tees all stdout/stderr to `output.log`. When the user asks you to "check the log" or "look at the output," read this file. It is gitignored and overwritten on each run.
 
+## Autonomous Dev Loop (agents: use this)
+
+You can run and drive the client without a human. Everything goes through the
+dev control server (`scripts/autoload/dev_server.gd`), which listens on
+127.0.0.1 only when `SPACEMOLT_DEV_PORT` is set.
+
+1. One-time: `make godot` downloads Godot 4.6.1 into `~/.cache/godot` and links `bin/godot-bin`.
+2. Put the test account in `.test_credentials` (gitignored):
+   `SPACEMOLT_USERNAME="..."` and `SPACEMOLT_PASSWORD=...`
+3. `make dev` launches the client, logs in with those credentials, and waits for the dev port.
+   Under WSL the window opens on the Windows desktop through WSLg (`DISPLAY=:0`).
+4. Drive it with `scripts/tools/devctl.py`:
+   - `devctl.py screenshot screenshots/name.png` — exact viewport capture, then Read the PNG
+   - `devctl.py key D` / `devctl.py key Escape` — key press (names from `OS.find_keycode_from_string`)
+   - `devctl.py click X Y` / `devctl.py scroll X Y up 3` / `devctl.py type hello`
+   - `devctl.py nodes Button` — visible controls with screen rects, for finding what to click
+   - `devctl.py state` or `devctl.py state ship` — StateManager dump
+   - `devctl.py quit`
+5. `output.log` holds the run log. `SPACEMOLT_SERVER_URL` overrides the server (local gameserver).
+
+`make run` is the human launch path and still uses the browser device login.
+
 ## Build & Validation Tools
 
 All scripts in `scripts/tools/`:
@@ -52,6 +74,7 @@ All scripts in `scripts/tools/`:
 - **`check_test_coverage.sh`** — Verifies every non-exempt script has a corresponding test file.
 - **`build_windows.sh`** — Validates scripts, then exports a Windows .exe.
 - **`capture_screenshot.gd`** — Visual testing: `./bin/godot --windowed --resolution 800x600 -s scripts/tools/capture_screenshot.gd`. Saves PNGs to `screenshots/`.
+- **`dev_run.sh`** / **`devctl.py`** — the autonomous dev loop described in the section that precedes this one.
 
 ### Build workflow
 1. `./scripts/tools/validate_scripts.sh` — fix any parse errors

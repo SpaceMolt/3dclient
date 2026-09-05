@@ -27,6 +27,9 @@ signal session_expired
 
 func _ready() -> void:
 	_init_named_logs()
+	var env_url := OS.get_environment("SPACEMOLT_SERVER_URL")
+	if not env_url.is_empty():
+		base_url = env_url.rstrip("/")
 	Log.i("NetworkManager ready, base_url=%s" % base_url)
 	var poll_timer := Timer.new()
 	poll_timer.name = "PollTimer"
@@ -92,6 +95,13 @@ func select_player(player_id: String, on_success: Callable, on_error: Callable =
 			, on_error)
 		)
 	, on_error)
+
+
+## Password login for scripted dev runs (SPACEMOLT_USERNAME / SPACEMOLT_PASSWORD).
+func login_password(username: String, password: String, on_error: Callable = Callable()) -> void:
+	create_session(func() -> void:
+		api_post("/api/v2/spacemolt_auth/login", {"username": username, "password": password}, _finish_login, on_error)
+	)
 
 
 ## Browser device login: the server hands back a link for the human to approve.
@@ -332,7 +342,10 @@ func api_post(path: String, body: Dictionary, on_success: Callable, on_error: Ca
 			on_error.call({"code": "no_session", "message": "No session"})
 		return
 
-	Log.i(">> POST %s %s" % [path, JSON.stringify(body)])
+	var logged_body := body.duplicate()
+	if logged_body.has("password"):
+		logged_body["password"] = "***"
+	Log.i(">> POST %s %s" % [path, JSON.stringify(logged_body)])
 	is_request_pending = true
 	request_started.emit()
 

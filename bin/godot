@@ -1,0 +1,18 @@
+#!/usr/bin/env bash
+# Runs the project-local Godot binary with user data kept inside the checkout (.godot-userdata/).
+set -euo pipefail
+
+SCRIPT_DIR="$(cd "$(dirname "${BASH_SOURCE[0]}")" && pwd)"
+PROJECT_DIR="$(cd "$SCRIPT_DIR/.." && pwd)"
+GODOT_BIN="$SCRIPT_DIR/godot-bin"
+
+if [[ ! -x "$GODOT_BIN" ]]; then
+	echo "Error: Godot binary not found at $GODOT_BIN" >&2
+	echo "Run: make godot" >&2
+	exit 1
+fi
+
+export XDG_DATA_HOME="${XDG_DATA_HOME:-$PROJECT_DIR/.godot-userdata}"
+mkdir -p "$XDG_DATA_HOME"
+
+exec "$GODOT_BIN" "$@"

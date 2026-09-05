@@ -13,11 +13,13 @@ builds/
 # Import cache
 *.import
 
-# Godot binary (download via bin/install.sh)
-bin/godot
+# Godot binary (linked by make godot / bin/install.sh)
 bin/godot-bin
 bin/*.x86_64
 .godot-userdata/
+
+# Dev loop launcher state
+.dev_run.pid
 
 # Godot 4.5+ UID cache files
 *.gd.uid
