@@ -250,7 +250,25 @@ func _handle_frame(frame: Dictionary) -> void:
 			UIManager.add_event({"msg_type": type, "data": payload})
 			_request("spacemolt", "get_status", {})
 		_:
-			UIManager.add_event({"msg_type": type, "message": str(payload.get("message", "")), "data": payload})
+			UIManager.add_event({"msg_type": type, "message": push_message(type, payload), "data": payload})
+
+
+## One readable line for a push frame; falls back to the payload's own message.
+static func push_message(type: String, payload: Dictionary) -> String:
+	match type:
+		"mining_yield":
+			var line := "+%d %s" % [int(payload.get("quantity", 0)), payload.get("resource_name", payload.get("resource_id", "ore"))]
+			var remaining := str(payload.get("remaining_display", ""))
+			return line + (" (%s remaining)" % remaining if not remaining.is_empty() else "")
+		"skill_level_up":
+			return "%s reached level %s" % [payload.get("skill_name", payload.get("skill", "Skill")), payload.get("level", "?")]
+		"achievement_unlocked":
+			var names: Array = []
+			for achievement in payload.get("achievements", []):
+				names.append(str(achievement.get("name", "")))
+			return "Achievement: %s" % ", ".join(names) if not names.is_empty() else ""
+		_:
+			return str(payload.get("message", ""))
 
 
 func _on_welcome(payload: Dictionary) -> void:
