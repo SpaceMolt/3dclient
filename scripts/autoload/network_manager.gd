@@ -121,8 +121,9 @@ func _request(tool: String, action: String, params: Dictionary, on_complete: Cal
 	_update_pending_flag()
 	var frame := {"tool": tool, "action": action, "payload": params, "request_id": request_id}
 	var logged := params.duplicate()
-	if logged.has("password"):
-		logged["password"] = "***"
+	for secret in ["password", "token"]:
+		if logged.has(secret):
+			logged[secret] = "***"
 	Log.i(">> %s/%s %s %s" % [tool, action, request_id, JSON.stringify(logged)])
 	_ws.send_text(JSON.stringify(frame))
 

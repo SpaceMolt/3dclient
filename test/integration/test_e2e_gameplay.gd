@@ -22,10 +22,10 @@ func _load_credentials() -> bool:
 	var file := FileAccess.open(CRED_PATH, FileAccess.READ)
 	while not file.eof_reached():
 		var line := file.get_line().strip_edges()
-		if line.begins_with("username="):
-			_username = line.substr(9)
-		elif line.begins_with("password="):
-			_password = line.substr(9)
+		if line.begins_with("SPACEMOLT_USERNAME="):
+			_username = line.get_slice("=", 1).trim_prefix('"').trim_suffix('"')
+		elif line.begins_with("SPACEMOLT_PASSWORD="):
+			_password = line.get_slice("=", 1)
 	return not _username.is_empty() and not _password.is_empty()
 
 

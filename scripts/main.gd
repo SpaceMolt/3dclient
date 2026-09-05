@@ -13,13 +13,27 @@ func _ready() -> void:
 	NetworkManager.authenticated.connect(_on_authenticated)
 	NetworkManager.session_expired.connect(_on_session_expired)
 
-	# Scripted dev runs log in with a password from the environment (see scripts/tools/dev_run.sh)
+	# Scripted dev runs log in from the environment (see scripts/tools/dev_run.sh):
+	# SPACEMOLT_USERNAME + SPACEMOLT_PASSWORD log straight in; SPACEMOLT_API_KEY
+	# opens the dashboard player list, and SPACEMOLT_PLAYER picks one by username.
 	var dev_user := OS.get_environment("SPACEMOLT_USERNAME")
 	var dev_pass := OS.get_environment("SPACEMOLT_PASSWORD")
+	var dev_key := OS.get_environment("SPACEMOLT_API_KEY")
+	var show_auth := func(_error: Dictionary = {}) -> void:
+		_switch_to(AUTH_SCENE.instantiate())
 	if not dev_user.is_empty() and not dev_pass.is_empty():
-		NetworkManager.login_password(dev_user, dev_pass, func(_error: Dictionary = {}) -> void:
-			_switch_to(AUTH_SCENE.instantiate())
-		)
+		NetworkManager.login_password(dev_user, dev_pass, show_auth)
+		return
+	if not dev_key.is_empty():
+		NetworkManager.api_key = dev_key
+		var dev_player := OS.get_environment("SPACEMOLT_PLAYER")
+		NetworkManager.get_players(func(players: Array) -> void:
+			for player in players:
+				if player.get("username", "") == dev_player:
+					NetworkManager.select_player(player.get("id", ""), func(_c: Dictionary) -> void: pass, show_auth)
+					return
+			_show_player_select(players)
+		, show_auth)
 		return
 
 	# Try restoring saved auth; if valid, go to player select

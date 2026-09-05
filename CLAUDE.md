@@ -53,8 +53,10 @@ dev control server (`scripts/autoload/dev_server.gd`), which listens on
 127.0.0.1 only when `SPACEMOLT_DEV_PORT` is set.
 
 1. One-time: `make godot` downloads Godot 4.6.1 into `~/.cache/godot` and links `bin/godot-bin`.
-2. Put the test account in `.test_credentials` (gitignored):
-   `SPACEMOLT_USERNAME="..."` and `SPACEMOLT_PASSWORD=...`
+2. Put credentials in `.test_credentials` (gitignored), one `KEY=VALUE` per line:
+   `SPACEMOLT_USERNAME` + `SPACEMOLT_PASSWORD` for a direct password login, and/or
+   `SPACEMOLT_API_KEY` (dashboard key) with optional `SPACEMOLT_PLAYER` (username to auto-select).
+   Password wins when both are present; `SPACEMOLT_USERNAME= make dev` forces the API-key path.
 3. `make dev` launches the client, logs in with those credentials, and waits for the dev port.
    Under WSL the window opens on the Windows desktop through WSLg (`DISPLAY=:0`).
 4. Drive it with `scripts/tools/devctl.py`:
