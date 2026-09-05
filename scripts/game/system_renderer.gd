@@ -287,6 +287,16 @@ func _aim_camera_at_star() -> void:
 			return
 
 
+## Marker class for a POI. Stations carry no class in game data, so they take the system's
+## empire, which picks the capital station model.
+static func poi_marker_class(poi: Dictionary, system_empire: String) -> String:
+	var raw = poi.get("class", "")
+	var pclass: String = raw if raw is String else ""
+	if poi.get("type", "") == "station" and pclass.is_empty():
+		return system_empire
+	return pclass
+
+
 ## Direction light travels from the star to the lit position (zero when they coincide).
 static func sun_direction(star_pos: Vector3, lit_pos: Vector3) -> Vector3:
 	var delta := lit_pos - star_pos
@@ -570,7 +580,8 @@ func _sync_poi_markers() -> void:
 
 		var marker := POI_MARKER_SCENE.instantiate() as Node3D
 		add_child(marker)
-		marker.setup(id, poi.get("name", "Unknown"), poi.get("type", ""), pos, poi.get("class", ""))
+		var empire: String = StateManager.location.get("empire", StateManager.current_system.get("empire", ""))
+		marker.setup(id, poi.get("name", "Unknown"), poi.get("type", ""), pos, poi_marker_class(poi, empire))
 		marker.selected.connect(_on_poi_marker_selected)
 		_poi_markers[id] = marker
 

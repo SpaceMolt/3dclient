@@ -16,7 +16,14 @@ const BEACON_HIDE_RADII := 30.0  # hide the beacon dot once the camera is this m
 const LABEL_HIDE_RADII := 3.0    # hide the name when the camera is right on top of the body
 const ATMOSPHERE_SHADER := preload("res://shaders/atmosphere.gdshader")
 const STAR_SURFACE_SHADER := preload("res://shaders/star_surface.gdshader")
-const STATION_MODEL := "res://assets/stations/sol_central.glb"  # Sol Central concept, Meshy image-to-3D
+# Capital station models by empire (content-gen empire station concepts through Meshy image-to-3D)
+const STATION_MODELS := {
+	"solarian": "res://assets/stations/solarian.glb",
+	"voidborn": "res://assets/stations/voidborn.glb",
+	"crimson": "res://assets/stations/crimson.glb",
+	"nebula": "res://assets/stations/nebula.glb",
+	"outerrim": "res://assets/stations/outerrim.glb",
+}
 const ATMOSPHERE_SHELL := 1.05   # halo shell radius as a multiple of the planet radius
 const BLINK_PERIOD := 1.6        # seconds between station approach-beacon flashes
 const BLINK_ON := 0.12           # seconds each flash stays lit
@@ -555,9 +562,14 @@ func _add_atmosphere(r: float) -> void:
 	_add_visual_child(shell)
 
 
+## A station's class names its empire (the renderer fills it from the system); unknown means Sol Central.
+static func station_model_path(empire: String) -> String:
+	return STATION_MODELS.get(empire, STATION_MODELS["solarian"])
+
+
 func _make_station() -> void:
 	var r: float = FocusBubble.poi_radius(poi_type, poi_class)
-	var model := (load(STATION_MODEL) as PackedScene).instantiate() as Node3D
+	var model := (load(station_model_path(poi_class)) as PackedScene).instantiate() as Node3D
 	_add_visual_child(model)
 	_fit_model_to_radius(model, r)
 	mesh_instance.mesh = null

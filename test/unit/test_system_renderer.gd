@@ -50,6 +50,15 @@ func _add_player_ship(renderer: Node3D, pos: Vector3) -> Node3D:
 	return ship
 
 
+# --- Marker classes ---
+
+func test_stations_take_the_system_empire_as_their_class() -> void:
+	assert_str(SystemRenderer.poi_marker_class({"type": "station"}, "voidborn")).is_equal("voidborn")
+	assert_str(SystemRenderer.poi_marker_class({"type": "station", "class": "outpost"}, "voidborn")).is_equal("outpost")
+	assert_str(SystemRenderer.poi_marker_class({"type": "planet", "class": "arid"}, "voidborn")).is_equal("arid")
+	assert_str(SystemRenderer.poi_marker_class({"type": "planet", "class": null}, "voidborn")).is_equal("")
+
+
 # --- Player ship placement ---
 
 func test_world_recenters_on_the_player_ship() -> void:

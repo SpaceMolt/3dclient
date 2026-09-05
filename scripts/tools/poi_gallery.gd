@@ -10,7 +10,8 @@ const POI_MARKER_SCENE := preload("res://scenes/game/poi_marker.tscn")
 const FocusBubble := preload("res://scripts/game/focus_bubble.gd")
 const WAIT_FRAMES := 12
 const ENTRIES := [
-	["station", ""], ["sun", "G2V"], ["sun", "B3V"], ["sun", "M3III"],
+	["station", ""], ["station", "voidborn"], ["station", "crimson"], ["station", "nebula"], ["station", "outerrim"],
+	["sun", "G2V"], ["sun", "B3V"], ["sun", "M3III"],
 	["planet", "terran"], ["planet", "arid"], ["planet", "scorched"], ["planet", "ice_world"],
 	["planet", "jovian"], ["planet", "oceanic"], ["moon", ""],
 	["asteroid_belt", "metallic"], ["asteroid_belt", "icy"], ["asteroid_belt", "mixed"],
