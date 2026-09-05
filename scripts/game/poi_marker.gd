@@ -10,6 +10,9 @@ var poi_type: String = ""
 var poi_class: String = ""  # type-specific classification (spectral class, composition, etc.)
 var is_selected: bool = false
 var _uses_custom_model: bool = false
+var _beacon: Sprite3D = null
+
+const BEACON_HIDE_RADII := 30.0  # hide the beacon dot once the camera is this many radii away or closer
 
 @onready var name_label: Label3D = $NameLabel
 @onready var mesh_instance: MeshInstance3D = $MeshInstance3D
@@ -33,6 +36,7 @@ func setup(id: String, pname: String, ptype: String, pos: Vector3, pclass: Strin
 		name_label.text = poi_name
 		_apply_appearance()
 		_apply_cull_margin()
+		_ensure_beacon()
 
 
 func set_selected(val: bool) -> void:
@@ -44,6 +48,11 @@ func set_selected(val: bool) -> void:
 
 
 func _process(_delta: float) -> void:
+	if _beacon:
+		var camera := get_viewport().get_camera_3d()
+		if camera:
+			var radius := FocusBubble.poi_radius(poi_type, poi_class)
+			_beacon.visible = camera.global_position.distance_to(global_position) > radius * BEACON_HIDE_RADII
 	match poi_type:
 		"wormhole", "wormhole_entrance", "wormhole_exit", "jump_gate":
 			rotate_y(_delta * 1.5)
@@ -62,7 +71,7 @@ func _add_visual_child(node: Node3D) -> void:
 func _clear_visual_children() -> void:
 	# Remove all dynamically added children (lights, extra meshes) but keep scene nodes
 	for child in get_children():
-		if child == name_label or child == mesh_instance or child == click_area:
+		if child == name_label or child == mesh_instance or child == click_area or child == _beacon:
 			continue
 		child.queue_free()
 
@@ -101,6 +110,60 @@ func _apply_appearance() -> void:
 			_make_relic()
 		_:
 			_make_default()
+	# Labels keep one screen size at any distance so a far POI still reads.
+	name_label.fixed_size = true
+	name_label.no_depth_test = true
+	name_label.font_size = 18
+	name_label.outline_size = 5
+	name_label.pixel_size = 0.0011  # with fixed_size this sets the on-screen size
+	name_label.offset = Vector2(0.0, 16.0)  # sit above the beacon dot when far away
+
+
+## A soft glow dot the size of a few pixels at any distance, so every POI in the
+## system is findable from the ship. Hidden when the camera is close enough to see geometry.
+func _ensure_beacon() -> void:
+	if _beacon:
+		_beacon.modulate = beacon_color()
+		return
+	var gradient := Gradient.new()
+	gradient.set_color(0, Color(1.0, 1.0, 1.0, 1.0))
+	gradient.set_color(1, Color(1.0, 1.0, 1.0, 0.0))
+	var texture := GradientTexture2D.new()
+	texture.gradient = gradient
+	texture.fill = GradientTexture2D.FILL_RADIAL
+	texture.fill_from = Vector2(0.5, 0.5)
+	texture.fill_to = Vector2(0.5, 0.0)
+	texture.width = 32
+	texture.height = 32
+	_beacon = Sprite3D.new()
+	_beacon.name = "Beacon"
+	_beacon.texture = texture
+	_beacon.billboard = BaseMaterial3D.BILLBOARD_ENABLED
+	_beacon.fixed_size = true
+	_beacon.no_depth_test = true
+	_beacon.pixel_size = 0.0012
+	_beacon.modulate = beacon_color()
+	add_child(_beacon)
+
+
+func beacon_color() -> Color:
+	match poi_type:
+		"sun", "star":
+			return _star_color()
+		"station":
+			return ThemeColors.PLASMA_CYAN
+		"planet", "moon":
+			return ThemeColors.LASER_BLUE
+		"asteroid", "asteroid_field", "asteroid_belt", "ice_field":
+			return ThemeColors.CHROME_SILVER
+		"gas_cloud", "nebula":
+			return ThemeColors.VOID_PURPLE
+		"relic":
+			return ThemeColors.WARNING_YELLOW
+		"wormhole", "wormhole_entrance", "wormhole_exit", "jump_gate":
+			return ThemeColors.BIO_GREEN
+		_:
+			return ThemeColors.HULL_GREY
 
 
 func _make_celestial_model() -> bool:
@@ -374,41 +437,124 @@ func _make_planet() -> void:
 
 func _make_station() -> void:
 	var r: float = FocusBubble.poi_radius(poi_type, poi_class)
-	# Central hub
-	var hub_mesh := BoxMesh.new()
-	hub_mesh.size = Vector3(r * 0.4, r * 0.6, r * 0.4)
-	var hub_mat := StandardMaterial3D.new()
-	hub_mat.albedo_color = Color(0.5, 0.6, 0.7)
-	hub_mat.metallic = 0.8
-	hub_mat.roughness = 0.3
-	mesh_instance.mesh = hub_mesh
-	mesh_instance.material_override = hub_mat
-	# Docking ring
-	var ring := MeshInstance3D.new()
-	var ring_mesh := TorusMesh.new()
-	ring_mesh.inner_radius = r * 0.7
-	ring_mesh.outer_radius = r
-	ring.mesh = ring_mesh
-	var ring_mat := StandardMaterial3D.new()
-	ring_mat.albedo_color = Color(0.3, 0.5, 0.8)
-	ring_mat.metallic = 0.6
-	ring_mat.emission_enabled = true
-	ring_mat.emission = Color(0.1, 0.3, 0.6)
-	ring_mat.emission_energy_multiplier = 0.5
-	ring.material_override = ring_mat
-	_add_visual_child(ring)
-	# Nav lights
+	var hull := _metal_material(Color(0.34, 0.38, 0.44))
+	var trim := _metal_material(Color(0.17, 0.19, 0.24))
+	var windows := _emissive_material(ThemeColors.PLASMA_CYAN, 2.5)
+	var beacons := _emissive_material(ThemeColors.SHELL_ORANGE, 3.0)
+	var panels := _metal_material(Color(0.08, 0.14, 0.32))
+	panels.emission_enabled = true
+	panels.emission = Color(0.1, 0.2, 0.5)
+	panels.emission_energy_multiplier = 0.4
+
+	# Central hub stays on mesh_instance (click target, tests)
+	var hub := CylinderMesh.new()
+	hub.top_radius = r * 0.16
+	hub.bottom_radius = r * 0.2
+	hub.height = r * 0.7
+	mesh_instance.mesh = hub
+	mesh_instance.material_override = hull
+
+	# Spine through the hub
+	_add_cylinder(r * 0.05, r * 1.6, Vector3.ZERO, trim)
+
+	# Habitat ring with six spokes and a band of lit windows on its outer face
+	_add_torus(r * 0.82, r * 0.94, Vector3.ZERO, hull)
+	for i in 6:
+		var angle := TAU * i / 6.0
+		var spoke := _add_cylinder(r * 0.025, r * 0.84, Vector3(cos(angle) * r * 0.46, 0.0, sin(angle) * r * 0.46), trim)
+		spoke.rotation = Vector3(PI / 2.0, 0.0, 0.0)
+		spoke.rotate_y(angle + PI / 2.0)
+	for i in 32:
+		var angle := TAU * i / 32.0
+		var window := _add_box(Vector3(r * 0.05, r * 0.02, r * 0.012), Vector3(cos(angle) * r * 0.945, 0.0, sin(angle) * r * 0.945), windows)
+		window.rotation.y = -angle + PI / 2.0
+
+	# Smaller service ring above the hub
+	_add_torus(r * 0.42, r * 0.48, Vector3(0.0, r * 0.32, 0.0), trim)
+
+	# Four docking pylons below the hub, tipped with orange approach beacons
 	for i in 4:
-		var light := OmniLight3D.new()
-		light.light_color = Color(0.2, 0.6, 1.0)
-		light.light_energy = 2.0
-		light.omni_range = r * 0.5
+		var angle := TAU * i / 4.0 + PI / 4.0
+		var base := Vector3(cos(angle) * r * 0.28, -r * 0.45, sin(angle) * r * 0.28)
+		_add_box(Vector3(r * 0.06, r * 0.3, r * 0.06), base, trim)
+		var tip := MeshInstance3D.new()
+		var tip_mesh := SphereMesh.new()
+		tip_mesh.radius = r * 0.025
+		tip_mesh.height = r * 0.05
+		tip.mesh = tip_mesh
+		tip.material_override = beacons
+		tip.position = base + Vector3(0.0, -r * 0.17, 0.0)
+		_add_visual_child(tip)
+
+	# Solar arrays on arms at the top of the spine
+	for side in [-1.0, 1.0]:
+		_add_box(Vector3(r * 0.5, r * 0.012, r * 0.22), Vector3(side * r * 0.42, r * 0.7, 0.0), panels)
+		_add_box(Vector3(r * 0.3, r * 0.02, r * 0.02), Vector3(side * r * 0.15, r * 0.7, 0.0), trim)
+
+	# Nav lights: cyan on the ring, orange at the docks
+	for i in 4:
 		var angle := TAU * i / 4.0
-		light.position = Vector3(cos(angle) * r * 0.8, r * 0.3, sin(angle) * r * 0.8)
+		var light := OmniLight3D.new()
+		light.light_color = ThemeColors.PLASMA_CYAN if i % 2 == 0 else ThemeColors.SHELL_ORANGE
+		light.light_energy = 2.0
+		light.omni_range = r * 0.6
+		light.position = Vector3(cos(angle) * r * 0.9, r * 0.05, sin(angle) * r * 0.9)
 		_add_visual_child(light)
-	# Label above station
-	name_label.position = Vector3(0, r * 0.8, 0)
-	name_label.font_size = 64
+
+	name_label.position = Vector3(0, r * 1.0, 0)
+
+
+func _metal_material(color: Color) -> StandardMaterial3D:
+	var mat := StandardMaterial3D.new()
+	mat.albedo_color = color
+	mat.metallic = 0.85
+	mat.roughness = 0.4
+	return mat
+
+
+func _emissive_material(color: Color, energy: float) -> StandardMaterial3D:
+	var mat := StandardMaterial3D.new()
+	mat.albedo_color = color
+	mat.emission_enabled = true
+	mat.emission = color
+	mat.emission_energy_multiplier = energy
+	return mat
+
+
+func _add_box(size: Vector3, pos: Vector3, mat: Material) -> MeshInstance3D:
+	var node := MeshInstance3D.new()
+	var mesh := BoxMesh.new()
+	mesh.size = size
+	node.mesh = mesh
+	node.material_override = mat
+	node.position = pos
+	_add_visual_child(node)
+	return node
+
+
+func _add_cylinder(radius: float, height: float, pos: Vector3, mat: Material) -> MeshInstance3D:
+	var node := MeshInstance3D.new()
+	var mesh := CylinderMesh.new()
+	mesh.top_radius = radius
+	mesh.bottom_radius = radius
+	mesh.height = height
+	node.mesh = mesh
+	node.material_override = mat
+	node.position = pos
+	_add_visual_child(node)
+	return node
+
+
+func _add_torus(inner: float, outer: float, pos: Vector3, mat: Material) -> MeshInstance3D:
+	var node := MeshInstance3D.new()
+	var mesh := TorusMesh.new()
+	mesh.inner_radius = inner
+	mesh.outer_radius = outer
+	node.mesh = mesh
+	node.material_override = mat
+	node.position = pos
+	_add_visual_child(node)
+	return node
 
 
 func _make_asteroid_cluster() -> void:

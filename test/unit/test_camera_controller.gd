@@ -30,6 +30,6 @@ func test_snap_to_target_updates_camera_immediately() -> void:
 
 	camera.snap_to_target()
 
-	assert_float(camera.global_position.distance_to(target.global_position)).is_greater(200.0)
+	assert_float(camera.global_position.distance_to(target.global_position)).is_equal_approx(camera.DEFAULT_ZOOM, 1.0)
 	camera.queue_free()
 	target.queue_free()

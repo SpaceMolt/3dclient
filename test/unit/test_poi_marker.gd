@@ -98,3 +98,31 @@ func test_asteroid_uses_custom_model() -> void:
 	assert_bool(m._uses_custom_model).is_true()
 	assert_bool(m.mesh_instance.visible).is_false()
 	m.queue_free()
+
+
+func test_station_has_lit_windows_and_docking_beacons() -> void:
+	var m := _make_marker("st1", "Hub", "station", Vector3.ZERO)
+	var emissive := 0
+	for child in m.get_children():
+		if child is MeshInstance3D and child.material_override is StandardMaterial3D and child.material_override.emission_enabled:
+			emissive += 1
+	assert_int(emissive).is_greater(30)
+	m.queue_free()
+
+
+func test_labels_keep_screen_size_at_any_distance() -> void:
+	var m := _make_marker("p1", "Far Planet", "planet", Vector3(1e5, 0, 0), "terran")
+	assert_bool(m.name_label.fixed_size).is_true()
+	assert_bool(m.name_label.no_depth_test).is_true()
+	m.queue_free()
+
+
+func test_every_marker_gets_a_beacon_colored_by_type() -> void:
+	var station := _make_marker("st1", "Hub", "station", Vector3.ZERO)
+	var star := _make_marker("s1", "Sol", "sun", Vector3.ZERO, "G")
+	assert_object(station.get_node_or_null("Beacon")).is_instanceof(Sprite3D)
+	assert_bool((station.get_node("Beacon") as Sprite3D).fixed_size).is_true()
+	assert_object(station.beacon_color()).is_equal(ThemeColors.PLASMA_CYAN)
+	assert_object(star.beacon_color()).is_equal(star._star_color())
+	station.queue_free()
+	star.queue_free()

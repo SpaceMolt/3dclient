@@ -36,7 +36,7 @@ light_energy = 0.6
 
 [node name="Camera3D" type="Camera3D" parent="."]
 script = ExtResource("1")
-position = Vector3(0, 18.4, 7.8)
+position = Vector3(0, 46.20, 52.59)
 
 [node name="Ships" type="Node3D" parent="."]
 script = ExtResource("2")
