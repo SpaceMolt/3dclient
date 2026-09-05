@@ -44,6 +44,7 @@ func _build_theme() -> void:
 	theme.default_font_size = ThemeColors.FONT_SIZE_MD
 
 	_theme_label()
+	_theme_panel_title()
 	_theme_button()
 	_theme_line_edit()
 	_theme_text_edit()
@@ -64,6 +65,15 @@ func _build_theme() -> void:
 
 func _apply_theme() -> void:
 	get_tree().root.theme = theme
+	# A theme flows down through Control and Window parents only. A Control under a
+	# CanvasLayer or a plain Node, which is every HUD panel, falls back to the engine
+	# default, so those get the theme directly as they enter the tree.
+	get_tree().node_added.connect(_adopt_orphan_control)
+
+
+func _adopt_orphan_control(node: Node) -> void:
+	if node is Control and not (node.get_parent() is Control or node.get_parent() is Window):
+		node.theme = theme
 
 
 # ── Label ────────────────────────────────────────────────────────────
@@ -74,6 +84,16 @@ func _theme_label() -> void:
 	theme.set_color("font_outline_color", "Label", Color.TRANSPARENT)
 	theme.set_font("font", "Label", font_jetbrains)
 	theme.set_font_size("font_size", "Label", ThemeColors.FONT_SIZE_MD)
+
+
+# ── PanelTitle (Label variation for panel headers) ───────────────────
+
+func _theme_panel_title() -> void:
+	theme.add_type("PanelTitle")
+	theme.set_type_variation("PanelTitle", "Label")
+	theme.set_font("font", "PanelTitle", font_orbitron_medium)
+	theme.set_font_size("font_size", "PanelTitle", ThemeColors.FONT_SIZE_MD)
+	theme.set_color("font_color", "PanelTitle", ThemeColors.PLASMA_CYAN)
 
 
 # ── Button ───────────────────────────────────────────────────────────
@@ -173,23 +193,11 @@ func _theme_text_edit() -> void:
 # ── Panel / PanelContainer ──────────────────────────────────────────
 
 func _theme_panel() -> void:
-	var panel_style := StyleBoxFlat.new()
-	panel_style.bg_color = Color(ThemeColors.DEEP_VOID, 0.95)
-	panel_style.border_color = ThemeColors.DIM_GREY
-	panel_style.set_border_width_all(1)
-	panel_style.set_corner_radius_all(8)
-	panel_style.set_content_margin_all(0)
-	theme.set_stylebox("panel", "Panel", panel_style)
+	theme.set_stylebox("panel", "Panel", _make_stylebox(Color(ThemeColors.SPACE_BLACK, 0.86), Color(ThemeColors.PLASMA_CYAN, 0.22), 4, 0))
 
 
 func _theme_panel_container() -> void:
-	var panel_style := StyleBoxFlat.new()
-	panel_style.bg_color = Color(ThemeColors.DEEP_VOID, 0.95)
-	panel_style.border_color = ThemeColors.DIM_GREY
-	panel_style.set_border_width_all(1)
-	panel_style.set_corner_radius_all(8)
-	panel_style.set_content_margin_all(6)
-	theme.set_stylebox("panel", "PanelContainer", panel_style)
+	theme.set_stylebox("panel", "PanelContainer", _make_stylebox(Color(ThemeColors.SPACE_BLACK, 0.86), Color(ThemeColors.PLASMA_CYAN, 0.22), 4, 6))
 
 
 # ── TabContainer ─────────────────────────────────────────────────────
@@ -437,13 +445,17 @@ func _theme_progress_bar() -> void:
 	bg.bg_color = Color(ThemeColors.SPACE_BLACK, 0.8)
 	bg.border_color = Color(ThemeColors.DIM_GREY, 0.6)
 	bg.set_border_width_all(1)
-	bg.set_corner_radius_all(3)
+	bg.set_corner_radius_all(2)
 	theme.set_stylebox("background", "ProgressBar", bg)
+	theme.set_stylebox("fill", "ProgressBar", bar_fill(ThemeColors.PLASMA_CYAN))
 
+
+## Fill style for a ProgressBar in one colour; the HUD gives each ship bar its own.
+static func bar_fill(color: Color) -> StyleBoxFlat:
 	var fill := StyleBoxFlat.new()
-	fill.bg_color = ThemeColors.PLASMA_CYAN
-	fill.set_corner_radius_all(3)
-	theme.set_stylebox("fill", "ProgressBar", fill)
+	fill.bg_color = color
+	fill.set_corner_radius_all(2)
+	return fill
 
 
 # ── Helpers ──────────────────────────────────────────────────────────
