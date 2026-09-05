@@ -1,9 +1,16 @@
-[gd_scene load_steps=5 format=3]
+[gd_scene load_steps=6 format=3]
 
 [ext_resource type="Script" path="res://scripts/ui/hud.gd" id="1"]
 [ext_resource type="Script" path="res://scripts/ui/action_bar.gd" id="2"]
 [ext_resource type="Script" path="res://scripts/ui/event_log.gd" id="3"]
 [ext_resource type="Script" path="res://scripts/ui/minimap.gd" id="4"]
+
+[sub_resource type="StyleBoxFlat" id="LogPanelStyle"]
+bg_color = Color(0.039, 0.055, 0.09, 0.55)
+corner_radius_top_left = 4
+corner_radius_top_right = 4
+corner_radius_bottom_right = 4
+corner_radius_bottom_left = 4
 
 [node name="HUD" type="CanvasLayer"]
 script = ExtResource("1")
@@ -19,7 +26,7 @@ custom_minimum_size = Vector2(0, 36)
 [node name="TopBarBG" type="ColorRect" parent="Layout/TopBar"]
 anchor_right = 1.0
 anchor_bottom = 1.0
-color = Color(0.06, 0.06, 0.1, 0.9)
+color = Color(0.039, 0.055, 0.09, 0.88)
 show_behind_parent = true
 
 [node name="TopMargin" type="MarginContainer" parent="Layout/TopBar"]
@@ -58,6 +65,10 @@ theme_override_font_sizes/font_size = 11
 unique_name_in_owner = true
 text = "Logout"
 theme_override_font_sizes/font_size = 11
+
+[node name="TopEdge" type="ColorRect" parent="Layout"]
+custom_minimum_size = Vector2(0, 1)
+color = Color(0, 0.831, 1, 0.35)
 
 [node name="MidRow" type="HBoxContainer" parent="Layout"]
 size_flags_vertical = 3
@@ -109,26 +120,40 @@ theme_override_font_sizes/font_size = 12
 
 [node name="TargetDockButton" type="Button" parent="Layout/MidRow/GameArea/TargetPanel/TargetMargin/TargetRow"]
 unique_name_in_owner = true
-text = "Dock"
+text = "Dock [D]"
 theme_override_font_sizes/font_size = 12
 
-[node name="EventLogPanel" type="PanelContainer" parent="Layout/MidRow"]
+[node name="EventLogPanel" type="PanelContainer" parent="Layout/MidRow/GameArea"]
 script = ExtResource("3")
-custom_minimum_size = Vector2(280, 0)
-size_flags_vertical = 3
+anchor_left = 1.0
+anchor_top = 1.0
+anchor_right = 1.0
+anchor_bottom = 1.0
+offset_left = -470.0
+offset_top = -180.0
+offset_right = -10.0
+offset_bottom = -10.0
+mouse_filter = 2
+theme_override_styles/panel = SubResource("LogPanelStyle")
 
-[node name="EventLogMargin" type="MarginContainer" parent="Layout/MidRow/EventLogPanel"]
+[node name="EventLogMargin" type="MarginContainer" parent="Layout/MidRow/GameArea/EventLogPanel"]
 theme_override_constants/margin_left = 8
 theme_override_constants/margin_right = 8
-theme_override_constants/margin_top = 8
-theme_override_constants/margin_bottom = 8
+theme_override_constants/margin_top = 6
+theme_override_constants/margin_bottom = 6
 
-[node name="LogText" type="RichTextLabel" parent="Layout/MidRow/EventLogPanel/EventLogMargin"]
+[node name="LogText" type="RichTextLabel" parent="Layout/MidRow/GameArea/EventLogPanel/EventLogMargin"]
 unique_name_in_owner = true
 size_flags_vertical = 3
+mouse_filter = 2
 bbcode_enabled = true
 scroll_following = true
+scroll_active = false
 text = "[color=gray]— Event Log —[/color]"
+
+[node name="BottomEdge" type="ColorRect" parent="Layout"]
+custom_minimum_size = Vector2(0, 1)
+color = Color(0, 0.831, 1, 0.35)
 
 [node name="BottomBar" type="VBoxContainer" parent="Layout"]
 theme_override_constants/separation = 0
@@ -136,7 +161,7 @@ theme_override_constants/separation = 0
 [node name="BottomBarBG" type="ColorRect" parent="Layout/BottomBar"]
 anchor_right = 1.0
 anchor_bottom = 1.0
-color = Color(0.06, 0.06, 0.1, 0.9)
+color = Color(0.039, 0.055, 0.09, 0.88)
 show_behind_parent = true
 
 [node name="ShipStatusMargin" type="MarginContainer" parent="Layout/BottomBar"]
@@ -166,7 +191,7 @@ theme_override_font_sizes/font_size = 11
 
 [node name="HullBar" type="ProgressBar" parent="Layout/BottomBar/ShipStatusMargin/ShipStatusRow/HullGroup"]
 unique_name_in_owner = true
-custom_minimum_size = Vector2(0, 14)
+custom_minimum_size = Vector2(0, 8)
 size_flags_horizontal = 3
 show_percentage = false
 
@@ -188,7 +213,7 @@ theme_override_font_sizes/font_size = 11
 
 [node name="ShieldBar" type="ProgressBar" parent="Layout/BottomBar/ShipStatusMargin/ShipStatusRow/ShieldGroup"]
 unique_name_in_owner = true
-custom_minimum_size = Vector2(0, 14)
+custom_minimum_size = Vector2(0, 8)
 size_flags_horizontal = 3
 show_percentage = false
 
@@ -210,7 +235,7 @@ theme_override_font_sizes/font_size = 11
 
 [node name="FuelBar" type="ProgressBar" parent="Layout/BottomBar/ShipStatusMargin/ShipStatusRow/FuelGroup"]
 unique_name_in_owner = true
-custom_minimum_size = Vector2(0, 14)
+custom_minimum_size = Vector2(0, 8)
 size_flags_horizontal = 3
 show_percentage = false
 
@@ -232,7 +257,7 @@ theme_override_font_sizes/font_size = 11
 
 [node name="CargoBar" type="ProgressBar" parent="Layout/BottomBar/ShipStatusMargin/ShipStatusRow/CargoGroup"]
 unique_name_in_owner = true
-custom_minimum_size = Vector2(0, 14)
+custom_minimum_size = Vector2(0, 8)
 size_flags_horizontal = 3
 show_percentage = false
 
@@ -258,15 +283,15 @@ text = "Attack ▼"
 
 [node name="ScanButton" type="Button" parent="Layout/BottomBar/ActionBarContainer/ActionMargin/ActionRow"]
 unique_name_in_owner = true
-text = "Scan"
+text = "Scan [V]"
 
 [node name="SurveyButton" type="Button" parent="Layout/BottomBar/ActionBarContainer/ActionMargin/ActionRow"]
 unique_name_in_owner = true
-text = "Survey"
+text = "Survey [Y]"
 
 [node name="MineButton" type="Button" parent="Layout/BottomBar/ActionBarContainer/ActionMargin/ActionRow"]
 unique_name_in_owner = true
-text = "Mine"
+text = "Mine [M]"
 
 [node name="DockButton" type="Button" parent="Layout/BottomBar/ActionBarContainer/ActionMargin/ActionRow"]
 unique_name_in_owner = true
@@ -274,17 +299,17 @@ text = "Dock"
 
 [node name="UndockButton" type="Button" parent="Layout/BottomBar/ActionBarContainer/ActionMargin/ActionRow"]
 unique_name_in_owner = true
-text = "Undock"
+text = "Undock [D]"
 visible = false
 
 [node name="RepairButton" type="Button" parent="Layout/BottomBar/ActionBarContainer/ActionMargin/ActionRow"]
 unique_name_in_owner = true
-text = "Repair"
+text = "Repair [R]"
 visible = false
 
 [node name="RefuelButton" type="Button" parent="Layout/BottomBar/ActionBarContainer/ActionMargin/ActionRow"]
 unique_name_in_owner = true
-text = "Refuel"
+text = "Refuel [U]"
 visible = false
 
 [node name="Spacer" type="Control" parent="Layout/BottomBar/ActionBarContainer/ActionMargin/ActionRow"]

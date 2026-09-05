@@ -60,6 +60,22 @@ const EMPIRE_CRIMSON := CLAW_RED
 const EMPIRE_NEBULA := PLASMA_CYAN
 const EMPIRE_OUTERRIM := BIO_GREEN
 
+
+static func empire_color(empire_id: String) -> Color:
+	match empire_id:
+		"solarian":
+			return EMPIRE_SOLARIAN
+		"voidborn":
+			return EMPIRE_VOIDBORN
+		"crimson":
+			return EMPIRE_CRIMSON
+		"nebula":
+			return EMPIRE_NEBULA
+		"outerrim":
+			return EMPIRE_OUTERRIM
+		_:
+			return TEXT_ACCENT
+
 # ── Status indicators ───────────────────────────────────────────────
 const ACTIVE := BIO_GREEN
 const INACTIVE := HULL_GREY
@@ -70,8 +86,8 @@ const SELL_ORDER := SHELL_ORANGE
 # ── UI element styling ──────────────────────────────────────────────
 const PANEL_BG_ALPHA := 0.6
 const BAR_BG := Color(0.06, 0.06, 0.1, 0.9)
-const MINIMAP_BG := Color(0.0, 0.0, 0.0, 0.5)
-const MINIMAP_BORDER := Color(0.2, 0.3, 0.5, 0.4)
+const MINIMAP_BG := Color(0.039, 0.055, 0.090, 0.7)
+const MINIMAP_BORDER := Color(0.0, 0.831, 1.0, 0.3)
 
 # ── Font sizes ───────────────────────────────────────────────────────
 const FONT_SIZE_XS := 10

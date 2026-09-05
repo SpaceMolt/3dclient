@@ -58,6 +58,7 @@ var _selected_poi_name: String = ""
 var _selected_ship_id: String = ""
 var _selected_ship_name: String = ""
 var _system_renderer: Node3D = null
+var _hull_fill: StyleBoxFlat = null
 
 
 func _ready() -> void:
@@ -70,6 +71,11 @@ func _ready() -> void:
 	target_travel_button.pressed.connect(_on_target_travel)
 	target_dock_button.pressed.connect(_on_target_dock)
 	target_panel.hide()
+	_hull_fill = ThemeManager.bar_fill(ThemeColors.BIO_GREEN)
+	hull_bar.add_theme_stylebox_override("fill", _hull_fill)
+	shield_bar.add_theme_stylebox_override("fill", ThemeManager.bar_fill(ThemeColors.PLASMA_CYAN))
+	fuel_bar.add_theme_stylebox_override("fill", ThemeManager.bar_fill(ThemeColors.SHELL_ORANGE))
+	cargo_bar.add_theme_stylebox_override("fill", ThemeManager.bar_fill(ThemeColors.CHROME_SILVER))
 	_refresh()
 
 	# Find the system renderer to listen for POI selection
@@ -171,9 +177,7 @@ func _toggle_panel(panel_name: String) -> void:
 				_chat_panel = null
 			else:
 				_chat_panel = CHAT_PANEL_SCENE.instantiate()
-				# Insert before event log (which is the last child of mid_row)
 				mid_row.add_child(_chat_panel)
-				mid_row.move_child(_chat_panel, mid_row.get_child_count() - 2)
 		"missions":
 			if _missions_panel:
 				_missions_panel.queue_free()
@@ -181,7 +185,6 @@ func _toggle_panel(panel_name: String) -> void:
 			else:
 				_missions_panel = MISSIONS_PANEL_SCENE.instantiate()
 				mid_row.add_child(_missions_panel)
-				mid_row.move_child(_missions_panel, mid_row.get_child_count() - 2)
 		"crafting":
 			if _crafting_panel:
 				_crafting_panel.queue_free()
@@ -189,7 +192,6 @@ func _toggle_panel(panel_name: String) -> void:
 			else:
 				_crafting_panel = CRAFTING_PANEL_SCENE.instantiate()
 				mid_row.add_child(_crafting_panel)
-				mid_row.move_child(_crafting_panel, mid_row.get_child_count() - 2)
 		"action_log":
 			if _action_log_panel:
 				_action_log_panel.queue_free()
@@ -197,7 +199,6 @@ func _toggle_panel(panel_name: String) -> void:
 			else:
 				_action_log_panel = ACTION_LOG_PANEL_SCENE.instantiate()
 				mid_row.add_child(_action_log_panel)
-				mid_row.move_child(_action_log_panel, mid_row.get_child_count() - 2)
 		"ship":
 			if _ship_panel:
 				_ship_panel.queue_free()
@@ -205,7 +206,6 @@ func _toggle_panel(panel_name: String) -> void:
 			else:
 				_ship_panel = SHIP_PANEL_SCENE.instantiate()
 				mid_row.add_child(_ship_panel)
-				mid_row.move_child(_ship_panel, mid_row.get_child_count() - 2)
 		"market":
 			if _market_panel:
 				_market_panel.queue_free()
@@ -237,7 +237,6 @@ func _toggle_panel(panel_name: String) -> void:
 			else:
 				_faction_panel = FACTION_PANEL_SCENE.instantiate()
 				mid_row.add_child(_faction_panel)
-				mid_row.move_child(_faction_panel, mid_row.get_child_count() - 2)
 		"skills":
 			if _skills_panel:
 				_skills_panel.queue_free()
@@ -245,7 +244,6 @@ func _toggle_panel(panel_name: String) -> void:
 			else:
 				_skills_panel = SKILLS_PANEL_SCENE.instantiate()
 				mid_row.add_child(_skills_panel)
-				mid_row.move_child(_skills_panel, mid_row.get_child_count() - 2)
 		"facilities":
 			if _facilities_panel:
 				_facilities_panel.queue_free()
@@ -261,7 +259,6 @@ func _toggle_panel(panel_name: String) -> void:
 			else:
 				_info_panel = INFO_PANEL_SCENE.instantiate()
 				mid_row.add_child(_info_panel)
-				mid_row.move_child(_info_panel, mid_row.get_child_count() - 2)
 		"wreck":
 			if _wreck_panel:
 				_wreck_panel.queue_free()
@@ -269,7 +266,6 @@ func _toggle_panel(panel_name: String) -> void:
 			else:
 				_wreck_panel = WRECK_PANEL_SCENE.instantiate()
 				mid_row.add_child(_wreck_panel)
-				mid_row.move_child(_wreck_panel, mid_row.get_child_count() - 2)
 
 
 func _toggle_galaxy_map() -> void:
@@ -325,9 +321,10 @@ func _refresh_location() -> void:
 
 
 func _refresh_player() -> void:
-	var pname: String = StateManager.player.get("name", "")
+	var pname: String = StateManager.player.get("username", StateManager.player.get("name", ""))
 	var empire: String = StateManager.player.get("empire", "")
 	player_name_label.text = pname + (" [%s]" % empire if empire else "")
+	player_name_label.add_theme_color_override("font_color", ThemeColors.empire_color(empire))
 
 	var credits: int = StateManager.player.get("credits", 0)
 	credits_label.text = "¢%s" % _format_number(credits)
@@ -354,13 +351,16 @@ func _refresh_ship() -> void:
 	fuel_label.text = "%d/%d" % [fuel, max_fuel]
 	cargo_label.text = "%d/%d" % [cargo_used, cargo_cap]
 
-	# Color hull bar by health
-	if StateManager.hull_pct() < 0.25:
-		hull_bar.modulate = Color.RED
-	elif StateManager.hull_pct() < 0.5:
-		hull_bar.modulate = Color.ORANGE
-	else:
-		hull_bar.modulate = Color.WHITE
+	_hull_fill.bg_color = hull_color(StateManager.hull_pct())
+
+
+## Traffic-light hull colour: green while sound, yellow under half, red under a quarter.
+static func hull_color(pct: float) -> Color:
+	if pct < 0.25:
+		return ThemeColors.CLAW_RED
+	if pct < 0.5:
+		return ThemeColors.WARNING_YELLOW
+	return ThemeColors.BIO_GREEN
 
 
 func _refresh_dock_panels() -> void:

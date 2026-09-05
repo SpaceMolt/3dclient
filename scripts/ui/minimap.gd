@@ -3,7 +3,7 @@ extends Control
 ## A minimap showing the current system's POIs and the player's position.
 ## Drawn as a 2D overlay in the top-right corner of the screen.
 
-const MAP_SIZE := 180.0  # Pixels
+const MAP_SIZE := 210.0  # Pixels
 const MAP_MARGIN := 10.0
 const POI_RADIUS := 4.0
 const PLAYER_RADIUS := 5.0
@@ -47,9 +47,12 @@ func _draw() -> void:
 			HORIZONTAL_ALIGNMENT_LEFT, MAP_SIZE - 8, LABEL_FONT_SIZE,
 			Color(ThemeColors.CHROME_SILVER, 0.8))
 
-	# Draw POIs
+	# Draw POIs; the current one first so its label always wins the space
 	var current_poi_id: String = StateManager.location.get("poi_id", "")
-	for poi in pois:
+	var ordered: Array = pois.duplicate()
+	ordered.sort_custom(func(a, b): return a.get("id", "") == current_poi_id and b.get("id", "") != current_poi_id)
+	var taken: Array[Rect2] = []
+	for poi in ordered:
 		var pos: Dictionary = poi.get("position", {})
 		var screen_pos := _world_to_map(Vector2(pos.get("x", 0.0), pos.get("y", 0.0)))
 		var poi_type: String = poi.get("type", "")
@@ -60,14 +63,23 @@ func _draw() -> void:
 			draw_circle(screen_pos, POI_RADIUS + 3.0, Color(1.0, 1.0, 1.0, 0.3))
 
 		draw_circle(screen_pos, POI_RADIUS, color)
+		taken.append(Rect2(screen_pos - Vector2.ONE * (POI_RADIUS + 1), Vector2.ONE * (POI_RADIUS + 1) * 2.0))
 
-		# POI name label
+		# POI name label, skipped when it would print over a dot or a label already placed
 		var pname: String = poi.get("name", "")
 		if not pname.is_empty():
-			draw_string(ThemeDB.fallback_font,
-				screen_pos + Vector2(POI_RADIUS + 2, 3),
-				pname, HORIZONTAL_ALIGNMENT_LEFT, MAP_SIZE * 0.4,
-				LABEL_FONT_SIZE, Color(ThemeColors.CHROME_SILVER, 0.6))
+			var text_size := ThemeDB.fallback_font.get_string_size(pname, HORIZONTAL_ALIGNMENT_LEFT, MAP_SIZE * 0.4, LABEL_FONT_SIZE)
+			var width := minf(text_size.x, MAP_SIZE * 0.4)
+			# Right of the dot by default; left of it when that would run off the map
+			var label_pos := screen_pos + Vector2(POI_RADIUS + 2, 3)
+			if label_pos.x + width > MAP_SIZE - 2.0:
+				label_pos.x = screen_pos.x - POI_RADIUS - 2 - width
+			var label_rect := Rect2(label_pos - Vector2(2, LABEL_FONT_SIZE + 1), Vector2(width + 4, LABEL_FONT_SIZE + 4))
+			if label_fits(label_rect, taken):
+				taken.append(label_rect)
+				draw_string(ThemeDB.fallback_font, label_pos,
+					pname, HORIZONTAL_ALIGNMENT_LEFT, MAP_SIZE * 0.4,
+					LABEL_FONT_SIZE, Color(ThemeColors.CHROME_SILVER, 0.6))
 
 	# Draw nearby players
 	for p in StateManager.nearby_players:
@@ -92,6 +104,14 @@ func _draw() -> void:
 	var player_pos := _get_player_map_pos()
 	draw_circle(player_pos, PLAYER_RADIUS, ThemeColors.PLASMA_CYAN)
 	draw_circle(player_pos, PLAYER_RADIUS + 1.0, Color(ThemeColors.PLASMA_CYAN, 0.4), false, 1.0)
+
+
+## True when the label rectangle overlaps none of the rectangles already drawn.
+static func label_fits(rect: Rect2, taken: Array[Rect2]) -> bool:
+	for other in taken:
+		if rect.intersects(other):
+			return false
+	return true
 
 
 func _calculate_bounds(pois: Array) -> void:
