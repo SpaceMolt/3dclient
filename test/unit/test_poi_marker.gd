@@ -53,11 +53,12 @@ func test_set_selected_false_restores_label_color() -> void:
 
 # --- _apply_appearance dispatch ---
 
-func test_star_gets_emissive_material() -> void:
+func test_star_gets_glowing_surface_shader() -> void:
 	var m := _make_marker("s1", "Sol", "sun", Vector3.ZERO, "G")
-	# Stars should have emission enabled
-	var mat: StandardMaterial3D = m.mesh_instance.material_override
-	assert_bool(mat.emission_enabled).is_true()
+	var mat: ShaderMaterial = m.mesh_instance.material_override
+	assert_that(mat.shader).is_equal(m.STAR_SURFACE_SHADER)
+	assert_object(mat.get_shader_parameter("star_color")).is_equal(m._star_color())
+	assert_float(mat.get_shader_parameter("energy")).is_greater(1.0)
 	m.queue_free()
 
 
@@ -126,3 +127,50 @@ func test_every_marker_gets_a_beacon_colored_by_type() -> void:
 	assert_object(star.beacon_color()).is_equal(star._star_color())
 	station.queue_free()
 	star.queue_free()
+
+
+# --- atmosphere and beacons ---
+
+func test_atmosphere_color_depends_on_class() -> void:
+	var marker_script: GDScript = load("res://scripts/game/poi_marker.gd")
+	assert_float(marker_script.atmosphere_color_for("planet", "terran").a).is_greater(0.0)
+	assert_float(marker_script.atmosphere_color_for("moon", "").a).is_equal(0.0)
+	assert_float(marker_script.atmosphere_color_for("planet", "carbon").a).is_equal(0.0)
+	var scorched: float = marker_script.atmosphere_color_for("planet", "scorched").a
+	var oceanic: float = marker_script.atmosphere_color_for("planet", "oceanic").a
+	assert_float(scorched).is_less(oceanic)
+
+
+func test_planet_gets_atmosphere_shell_and_moon_does_not() -> void:
+	var planet := _make_marker("p1", "Home", "planet", Vector3.ZERO, "terran")
+	var moon := _make_marker("m1", "Rock", "moon", Vector3(10, 0, 0))
+	var shell := planet.find_child("Atmosphere", true, false) as MeshInstance3D
+	assert_that(shell).is_not_null()
+	assert_that(shell.material_override).is_instanceof(ShaderMaterial)
+	assert_that(moon.find_child("Atmosphere", true, false)).is_null()
+	planet.queue_free()
+	moon.queue_free()
+
+
+func test_atmosphere_faces_the_scene_sun() -> void:
+	var sun := DirectionalLight3D.new()
+	sun.name = "SunLight"
+	add_child(sun)
+	sun.global_transform = Transform3D(Basis.looking_at(Vector3(-1, 0, 0), Vector3.UP), Vector3.ZERO)
+	var planet := _make_marker("p1", "Home", "planet", Vector3.ZERO, "terran")
+	var shell := planet.find_child("Atmosphere", true, false) as MeshInstance3D
+	var toward_star: Vector3 = (shell.material_override as ShaderMaterial).get_shader_parameter("sun_dir")
+	# light travels -X, so the star lies towards +X
+	assert_float(toward_star.x).is_greater(0.99)
+	sun.free()
+	assert_vector(planet.sun_direction_from_scene()).is_equal(Vector3.UP)
+	planet.queue_free()
+
+
+func test_station_beacons_blink() -> void:
+	var marker_script: GDScript = load("res://scripts/game/poi_marker.gd")
+	assert_float(marker_script.blink_energy(0.05)).is_greater(marker_script.blink_energy(0.8))
+	assert_float(marker_script.blink_energy(marker_script.BLINK_PERIOD + 0.05)).is_greater(marker_script.blink_energy(0.8))
+	var m := _make_marker("st1", "Hub", "station", Vector3.ZERO)
+	assert_that(m._blink_material).is_not_null()
+	m.queue_free()

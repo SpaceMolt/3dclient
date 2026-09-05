@@ -1,42 +1,53 @@
-[gd_scene load_steps=10 format=3]
+[gd_scene load_steps=9 format=3]
 
 [ext_resource type="Script" path="res://scripts/game/camera_controller.gd" id="1"]
 [ext_resource type="Script" path="res://scripts/game/system_renderer.gd" id="2"]
-[ext_resource type="Texture2D" path="res://textures/sky/blue_nebula.jpg" id="4"]
+[ext_resource type="Environment" path="res://resources/space_environment.tres" id="3"]
 [ext_resource type="PackedScene" path="res://scenes/game/mining_beam.tscn" id="5"]
 [ext_resource type="PackedScene" path="res://scenes/game/combat_rings.tscn" id="6"]
 
-[sub_resource type="PanoramaSkyMaterial" id="PanoSkyMat"]
-panorama = ExtResource("4")
+[sub_resource type="ParticleProcessMaterial" id="DustProcess"]
+emission_shape = 3
+emission_box_extents = Vector3(60, 40, 60)
+spread = 180.0
+initial_velocity_min = 0.2
+initial_velocity_max = 0.8
+gravity = Vector3(0, 0, 0)
+scale_min = 0.6
+scale_max = 1.4
 
-[sub_resource type="Sky" id="Sky_2"]
-sky_material = SubResource("PanoSkyMat")
+[sub_resource type="StandardMaterial3D" id="DustMaterial"]
+transparency = 1
+shading_mode = 0
+albedo_color = Color(0.8, 0.9, 1, 0.28)
+billboard_mode = 3
 
-[sub_resource type="Environment" id="Env_1"]
-background_mode = 2
-sky = SubResource("Sky_2")
-ambient_light_source = 2
-ambient_light_color = Color(0.1, 0.12, 0.2, 1)
-ambient_light_energy = 0.3
-tonemap_mode = 2
-glow_enabled = true
-glow_intensity = 0.8
-glow_bloom = 0.15
-glow_hdr_threshold = 0.9
+[sub_resource type="QuadMesh" id="DustMesh"]
+material = SubResource("DustMaterial")
+size = Vector2(0.06, 0.06)
 
 [node name="GameView" type="Node3D"]
 
 [node name="WorldEnvironment" type="WorldEnvironment" parent="."]
-environment = SubResource("Env_1")
+environment = ExtResource("3")
 
 [node name="SunLight" type="DirectionalLight3D" parent="."]
 transform = Transform3D(1, 0, 0, 0, 0.5, 0.866, 0, -0.866, 0.5, 0, 0, 0)
 light_color = Color(0.9, 0.9, 1.0, 1)
-light_energy = 0.6
+light_energy = 1.0
 
 [node name="Camera3D" type="Camera3D" parent="."]
 script = ExtResource("1")
 position = Vector3(0, 34.83, 60.72)
+
+[node name="SpaceDust" type="GPUParticles3D" parent="Camera3D"]
+amount = 500
+lifetime = 12.0
+preprocess = 12.0
+visibility_aabb = AABB(-80, -80, -80, 160, 160, 160)
+local_coords = false
+process_material = SubResource("DustProcess")
+draw_pass_1 = SubResource("DustMesh")
 
 [node name="Ships" type="Node3D" parent="."]
 script = ExtResource("2")
