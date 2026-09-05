@@ -80,6 +80,7 @@ All scripts in `scripts/tools/`:
 - **`check_api_parity.py`** (`make parity`) — Checks every `send_*_command("action")` in the client against the live v2 OpenAPI spec. Run it before a PR: the server renames and removes actions between releases.
 - **`build_windows.sh`** — Validates scripts, then exports a Windows .exe.
 - **`capture_screenshot.gd`** — Visual testing: `./bin/godot --windowed --resolution 800x600 -s scripts/tools/capture_screenshot.gd`. Saves PNGs to `screenshots/`.
+- **`poi_gallery.gd`** (`make poi-gallery`) — Renders one PNG per POI type/class into `screenshots/poi_*.png` with no server. Use it to iterate on marker looks, then confirm in the live client.
 - **`dev_run.sh`** / **`devctl.py`** — the autonomous dev loop described in the section that precedes this one.
 
 ### Build workflow
