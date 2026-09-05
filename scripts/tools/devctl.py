@@ -12,6 +12,7 @@ The client must be started with SPACEMOLT_DEV_PORT set (scripts/tools/dev_run.sh
   devctl.py type <text>
   devctl.py state [key]                 dump StateManager (optionally one field)
   devctl.py nodes [pattern]             visible controls with screen rects
+  devctl.py call <node> <method> [json args...]   e.g. call /root/NetworkManager disconnect_from_server
   devctl.py quit
 """
 import json
@@ -73,6 +74,8 @@ def main(argv: list) -> None:
         cmd = {"cmd": "type", "text": " ".join(args)}
     elif name == "nodes":
         cmd = {"cmd": "nodes", "pattern": args[0] if args else ""}
+    elif name == "call":
+        cmd = {"cmd": "call", "node": args[0], "method": args[1], "args": [json.loads(a) for a in args[2:]]}
     else:
         cmd = {"cmd": name}
     reply = send(cmd)

@@ -1,7 +1,7 @@
 extends Node
 ## Dev control server for autonomous testing. Inactive unless SPACEMOLT_DEV_PORT is set.
 ## Protocol: one JSON object per line over TCP on 127.0.0.1, one JSON reply line per request.
-## Driven by scripts/tools/devctl.py (screenshot, key, click, scroll, type, state, nodes, quit).
+## Driven by scripts/tools/devctl.py (screenshot, key, click, scroll, type, state, nodes, call, quit).
 
 const MAX_NODES = 300
 
@@ -82,6 +82,8 @@ func handle(cmd: Dictionary) -> Dictionary:
 			return {"ok": true, "state": _state()}
 		"nodes":
 			return {"ok": true, "nodes": _nodes(str(cmd.get("pattern", "")))}
+		"call":
+			return _call(str(cmd.get("node", "")), str(cmd.get("method", "")), cmd.get("args", []))
 		"quit":
 			get_tree().quit()
 			return {"ok": true}
@@ -153,6 +155,17 @@ func _type(text: String) -> Dictionary:
 			ev.pressed = pressed
 			Input.parse_input_event(ev)
 	return {"ok": true, "length": text.length()}
+
+
+## Calls a method on a node by path, e.g. /root/NetworkManager disconnect_from_server.
+func _call(node_path: String, method: String, args) -> Dictionary:
+	var node := get_node_or_null(node_path)
+	if node == null:
+		return {"ok": false, "error": "no node at %s" % node_path}
+	if not node.has_method(method):
+		return {"ok": false, "error": "%s has no method %s" % [node_path, method]}
+	var result = node.callv(method, args if args is Array else [])
+	return {"ok": true, "result": result if result is Dictionary or result is Array or result is String or result is int or result is float or result is bool else str(result)}
 
 
 func _state() -> Dictionary:
