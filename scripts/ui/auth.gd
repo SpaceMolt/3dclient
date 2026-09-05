@@ -1,7 +1,5 @@
 extends CanvasLayer
 
-const AUTH_LINK_URL = "https://game.spacemolt.com/auth/link"
-
 signal show_player_select(players: Array)
 
 @onready var key_field: LineEdit = %KeyField
@@ -20,6 +18,7 @@ func _ready() -> void:
 	key_field.text_submitted.connect(func(_text: String) -> void: _on_submit())
 	NetworkManager.request_started.connect(func() -> void: submit_button.disabled = true)
 	NetworkManager.request_completed.connect(func() -> void: submit_button.disabled = false)
+	NetworkManager.auth_error.connect(_on_auth_error)
 
 
 func _apply_theme() -> void:
@@ -65,8 +64,24 @@ func _style_primary_button(btn: Button) -> void:
 
 
 func _on_sign_in() -> void:
-	OS.shell_open(AUTH_LINK_URL)
-	_set_status("Sign in via your browser, then paste the key here.")
+	sign_in_button.disabled = true
+	_set_status("Starting browser login...")
+	NetworkManager.start_device_login(_on_device_link, _on_auth_error)
+
+
+func _on_device_link(url: String, user_code: String) -> void:
+	OS.shell_open(url)
+	_set_status("Approve the login in your browser.\nCode: %s\n%s" % [user_code, url])
+
+
+func _on_auth_error(_error = null) -> void:
+	sign_in_button.disabled = false
+	var message := "Login failed. Try again."
+	if _error is String:
+		message = _error
+	elif _error is Dictionary and _error.has("message"):
+		message = str(_error["message"])
+	_set_status(message, true)
 
 
 func _on_submit() -> void:

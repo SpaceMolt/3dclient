@@ -51,7 +51,7 @@ custom_minimum_size = Vector2(0, 8)
 
 [node name="KeyLabel" type="Label" parent="Center/Panel/Margin/VBox"]
 unique_name_in_owner = true
-text = "Paste your key:"
+text = "Or paste a dashboard API key:"
 
 [node name="KeyField" type="LineEdit" parent="Center/Panel/Margin/VBox"]
 unique_name_in_owner = true
