@@ -93,6 +93,13 @@ All scripts in `scripts/tools/`:
 
 **No snaps or lerps to cover up incorrect math.** If a transition requires a "settle animation," "brief lerp at the end," or any other smoothing step to hide the fact that the start and end states are geometrically inconsistent, that is a signal the math is wrong — not a signal to add a transition. Fix the underlying coordinate system so that things are in the right place from the start. A correct solution animates smoothly because the geometry is right, not because the discontinuity is hidden.
 
+## World Scale
+
+POIs sit at AU distances times `AU_TO_WORLD` (100000), so scene coordinates reach 1e5. Two engine
+features break at that magnitude: `look_at` on nodes far from the origin (use `Basis.looking_at`),
+and directional shadow maps (every surface renders black; keep `shadow_enabled` off). The proper fix
+is a floating origin that keeps the camera near zero.
+
 ## Git LFS
 
 This repo uses Git LFS for all binary assets. Tracked extensions (see `.gitattributes`):

@@ -14,6 +14,14 @@ var _beacon: Sprite3D = null
 
 const BEACON_HIDE_RADII := 30.0  # hide the beacon dot once the camera is this many radii away or closer
 const LABEL_HIDE_RADII := 3.0    # hide the name when the camera is right on top of the body
+const ATMOSPHERE_SHADER := preload("res://shaders/atmosphere.gdshader")
+const STAR_SURFACE_SHADER := preload("res://shaders/star_surface.gdshader")
+const ATMOSPHERE_SHELL := 1.05   # halo shell radius as a multiple of the planet radius
+const BLINK_PERIOD := 1.6        # seconds between station approach-beacon flashes
+const BLINK_ON := 0.12           # seconds each flash stays lit
+
+var _blink_material: StandardMaterial3D = null
+var _atmosphere: ShaderMaterial = null
 
 @onready var name_label: Label3D = $NameLabel
 @onready var mesh_instance: MeshInstance3D = $MeshInstance3D
@@ -56,6 +64,8 @@ func _process(_delta: float) -> void:
 			var distance := camera.global_position.distance_to(global_position)
 			_beacon.visible = distance > radius * BEACON_HIDE_RADII
 			name_label.visible = distance > radius * LABEL_HIDE_RADII
+	if _atmosphere:
+		_atmosphere.set_shader_parameter("sun_dir", sun_direction_from_scene())
 	match poi_type:
 		"wormhole", "wormhole_entrance", "wormhole_exit", "jump_gate":
 			rotate_y(_delta * 1.5)
@@ -63,8 +73,27 @@ func _process(_delta: float) -> void:
 			rotate_y(_delta * 0.3)
 		"station":
 			rotate_y(_delta * 0.2)
+			if _blink_material:
+				_blink_material.emission_energy_multiplier = blink_energy(Time.get_ticks_msec() / 1000.0)
 		"relic":
 			rotate_y(_delta * 0.4)
+
+
+## Direction towards the star, read from the nearest ancestor scene's SunLight. The live game
+## view and the gallery scene both carry one; with none, light comes from straight above.
+func sun_direction_from_scene() -> Vector3:
+	var node := get_parent()
+	while node:
+		var sun := node.get_node_or_null("SunLight") as DirectionalLight3D
+		if sun:
+			return sun.global_transform.basis.z
+		node = node.get_parent()
+	return Vector3.UP
+
+
+## Approach beacons flash briefly each period and sit dim in between.
+static func blink_energy(time_s: float) -> float:
+	return 4.0 if fmod(time_s, BLINK_PERIOD) < BLINK_ON else 0.5
 
 
 func _add_visual_child(node: Node3D) -> void:
@@ -134,12 +163,13 @@ func _ensure_beacon() -> void:
 	_beacon.billboard = BaseMaterial3D.BILLBOARD_ENABLED
 	_beacon.fixed_size = true
 	_beacon.no_depth_test = true
-	_beacon.pixel_size = 0.0012
+	_beacon.pixel_size = 0.00015
 	_beacon.modulate = beacon_color()
 	add_child(_beacon)
 
 
-## 32 px radial white-to-transparent gradient, tinted by the sprite's modulate.
+## Radial white-to-transparent gradient, tinted by the sprite's modulate. 256 px so a
+## corona scaled to thousands of units still has a smooth edge.
 static func _glow_texture() -> GradientTexture2D:
 	var gradient := Gradient.new()
 	gradient.set_color(0, Color(1.0, 1.0, 1.0, 1.0))
@@ -149,8 +179,8 @@ static func _glow_texture() -> GradientTexture2D:
 	texture.fill = GradientTexture2D.FILL_RADIAL
 	texture.fill_from = Vector2(0.5, 0.5)
 	texture.fill_to = Vector2(0.5, 0.0)
-	texture.width = 32
-	texture.height = 32
+	texture.width = 256
+	texture.height = 256
 	return texture
 
 
@@ -187,12 +217,14 @@ func _make_celestial_model() -> bool:
 	if model == null:
 		return false
 	_add_visual_child(model)
-	_fit_model_to_radius(model, FocusBubble.poi_radius(poi_type, poi_class))
+	var radius := FocusBubble.poi_radius(poi_type, poi_class)
+	_fit_model_to_radius(model, radius)
+	_matte_surfaces(model)
+	_add_atmosphere(radius)
 	mesh_instance.mesh = null
 	mesh_instance.material_override = null
 	mesh_instance.visible = false
 	_uses_custom_model = true
-	var radius := FocusBubble.poi_radius(poi_type, poi_class)
 	name_label.position = Vector3(0, radius * 1.15, 0)
 	name_label.font_size = 72
 	return true
@@ -371,20 +403,18 @@ func _make_star() -> void:
 	var mesh := SphereMesh.new()
 	mesh.radius = r
 	mesh.height = r * 2.0
-	var mat := StandardMaterial3D.new()
 	var color := _star_color()
-	mat.albedo_color = color
-	mat.emission = color
-	mat.emission_enabled = true
-	mat.emission_energy_multiplier = 6.0  # hot enough to bloom through the glow pass
-	mat.shading_mode = BaseMaterial3D.SHADING_MODE_UNSHADED
+	var mat := ShaderMaterial.new()
+	mat.shader = STAR_SURFACE_SHADER
+	mat.set_shader_parameter("star_color", color)
+	mat.set_shader_parameter("energy", 1.3)  # granule peaks pass 1.0 and bloom; the limb stays readable
 	mesh_instance.mesh = mesh
 	mesh_instance.material_override = mat
 	# Corona: a soft billboard glow a few radii wide, so the star reads from across the system
 	var corona := Sprite3D.new()
 	corona.texture = _glow_texture()
 	corona.billboard = BaseMaterial3D.BILLBOARD_ENABLED
-	corona.pixel_size = r * 3.5 / 32.0
+	corona.pixel_size = r * 3.5 / 256.0
 	corona.modulate = Color(color, 0.55)
 	corona.no_depth_test = true
 	corona.render_priority = -1
@@ -447,9 +477,78 @@ func _make_planet() -> void:
 				mat.albedo_color = Color(0.7, 0.5, 0.4)
 	mesh_instance.mesh = mesh
 	mesh_instance.material_override = mat
+	_add_atmosphere(r)
 	# Label above the planet surface
 	name_label.position = Vector3(0, r * 1.15, 0)
 	name_label.font_size = 72
+
+
+## Halo colour for a body; alpha carries the glow intensity and zero alpha means airless.
+static func atmosphere_color_for(ptype: String, pclass: String) -> Color:
+	if ptype == "moon":
+		return Color(0, 0, 0, 0)
+	match pclass:
+		"oceanic", "terran", "super_terran":
+			return Color(0.35, 0.6, 1.0, 1.6)
+		"arid", "hothouse":
+			return Color(0.9, 0.6, 0.35, 1.0)
+		"tundra", "glacial", "ice_world":
+			return Color(0.6, 0.8, 1.0, 1.0)
+		"jovian", "hot_jupiter":
+			return Color(0.85, 0.7, 0.5, 1.3)
+		"sub_neptune", "ice_giant":
+			return Color(0.4, 0.7, 1.0, 1.4)
+		"lava_world", "scorched", "chthonian":
+			return Color(1.0, 0.45, 0.15, 0.6)
+		"carbon":
+			return Color(0, 0, 0, 0)
+		_:
+			return Color(0.5, 0.65, 0.9, 0.8)
+
+
+## Planet surfaces are rock, water, and cloud, not lacquer: a glossy material puts a
+## star-shaped highlight on the disc, so every surface is made fully rough.
+func _matte_surfaces(root: Node3D) -> void:
+	var stack: Array[Node] = [root]
+	while not stack.is_empty():
+		var current: Node = stack.pop_back()
+		stack.append_array(current.get_children())
+		var mesh_node := current as MeshInstance3D
+		if mesh_node == null or mesh_node.mesh == null:
+			continue
+		for i in mesh_node.mesh.get_surface_count():
+			var mat := mesh_node.get_active_material(i) as BaseMaterial3D
+			if mat:
+				mat = mat.duplicate()
+				# The scalar is a multiplier on the texture, so the texture has to go too
+				mat.roughness_texture = null
+				mat.metallic_texture = null
+				mat.roughness = 1.0
+				mat.metallic = 0.0
+				mesh_node.set_surface_override_material(i, mat)
+
+
+func _add_atmosphere(r: float) -> void:
+	_atmosphere = null
+	var tint := atmosphere_color_for(poi_type, poi_class)
+	if tint.a <= 0.0:
+		return
+	var shell := MeshInstance3D.new()
+	shell.name = "Atmosphere"
+	var mesh := SphereMesh.new()
+	mesh.radius = r * ATMOSPHERE_SHELL
+	mesh.height = r * ATMOSPHERE_SHELL * 2.0
+	mesh.radial_segments = 96
+	mesh.rings = 48
+	shell.mesh = mesh
+	var mat := ShaderMaterial.new()
+	mat.shader = ATMOSPHERE_SHADER
+	mat.set_shader_parameter("atmo_color", Color(tint.r, tint.g, tint.b))
+	mat.set_shader_parameter("intensity", tint.a)
+	mat.set_shader_parameter("sun_dir", sun_direction_from_scene())
+	shell.material_override = mat
+	_atmosphere = mat
+	_add_visual_child(shell)
 
 
 func _make_station() -> void:
@@ -458,6 +557,7 @@ func _make_station() -> void:
 	var trim := _metal_material(Color(0.17, 0.19, 0.24))
 	var windows := _emissive_material(ThemeColors.PLASMA_CYAN, 2.5)
 	var beacons := _emissive_material(ThemeColors.SHELL_ORANGE, 3.0)
+	_blink_material = beacons
 	var panels := _metal_material(Color(0.08, 0.14, 0.32))
 	panels.emission_enabled = true
 	panels.emission = Color(0.1, 0.2, 0.5)
@@ -521,11 +621,13 @@ func _make_station() -> void:
 	name_label.position = Vector3(0, r * 1.0, 0)
 
 
+## Painted hull plating: metallic enough to catch the star, rough enough to show a lit side
+## and a shadow side instead of a mirror of the dark sky.
 func _metal_material(color: Color) -> StandardMaterial3D:
 	var mat := StandardMaterial3D.new()
 	mat.albedo_color = color
-	mat.metallic = 0.85
-	mat.roughness = 0.4
+	mat.metallic = 0.55
+	mat.roughness = 0.55
 	return mat
 
 

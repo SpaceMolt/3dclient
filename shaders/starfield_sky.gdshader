@@ -1,9 +1,13 @@
 shader_type sky;
 
 uniform vec3 sky_color : source_color = vec3(0.01, 0.01, 0.04);
-uniform vec3 nebula_color_1 : source_color = vec3(0.1, 0.02, 0.15);
-uniform vec3 nebula_color_2 : source_color = vec3(0.02, 0.05, 0.15);
-uniform float nebula_intensity : hint_range(0.0, 1.0) = 0.15;
+// Palette follows content-gen/style/base.json: nebula violet, dim claw orange, faint plasma cyan
+uniform vec3 nebula_color_1 : source_color = vec3(0.23, 0.12, 0.37);
+uniform vec3 nebula_color_2 : source_color = vec3(0.45, 0.18, 0.06);
+uniform vec3 nebula_color_3 : source_color = vec3(0.05, 0.25, 0.32);
+uniform float nebula_intensity : hint_range(0.0, 1.0) = 0.14;
+uniform vec3 band_color : source_color = vec3(0.35, 0.32, 0.4);
+uniform float band_intensity : hint_range(0.0, 1.0) = 0.2;
 uniform float star_density : hint_range(0.0, 1.0) = 0.5;
 uniform float star_brightness : hint_range(0.5, 5.0) = 2.0;
 uniform float twinkle_speed : hint_range(0.0, 2.0) = 0.5;
@@ -95,16 +99,27 @@ void sky() {
 
 	vec3 col = sky_color;
 
-	// Nebula — 3D noise, 3 octaves
-	float n1 = fbm3d(dir * 2.0 + vec3(3.7, 1.2, 0.5));
-	float n2 = fbm3d(dir * 2.5 + vec3(8.3, 5.1, 2.3));
-	col += nebula_color_1 * smoothstep(0.4, 0.8, n1) * nebula_intensity;
-	col += nebula_color_2 * smoothstep(0.5, 0.9, n2) * nebula_intensity * 0.7;
+	// Nebula — sparse wisps: a low-frequency mask picks where dust sits, a high-frequency
+	// pass breaks it into filaments so it never reads as one soft blob
+	float detail = fbm3d(dir * 11.0 + vec3(5.5, 2.2, 9.1));
+	float filaments = 0.25 + 0.75 * smoothstep(0.3, 0.7, detail);
+	float n1 = fbm3d(dir * 3.0 + vec3(3.7, 1.2, 0.5));
+	float n2 = fbm3d(dir * 3.6 + vec3(8.3, 5.1, 2.3));
+	float n3 = fbm3d(dir * 4.4 + vec3(1.9, 7.7, 4.4));
+	col += nebula_color_1 * smoothstep(0.5, 0.8, n1) * filaments * nebula_intensity;
+	col += nebula_color_2 * smoothstep(0.52, 0.82, n2) * filaments * nebula_intensity * 0.8;
+	col += nebula_color_3 * smoothstep(0.55, 0.85, n3) * filaments * nebula_intensity * 0.5;
 
-	// Stars — single cell lookup, two layers
+	// Galactic band — a soft belt of dust and unresolved stars, tilted off the horizon
+	vec3 band_axis = normalize(vec3(0.3, 1.0, 0.15));
+	float band = exp(-abs(dot(dir, band_axis)) * 7.0) * (0.5 + 0.5 * fbm3d(dir * 6.0));
+	col += band_color * band * band_intensity;
+
+	// Stars — single cell lookup, three layers; the faintest layer thickens along the band
 	float star_thresh = 1.0 - star_density * 0.02;
 	col += stars(dir, 30.0, star_thresh, star_brightness);
-	col += stars(dir, 60.0, 0.97, 0.6);
+	col += stars(dir, 60.0, 0.96, 0.7);
+	col += stars(dir, 90.0, 0.975 - band * 0.1, 0.55);
 
 	COLOR = col;
 }
