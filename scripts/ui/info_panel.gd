@@ -58,7 +58,7 @@ func _on_tab_changed(tab: int) -> void:
 
 func _fetch_notes() -> void:
 	status_label.text = "Loading notes..."
-	NetworkManager.send_command("get_notes", {}, func(content: Dictionary) -> void:
+	NetworkManager.send_social_command("get_notes", {}, func(content: Dictionary) -> void:
 		_notes = content.get("notes", [])
 		_refresh_notes()
 		status_label.text = "%d note%s" % [_notes.size(), "" if _notes.size() == 1 else "s"]
@@ -200,7 +200,7 @@ func _show_create_note_dialog() -> void:
 
 func _create_note(title: String, content: String) -> void:
 	status_label.text = "Creating note..."
-	NetworkManager.send_command("create_note", {"title": title, "content": content}, func(_content: Dictionary) -> void:
+	NetworkManager.send_social_command("create_note", {"title": title, "content": content}, func(_content: Dictionary) -> void:
 		status_label.text = "Note created."
 		_fetch_notes()
 	)
@@ -208,7 +208,7 @@ func _create_note(title: String, content: String) -> void:
 
 func _delete_note(note_id: String) -> void:
 	status_label.text = "Deleting note..."
-	NetworkManager.send_command("delete_note", {"note_id": note_id}, func(_content: Dictionary) -> void:
+	NetworkManager.send_social_command("delete_note", {"target": note_id}, func(_content: Dictionary) -> void:
 		status_label.text = "Note deleted."
 		_fetch_notes()
 	)
@@ -240,7 +240,7 @@ func _fetch_log() -> void:
 	var params := {"page": _log_page, "page_size": LOG_PAGE_SIZE}
 	if not _log_category.is_empty():
 		params["category"] = _log_category
-	NetworkManager.send_command("get_action_log", params, func(content: Dictionary) -> void:
+	NetworkManager.send_social_command("get_action_log", params, func(content: Dictionary) -> void:
 		var new_entries: Array = content.get("entries", [])
 		if _log_page == 1:
 			_log_entries = new_entries
@@ -287,7 +287,7 @@ static func _make_log_entry_row(entry: Dictionary) -> HBoxContainer:
 	row.add_theme_constant_override("separation", 4)
 
 	# Timestamp
-	var ts: String = entry.get("timestamp", "")
+	var ts: String = entry.get("created_at", entry.get("timestamp", ""))
 	var time_label := Label.new()
 	time_label.text = _format_timestamp(ts)
 	time_label.custom_minimum_size.x = 50
@@ -296,7 +296,7 @@ static func _make_log_entry_row(entry: Dictionary) -> HBoxContainer:
 	row.add_child(time_label)
 
 	# Category tag
-	var category: String = entry.get("type", entry.get("category", "system"))
+	var category: String = entry.get("category", entry.get("type", "system"))
 	var cat_label := Label.new()
 	cat_label.text = "[%s]" % category.to_upper()
 	cat_label.custom_minimum_size.x = 65
@@ -306,7 +306,7 @@ static func _make_log_entry_row(entry: Dictionary) -> HBoxContainer:
 
 	# Message
 	var msg_label := Label.new()
-	msg_label.text = entry.get("message", "")
+	msg_label.text = entry.get("summary", entry.get("message", ""))
 	msg_label.size_flags_horizontal = Control.SIZE_EXPAND_FILL
 	msg_label.add_theme_font_size_override("font_size", 12)
 	msg_label.autowrap_mode = TextServer.AUTOWRAP_WORD_SMART

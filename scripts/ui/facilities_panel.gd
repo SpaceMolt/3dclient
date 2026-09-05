@@ -35,8 +35,11 @@ func _on_tab_changed(tab: int) -> void:
 
 func _fetch_station_facilities() -> void:
 	status_label.text = "Loading facilities..."
-	NetworkManager.send_command("facility_list", {}, func(content: Dictionary) -> void:
-		_station_facilities = content.get("facilities", [])
+	NetworkManager.send_facility_command("list", {}, func(content: Dictionary) -> void:
+		# The station groups facilities by owner; the panel shows them as one list.
+		_station_facilities = []
+		for group in ["station_facilities", "public_facilities", "player_facilities", "faction_facilities"]:
+			_station_facilities.append_array(content.get(group, []))
 		_refresh_station()
 		status_label.text = "%d facilities" % _station_facilities.size()
 	)
@@ -61,7 +64,6 @@ func _refresh_station() -> void:
 		var ftype: String = facility.get("type", "")
 		var owner_name: String = facility.get("owner", "")
 		var services: Array = facility.get("services", [])
-		var facility_id: String = facility.get("id", "")
 
 		var row := HBoxContainer.new()
 		row.add_theme_constant_override("separation", 4)
@@ -88,24 +90,15 @@ func _refresh_station() -> void:
 		owner_label.modulate = ThemeColors.HULL_GREY
 		row.add_child(owner_label)
 
-		var use_btn := Button.new()
-		use_btn.text = "Use"
-		use_btn.add_theme_font_size_override("font_size", 10)
-		use_btn.custom_minimum_size.x = 40
-		use_btn.pressed.connect(_on_use_facility.bind(facility_id, fname))
-		row.add_child(use_btn)
+		var level_label := Label.new()
+		level_label.text = "L%d" % int(facility.get("level", 0))
+		level_label.custom_minimum_size.x = 40
+		level_label.add_theme_font_size_override("font_size", 11)
+		level_label.modulate = ThemeColors.HULL_GREY
+		level_label.tooltip_text = str(facility.get("description", ""))
+		row.add_child(level_label)
 
 		station_list.add_child(row)
-
-
-func _on_use_facility(facility_id: String, facility_name: String) -> void:
-	status_label.text = "Using %s..." % facility_name
-	NetworkManager.send_command("facility_use", {"facility_id": facility_id}, func(content: Dictionary) -> void:
-		var result_msg: String = content.get("message", "Done.")
-		status_label.text = result_msg
-		# Refresh state since using a facility may change cargo/credits
-		NetworkManager.send_command("get_status", {}, func(_c): pass)
-	)
 
 
 # ---------------------------------------------------------------------------
@@ -114,7 +107,7 @@ func _on_use_facility(facility_id: String, facility_name: String) -> void:
 
 func _fetch_owned_facilities() -> void:
 	status_label.text = "Loading owned facilities..."
-	NetworkManager.send_command("facility_owned", {}, func(content: Dictionary) -> void:
+	NetworkManager.send_facility_command("owned", {}, func(content: Dictionary) -> void:
 		_owned_facilities = content.get("facilities", [])
 		_refresh_owned()
 		status_label.text = "%d owned" % _owned_facilities.size()
@@ -139,7 +132,7 @@ func _refresh_owned() -> void:
 		var fname: String = facility.get("name", "Unknown")
 		var ftype: String = facility.get("type", "")
 		var level: int = facility.get("level", 1)
-		var facility_id: String = facility.get("id", "")
+		var facility_id: String = facility.get("facility_id", facility.get("id", ""))
 
 		var row := HBoxContainer.new()
 		row.add_theme_constant_override("separation", 4)
@@ -194,7 +187,7 @@ func station_list_add_facility_details(row: HBoxContainer, facility: Dictionary)
 func _on_upgrade_pressed(facility_id: String, facility_name: String) -> void:
 	# Fetch upgrade options then show a dialog
 	status_label.text = "Checking upgrades..."
-	NetworkManager.send_command("facility_upgrades", {"facility_id": facility_id}, func(content: Dictionary) -> void:
+	NetworkManager.send_facility_command("upgrades", {}, func(content: Dictionary) -> void:
 		var upgrades: Array = content.get("upgrades", [])
 		if upgrades.is_empty():
 			status_label.text = "No upgrades available for %s." % facility_name
@@ -254,7 +247,7 @@ func _show_upgrade_dialog(facility_id: String, facility_name: String, upgrades: 
 
 func _execute_upgrade(facility_id: String, facility_name: String, upgrade_type: String) -> void:
 	status_label.text = "Upgrading %s..." % facility_name
-	NetworkManager.send_command("facility_upgrade", {"facility_id": facility_id, "upgrade_type": upgrade_type}, func(content: Dictionary) -> void:
+	NetworkManager.send_facility_command("upgrade", {"facility_id": facility_id, "facility_type": upgrade_type}, func(content: Dictionary) -> void:
 		var msg: String = content.get("message", "Upgrade complete.")
 		status_label.text = msg
 		_fetch_owned_facilities()
@@ -268,7 +261,7 @@ func _execute_upgrade(facility_id: String, facility_name: String, upgrade_type: 
 
 func _fetch_build_types() -> void:
 	status_label.text = "Loading build options..."
-	NetworkManager.send_command("facility_types", {}, func(content: Dictionary) -> void:
+	NetworkManager.send_facility_command("types", {}, func(content: Dictionary) -> void:
 		_build_types = content.get("types", [])
 		_refresh_build()
 		status_label.text = "%d types available" % _build_types.size()
@@ -363,7 +356,7 @@ func _on_build_pressed(type_id: String, type_name: String, cost: int) -> void:
 
 func _execute_build(type_id: String, type_name: String) -> void:
 	status_label.text = "Building %s..." % type_name
-	NetworkManager.send_command("facility_build", {"type_id": type_id}, func(content: Dictionary) -> void:
+	NetworkManager.send_facility_command("build", {"facility_type": type_id}, func(content: Dictionary) -> void:
 		var msg: String = content.get("message", "Facility built.")
 		status_label.text = msg
 		_fetch_build_types()

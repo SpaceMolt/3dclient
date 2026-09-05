@@ -50,7 +50,7 @@ func _on_tab_changed(tab: int) -> void:
 
 func _fetch_faction_info() -> void:
 	status_label.text = "Loading..."
-	NetworkManager.send_command("faction_info", {}, func(content: Dictionary) -> void:
+	NetworkManager.send_faction_command("info", {}, func(content: Dictionary) -> void:
 		_faction_data = content.get("faction", {})
 		_members = _faction_data.get("members", [])
 		_refresh_info()
@@ -244,7 +244,7 @@ func _build_faction_info_view() -> void:
 
 func _create_faction(faction_name: String, tag: String) -> void:
 	status_label.text = "Creating faction..."
-	NetworkManager.send_command("create_faction", {"name": faction_name, "tag": tag}, func(_content: Dictionary) -> void:
+	NetworkManager.send_faction_command("create", {"text": faction_name, "id": tag}, func(_content: Dictionary) -> void:
 		status_label.text = "Faction created!"
 		NetworkManager.send_command("get_status", {}, func(_c): pass)
 		_fetch_faction_info()
@@ -253,14 +253,14 @@ func _create_faction(faction_name: String, tag: String) -> void:
 
 func _invite_player(player_id: String) -> void:
 	status_label.text = "Sending invite..."
-	NetworkManager.send_command("faction_invite", {"player_id": player_id}, func(_content: Dictionary) -> void:
+	NetworkManager.send_faction_command("invite", {"id": player_id}, func(_content: Dictionary) -> void:
 		status_label.text = "Invite sent."
 	)
 
 
 func _on_leave_pressed() -> void:
 	status_label.text = "Leaving faction..."
-	NetworkManager.send_command("leave_faction", {}, func(_content: Dictionary) -> void:
+	NetworkManager.send_faction_command("leave", {}, func(_content: Dictionary) -> void:
 		status_label.text = "Left faction."
 		_faction_data = {}
 		_members = []
@@ -330,7 +330,7 @@ func _refresh_members() -> void:
 
 func _on_kick_pressed(player_id: String, username: String) -> void:
 	status_label.text = "Kicking %s..." % username
-	NetworkManager.send_command("faction_kick", {"player_id": player_id}, func(_content: Dictionary) -> void:
+	NetworkManager.send_faction_command("kick", {"id": player_id}, func(_content: Dictionary) -> void:
 		status_label.text = "Kicked %s." % username
 		_fetch_faction_info()
 	)
@@ -349,7 +349,7 @@ func _fetch_intel(system_name: String = "") -> void:
 	var params := {}
 	if not system_name.is_empty():
 		params["system_name"] = system_name
-	NetworkManager.send_command("faction_query_intel", params, func(content: Dictionary) -> void:
+	NetworkManager.send_intel_command("query_intel", params, func(content: Dictionary) -> void:
 		_intel_entries = content.get("entries", [])
 		_refresh_intel()
 		status_label.text = "%d intel entries" % _intel_entries.size()
@@ -402,7 +402,7 @@ func _refresh_intel() -> void:
 # ---------------------------------------------------------------------------
 
 func _fetch_invites() -> void:
-	NetworkManager.send_command("faction_get_invites", {}, func(content: Dictionary) -> void:
+	NetworkManager.send_faction_command("get_invites", {}, func(content: Dictionary) -> void:
 		_invites = content.get("invites", [])
 		_refresh_invites()
 	)
@@ -455,7 +455,7 @@ func _refresh_invites() -> void:
 
 func _on_accept_invite(faction_id: String, faction_name: String) -> void:
 	status_label.text = "Joining %s..." % faction_name
-	NetworkManager.send_command("join_faction", {"faction_id": faction_id}, func(_content: Dictionary) -> void:
+	NetworkManager.send_faction_command("join", {"id": faction_id}, func(_content: Dictionary) -> void:
 		status_label.text = "Joined %s!" % faction_name
 		NetworkManager.send_command("get_status", {}, func(_c): pass)
 		_fetch_faction_info()
@@ -465,7 +465,7 @@ func _on_accept_invite(faction_id: String, faction_name: String) -> void:
 
 func _on_decline_invite(faction_id: String, faction_name: String) -> void:
 	status_label.text = "Declining..."
-	NetworkManager.send_command("faction_decline_invite", {"faction_id": faction_id}, func(_content: Dictionary) -> void:
+	NetworkManager.send_faction_command("decline_invite", {"id": faction_id}, func(_content: Dictionary) -> void:
 		status_label.text = "Declined %s." % faction_name
 		_fetch_invites()
 	)

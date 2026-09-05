@@ -50,7 +50,7 @@ func _ready() -> void:
 func _poll_battle() -> void:
 	if NetworkManager.is_request_pending:
 		return
-	NetworkManager.send_battle_command("get_status", {}, func(content: Dictionary) -> void:
+	NetworkManager.send_battle_command("status", {}, func(content: Dictionary) -> void:
 		StateManager.update_battle(content)
 	)
 
