@@ -22,6 +22,7 @@ NetworkManager="*res://scripts/autoload/network_manager.gd"
 StateManager="*res://scripts/autoload/state_manager.gd"
 UIManager="*res://scripts/autoload/ui_manager.gd"
 AssetLoader="*res://scripts/autoload/asset_loader.gd"
+DevServer="*res://scripts/autoload/dev_server.gd"
 
 [gui]
 

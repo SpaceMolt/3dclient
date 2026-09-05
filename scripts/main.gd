@@ -13,6 +13,15 @@ func _ready() -> void:
 	NetworkManager.authenticated.connect(_on_authenticated)
 	NetworkManager.session_expired.connect(_on_session_expired)
 
+	# Scripted dev runs log in with a password from the environment (see scripts/tools/dev_run.sh)
+	var dev_user := OS.get_environment("SPACEMOLT_USERNAME")
+	var dev_pass := OS.get_environment("SPACEMOLT_PASSWORD")
+	if not dev_user.is_empty() and not dev_pass.is_empty():
+		NetworkManager.login_password(dev_user, dev_pass, func(_error: Dictionary = {}) -> void:
+			_switch_to(AUTH_SCENE.instantiate())
+		)
+		return
+
 	# Try restoring saved auth; if valid, go to player select
 	NetworkManager.try_restore_auth(
 		func(players: Array) -> void:
