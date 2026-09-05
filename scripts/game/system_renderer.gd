@@ -17,6 +17,10 @@ signal ship_deselected
 
 const SHIP_HIT_RADIUS := 3.0
 const AU_TO_WORLD := 100000.0
+
+const DUST_RANGE := 80.0  # half-extent of the dust field kept alive around the camera
+
+@onready var _dust: GPUParticles3D = get_node_or_null("SpaceDust")
 const PRELAUNCH_ALIGN_TIME := 1.0
 const STAR_CLEARANCE_PADDING := 2000.0
 const STAR_VIEW_OFFSET_DEG := 35.0  # arrival camera looks a bit to the side of the star so the lit face shows
@@ -159,6 +163,27 @@ func _unhandled_input(event: InputEvent) -> void:
 
 
 func _process(delta: float) -> void:
+	_animate_travel(delta)
+	_recenter()
+
+
+## Floating origin: this node is shifted so the player's ship sits at the world origin. Children
+## keep their true coordinates (AU times AU_TO_WORLD) in local space, while global space, where
+## the camera, shadow maps, and particles live, stays near zero and keeps float precision.
+func _recenter() -> void:
+	var own_id: String = StateManager.player.get("id", "")
+	if _ships.has(own_id):
+		position = -_ships[own_id].position
+	# Dust is emitted around the camera but the emitter node itself never moves: with
+	# local_coords the particles ride the emitter, so moving it would drag them along.
+	var camera := get_viewport().get_camera_3d()
+	if camera and _dust:
+		var around := to_local(camera.global_position)
+		(_dust.process_material as ParticleProcessMaterial).emission_shape_offset = around
+		_dust.visibility_aabb = AABB(around - Vector3.ONE * DUST_RANGE, Vector3.ONE * DUST_RANGE * 2.0)
+
+
+func _animate_travel(delta: float) -> void:
 	if not _is_animating_travel:
 		return
 	if _travel_duration <= 0.0:
@@ -174,7 +199,7 @@ func _process(delta: float) -> void:
 		var ship_pos := _travel_path_world_pos(curved_progress)
 		if _travel_elapsed < _travel_align_duration:
 			ship_pos = _travel_ship_start_pos
-		ship.global_position = ship_pos
+		ship.position = ship_pos
 		if _travel_elapsed < _travel_align_duration:
 			ship.basis = _travel_ship_start_basis.slerp(_travel_ship_end_basis, align_progress)
 		else:
@@ -219,7 +244,7 @@ func _on_location_changed(_old_poi: String, _new_poi: String) -> void:
 func _recompute_poi_positions() -> void:
 	for id in _poi_markers:
 		var marker: Node3D = _poi_markers[id]
-		marker.global_position = _poi_world_pos(_get_poi_au_pos(id))
+		marker.position = _poi_world_pos(_get_poi_au_pos(id))
 		marker.scale = Vector3.ONE
 		marker.visible = true
 	_update_sun_light()
@@ -297,6 +322,7 @@ func _update_player_ship() -> void:
 			_player_ship_class_name(StateManager.ship)
 		)
 		_ships[pid] = ship
+		_recenter()
 
 		var camera := get_viewport().get_camera_3d()
 		if camera and camera.has_method("follow"):
@@ -304,6 +330,7 @@ func _update_player_ship() -> void:
 			if camera.has_method("snap_to_target"):
 				camera.snap_to_target()
 		_aim_camera_at_star()
+	_recenter()
 
 
 func _sync_nearby_ships() -> void:
@@ -853,7 +880,7 @@ func _on_travel_started(dest_poi_id: String, _dest_poi_name: String) -> void:
 	_travel_ship_start_pos = _current_ship_world_pos()
 	if _ships.has(own_id):
 		_travel_ship_start_basis = _ships[own_id].basis
-		_ships[own_id].global_position = _travel_ship_start_pos
+		_ships[own_id].position = _travel_ship_start_pos
 		_ships[own_id]._prev_pos = _travel_ship_start_pos
 		_ships[own_id]._next_pos = _travel_ship_start_pos
 		_ships[own_id]._tick_t = 1.0
@@ -914,12 +941,13 @@ func _on_travel_ended() -> void:
 	var own_id: String = StateManager.player.get("id", "")
 	if _ships.has(own_id):
 		var pos := _current_ship_world_pos()
-		_ships[own_id].global_position = pos
+		_ships[own_id].position = pos
 		_ships[own_id].basis = _travel_ship_arrival_basis
 		_ships[own_id]._prev_pos = pos
 		_ships[own_id]._next_pos = pos
 		_ships[own_id]._tick_t = 1.0
 		_ships[own_id].engine_glow.light_energy = 0.8
+		_recenter()
 
 	_travel_dest_poi_id = ""
 	_travel_ship_start_pos = Vector3.ZERO
@@ -960,12 +988,13 @@ func _on_travel_aborted(_origin_poi_id: String) -> void:
 	var own_id: String = StateManager.player.get("id", "")
 	if _ships.has(own_id):
 		var pos := _current_ship_world_pos()
-		_ships[own_id].global_position = pos
+		_ships[own_id].position = pos
 		_ships[own_id].basis = _travel_ship_start_basis
 		_ships[own_id]._prev_pos = pos
 		_ships[own_id]._next_pos = pos
 		_ships[own_id]._tick_t = 1.0
 		_ships[own_id].engine_glow.light_energy = 0.8
+		_recenter()
 
 	_travel_dest_poi_id = ""
 	_travel_ship_start_pos = Vector3.ZERO

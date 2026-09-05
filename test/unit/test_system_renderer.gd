@@ -52,14 +52,25 @@ func _add_player_ship(renderer: Node3D, pos: Vector3) -> Node3D:
 
 # --- Player ship placement ---
 
+func test_world_recenters_on_the_player_ship() -> void:
+	var renderer := _make_renderer()
+	var ship := _add_player_ship(renderer, Vector3.ZERO)
+	renderer._update_player_ship()
+	# the ship keeps its true coordinates locally while the world shifts to put it at the origin
+	var expected: Vector3 = renderer._ship_world_pos_for_poi("poi_001")
+	assert_float(ship.position.distance_to(expected)).is_less(0.1)
+	assert_float(ship.global_position.length()).is_less(0.01)
+	assert_float(renderer.position.distance_to(-expected)).is_less(0.1)
+
+
 func test_player_ship_placed_at_current_orbit() -> void:
 	var renderer := _make_renderer()
 	var ship := _add_player_ship(renderer, Vector3.ZERO)
 	renderer._update_player_ship()
 	var expected: Vector3 = renderer._ship_world_pos_for_poi("poi_001")
-	assert_float(ship.global_position.x).is_equal_approx(expected.x, 0.1)
-	assert_float(ship.global_position.y).is_equal_approx(expected.y, 0.1)
-	assert_float(ship.global_position.z).is_equal_approx(expected.z, 0.1)
+	assert_float(ship.position.x).is_equal_approx(expected.x, 0.1)
+	assert_float(ship.position.y).is_equal_approx(expected.y, 0.1)
+	assert_float(ship.position.z).is_equal_approx(expected.z, 0.1)
 
 
 # --- POI positioning (stable world space) ---
@@ -72,9 +83,9 @@ func test_current_poi_stays_at_stable_world_position() -> void:
 	assert_bool(renderer._poi_markers.has("poi_001")).is_true()
 	var marker: Node3D = renderer._poi_markers["poi_001"]
 	var expected_pos: Vector3 = renderer._poi_world_pos(Vector2(1.0, 2.0))
-	assert_float(marker.global_position.x).is_equal_approx(expected_pos.x, 0.1)
-	assert_float(marker.global_position.y).is_equal_approx(expected_pos.y, 0.1)
-	assert_float(marker.global_position.z).is_equal_approx(expected_pos.z, 0.1)
+	assert_float(marker.position.x).is_equal_approx(expected_pos.x, 0.1)
+	assert_float(marker.position.y).is_equal_approx(expected_pos.y, 0.1)
+	assert_float(marker.position.z).is_equal_approx(expected_pos.z, 0.1)
 	assert_float(marker.scale.x).is_equal_approx(1.0, 0.01)
 
 
@@ -88,8 +99,8 @@ func test_distant_poi_keeps_stable_scale() -> void:
 
 	assert_float(marker.scale.x).is_equal_approx(1.0, 0.01)
 	var expected_pos: Vector3 = renderer._poi_world_pos(Vector2(5.0, 8.0))
-	assert_float(marker.global_position.x).is_equal_approx(expected_pos.x, 0.1)
-	assert_float(marker.global_position.z).is_equal_approx(expected_pos.z, 0.1)
+	assert_float(marker.position.x).is_equal_approx(expected_pos.x, 0.1)
+	assert_float(marker.position.z).is_equal_approx(expected_pos.z, 0.1)
 
 
 func test_distant_poi_direction_correct() -> void:
@@ -98,8 +109,8 @@ func test_distant_poi_direction_correct() -> void:
 	renderer._sync_poi_markers()
 
 	var marker: Node3D = renderer._poi_markers["poi_002"]
-	assert_float(marker.global_position.x).is_greater(0.0)
-	assert_float(marker.global_position.z).is_greater(0.0)
+	assert_float(marker.position.x).is_greater(0.0)
+	assert_float(marker.position.z).is_greater(0.0)
 
 
 # --- Travel animation state ---
@@ -146,9 +157,9 @@ func test_travel_process_moves_ship_in_straight_line() -> void:
 	var expected_progress: float = SystemRenderer.travel_path_progress(
 		half_duration, renderer._travel_duration, renderer._travel_align_duration)
 	var expected_mid: Vector3 = renderer._travel_ship_start_pos.lerp(renderer._travel_ship_end_pos, expected_progress)
-	assert_float(ship.global_position.x).is_equal_approx(expected_mid.x, 0.1)
-	assert_float(ship.global_position.y).is_equal_approx(expected_mid.y, 0.1)
-	assert_float(ship.global_position.z).is_equal_approx(expected_mid.z, 0.1)
+	assert_float(ship.position.x).is_equal_approx(expected_mid.x, 0.1)
+	assert_float(ship.position.y).is_equal_approx(expected_mid.y, 0.1)
+	assert_float(ship.position.z).is_equal_approx(expected_mid.z, 0.1)
 
 
 func test_travel_holds_position_during_prelaunch_align() -> void:
@@ -159,7 +170,7 @@ func test_travel_holds_position_during_prelaunch_align() -> void:
 
 	renderer._process(0.5)
 
-	assert_float(ship.global_position.distance_to(renderer._travel_ship_start_pos)).is_less(0.1)
+	assert_float(ship.position.distance_to(renderer._travel_ship_start_pos)).is_less(0.1)
 
 
 func test_travel_bends_around_primary_star() -> void:
@@ -184,9 +195,9 @@ func test_travel_bends_around_primary_star() -> void:
 	renderer._process(halfway_through_move)
 
 	var star_world: Vector3 = renderer._poi_world_pos(Vector2.ZERO)
-	assert_float(absf(ship.global_position.z)).is_greater(1000.0)
-	assert_float(ship.global_position.distance_to(star_world)).is_greater(5500.0)
-	assert_float(absf(ship.global_position.z)).is_less(20000.0)
+	assert_float(absf(ship.position.z)).is_greater(1000.0)
+	assert_float(ship.position.distance_to(star_world)).is_greater(5500.0)
+	assert_float(absf(ship.position.z)).is_less(20000.0)
 	assert_float(renderer._travel_total_path_length).is_less(
 		renderer._travel_ship_start_pos.distance_to(renderer._travel_ship_end_pos) * 1.2
 	)
@@ -216,7 +227,7 @@ func test_travel_progress_starts_slower_than_linear() -> void:
 	renderer._process(quarter_duration)
 
 	var linear_quarter: Vector3 = renderer._travel_ship_start_pos.lerp(renderer._travel_ship_end_pos, 0.25)
-	assert_float(ship.global_position.distance_to(renderer._travel_ship_start_pos)).is_less(
+	assert_float(ship.position.distance_to(renderer._travel_ship_start_pos)).is_less(
 		linear_quarter.distance_to(renderer._travel_ship_start_pos)
 	)
 
@@ -226,12 +237,12 @@ func test_travel_keeps_destination_marker_fixed() -> void:
 	_add_player_ship(renderer, Vector3.ZERO)
 	renderer._sync_poi_markers()
 
-	var mars_before: Vector3 = renderer._poi_markers["poi_002"].global_position
+	var mars_before: Vector3 = renderer._poi_markers["poi_002"].position
 
 	renderer._on_travel_started("poi_002", "Mars")
 	renderer._process(30.0)
 
-	var mars_after: Vector3 = renderer._poi_markers["poi_002"].global_position
+	var mars_after: Vector3 = renderer._poi_markers["poi_002"].position
 	assert_float(mars_before.x).is_equal_approx(mars_after.x, 0.01)
 	assert_float(mars_before.y).is_equal_approx(mars_after.y, 0.01)
 	assert_float(mars_before.z).is_equal_approx(mars_after.z, 0.01)
@@ -251,12 +262,12 @@ func test_travel_ended_snaps_ship_to_destination_orbit() -> void:
 
 	assert_bool(renderer._is_animating_travel).is_false()
 	var expected_ship: Vector3 = renderer._ship_world_pos_for_poi("poi_002")
-	assert_float(ship.global_position.distance_to(expected_ship)).is_less(0.1)
+	assert_float(ship.position.distance_to(expected_ship)).is_less(0.1)
 	var mars: Node3D = renderer._poi_markers["poi_002"]
 	var expected: Vector3 = renderer._poi_world_pos(Vector2(5.0, 8.0))
-	assert_float(mars.global_position.x).is_equal_approx(expected.x, 0.1)
-	assert_float(mars.global_position.y).is_equal_approx(expected.y, 0.1)
-	assert_float(mars.global_position.z).is_equal_approx(expected.z, 0.1)
+	assert_float(mars.position.x).is_equal_approx(expected.x, 0.1)
+	assert_float(mars.position.y).is_equal_approx(expected.y, 0.1)
+	assert_float(mars.position.z).is_equal_approx(expected.z, 0.1)
 	assert_float(mars.scale.x).is_equal_approx(1.0, 0.01)
 
 
@@ -271,7 +282,7 @@ func test_travel_aborted_snaps_to_origin() -> void:
 	renderer._on_travel_aborted("poi_001")
 
 	assert_bool(renderer._is_animating_travel).is_false()
-	assert_float(ship.global_position.distance_to(renderer._ship_world_pos_for_poi("poi_001"))).is_less(0.1)
+	assert_float(ship.position.distance_to(renderer._ship_world_pos_for_poi("poi_001"))).is_less(0.1)
 
 
 # --- Guards ---
@@ -285,7 +296,7 @@ func test_update_player_ship_guarded_during_travel() -> void:
 
 	# _update_player_ship should be guarded during travel
 	renderer._update_player_ship()
-	assert_float(ship.global_position.distance_to(renderer._ship_world_pos_for_poi("poi_001"))).is_less(0.1)
+	assert_float(ship.position.distance_to(renderer._ship_world_pos_for_poi("poi_001"))).is_less(0.1)
 
 
 func test_update_player_ship_works_when_not_traveling() -> void:
@@ -293,7 +304,7 @@ func test_update_player_ship_works_when_not_traveling() -> void:
 	var ship := _add_player_ship(renderer, Vector3(100.0, 0.0, 100.0))
 
 	renderer._update_player_ship()
-	assert_float(ship.global_position.distance_to(renderer._ship_world_pos_for_poi("poi_001"))).is_less(0.1)
+	assert_float(ship.position.distance_to(renderer._ship_world_pos_for_poi("poi_001"))).is_less(0.1)
 
 
 # --- Travel duration formula ---
@@ -322,8 +333,8 @@ func test_travel_progress_advances_ship_toward_destination() -> void:
 	var half_duration: float = renderer._travel_duration * 0.5
 	renderer._process(half_duration)
 
-	assert_float(ship.global_position.length()).is_greater(1.0)
-	assert_float(ship.global_position.distance_to(renderer._travel_ship_end_pos)).is_greater(1.0)
+	assert_float(ship.position.length()).is_greater(1.0)
+	assert_float(ship.position.distance_to(renderer._travel_ship_end_pos)).is_greater(1.0)
 
 
 func test_travel_progress_reaches_destination_orbit_before_confirmation() -> void:
@@ -334,9 +345,9 @@ func test_travel_progress_reaches_destination_orbit_before_confirmation() -> voi
 
 	renderer._process(renderer._travel_duration)
 
-	assert_float(ship.global_position.x).is_equal_approx(renderer._travel_ship_end_pos.x, 0.1)
-	assert_float(ship.global_position.y).is_equal_approx(renderer._travel_ship_end_pos.y, 0.1)
-	assert_float(ship.global_position.z).is_equal_approx(renderer._travel_ship_end_pos.z, 0.1)
+	assert_float(ship.position.x).is_equal_approx(renderer._travel_ship_end_pos.x, 0.1)
+	assert_float(ship.position.y).is_equal_approx(renderer._travel_ship_end_pos.y, 0.1)
+	assert_float(ship.position.z).is_equal_approx(renderer._travel_ship_end_pos.z, 0.1)
 
 
 # --- Location changed guard ---
@@ -364,12 +375,12 @@ func test_sync_poi_markers_ignored_during_travel() -> void:
 	_add_player_ship(renderer, Vector3.ZERO)
 	renderer._sync_poi_markers()
 	renderer._on_travel_started("poi_002", "Mars")
-	var mars_before: Vector3 = renderer._poi_markers["poi_002"].global_position
+	var mars_before: Vector3 = renderer._poi_markers["poi_002"].position
 
 	StateManager.location = {"poi_id": "poi_002", "position": {"x": 5.0, "y": 8.0}}
 	renderer._sync_poi_markers()
 
-	var mars_after: Vector3 = renderer._poi_markers["poi_002"].global_position
+	var mars_after: Vector3 = renderer._poi_markers["poi_002"].position
 	assert_float(mars_before.x).is_equal_approx(mars_after.x, 0.01)
 	assert_float(mars_before.y).is_equal_approx(mars_after.y, 0.01)
 	assert_float(mars_before.z).is_equal_approx(mars_after.z, 0.01)
@@ -551,7 +562,7 @@ func test_player_au_pos_without_location_position() -> void:
 
 	assert_bool(renderer._poi_markers.has("poi_002")).is_true()
 	var marker: Node3D = renderer._poi_markers["poi_002"]
-	assert_float(marker.global_position.x).is_equal_approx(renderer._poi_world_pos(Vector2(5.0, 8.0)).x, 0.1)
+	assert_float(marker.position.x).is_equal_approx(renderer._poi_world_pos(Vector2(5.0, 8.0)).x, 0.1)
 
 
 func test_co_located_poi_is_still_rendered() -> void:
@@ -589,8 +600,8 @@ func test_recompute_positions_all_markers() -> void:
 	var mars: Node3D = renderer._poi_markers["poi_002"]
 	assert_float(earth.scale.x).is_equal_approx(1.0, 0.01)
 	assert_float(mars.scale.x).is_equal_approx(1.0, 0.01)
-	assert_float(earth.global_position.x).is_equal_approx(renderer._poi_world_pos(Vector2(1.0, 2.0)).x, 0.1)
-	assert_float(mars.global_position.z).is_equal_approx(renderer._poi_world_pos(Vector2(5.0, 8.0)).z, 0.1)
+	assert_float(earth.position.x).is_equal_approx(renderer._poi_world_pos(Vector2(1.0, 2.0)).x, 0.1)
+	assert_float(mars.position.z).is_equal_approx(renderer._poi_world_pos(Vector2(5.0, 8.0)).z, 0.1)
 
 
 # --- Sun light follows the system star ---

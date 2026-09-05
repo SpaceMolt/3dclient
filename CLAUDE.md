@@ -95,10 +95,14 @@ All scripts in `scripts/tools/`:
 
 ## World Scale
 
-POIs sit at AU distances times `AU_TO_WORLD` (100000), so scene coordinates reach 1e5. Two engine
-features break at that magnitude: `look_at` on nodes far from the origin (use `Basis.looking_at`),
-and directional shadow maps (every surface renders black; keep `shadow_enabled` off). The proper fix
-is a floating origin that keeps the camera near zero.
+POIs sit at AU distances times `AU_TO_WORLD` (100000), so coordinates reach 1e5. The system
+renderer (`Ships` node) is a floating origin: children keep true coordinates in local space and the
+node itself is shifted every frame so the player's ship sits at the global origin. Place ships and
+markers with `position`, never `global_position`. Anything that must stay fixed in the world (space
+dust) is a child of that node with `local_coords`. `look_at` breaks at 1e5 in global space (use
+`Basis.looking_at`). The sun light is aimed from the system's star, so the star sphere must never
+cast shadows: as a caster it eclipses everything downstream, which shows up as every surface
+rendering black.
 
 ## Git LFS
 
