@@ -250,3 +250,56 @@ func test_clear_auth_deletes_saved_key() -> void:
 	NetworkManager.clear_auth()
 	assert_bool(NetworkManager.has_saved_auth()).is_false()
 	assert_str(NetworkManager.api_key).is_empty()
+
+
+# --- Reconnect after a dropped socket ---
+
+func _reset_reconnect() -> void:
+	NetworkManager._relogin = Callable()
+	NetworkManager._reconnect_attempt = 0
+	NetworkManager.reconnect_delay = 2.0
+
+
+func test_close_with_relogin_retries_instead_of_expiring() -> void:
+	NetworkManager.is_authenticated = true
+	NetworkManager.reconnect_delay = 0.01
+	var calls: Array = []
+	NetworkManager._relogin = func() -> void: calls.append(true)
+	var monitor := monitor_signals(NetworkManager, false)
+	NetworkManager._handle_close(1006, "gone")
+	assert_int(NetworkManager._reconnect_attempt).is_equal(1)
+	await await_millis(100)
+	assert_int(calls.size()).is_equal(1)
+	await assert_signal(monitor).wait_until(50).is_not_emitted("session_expired")
+	_reset_reconnect()
+
+
+func test_session_replaced_never_retries() -> void:
+	NetworkManager.is_authenticated = true
+	NetworkManager._relogin = func() -> void: pass
+	var monitor := monitor_signals(NetworkManager, false)
+	NetworkManager._handle_close(NetworkManager.CLOSE_SESSION_REPLACED, "replaced")
+	await assert_signal(monitor).is_emitted("session_expired")
+	assert_int(NetworkManager._reconnect_attempt).is_equal(0)
+	_reset_reconnect()
+
+
+func test_retries_stop_at_the_limit() -> void:
+	NetworkManager.is_authenticated = false
+	NetworkManager._relogin = func() -> void: pass
+	NetworkManager._reconnect_attempt = NetworkManager.MAX_RECONNECT_ATTEMPTS
+	var monitor := monitor_signals(NetworkManager, false)
+	NetworkManager._handle_close(-2, "re-login failed")
+	await assert_signal(monitor).is_emitted("session_expired")
+	assert_int(NetworkManager._reconnect_attempt).is_equal(0)
+	_reset_reconnect()
+
+
+func test_successful_login_resets_attempts_and_logout_forgets_relogin() -> void:
+	NetworkManager._reconnect_attempt = 3
+	NetworkManager._handle_frame({"type": "logged_in", "payload": {"player": {}}})
+	assert_int(NetworkManager._reconnect_attempt).is_equal(0)
+	NetworkManager._relogin = func() -> void: pass
+	NetworkManager.logout()
+	assert_bool(NetworkManager._relogin.is_valid()).is_false()
+	_reset_reconnect()

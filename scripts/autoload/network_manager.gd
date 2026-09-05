@@ -12,6 +12,7 @@ const MISSING_MODELS_LOG_NAME = "missing_ship_models.log"
 # get_map alone is ~140 KB, well past WebSocketPeer's 64 KB default.
 const INBOUND_BUFFER_SIZE = 16 * 1024 * 1024
 const CLOSE_SESSION_REPLACED = 4001
+const MAX_RECONNECT_ATTEMPTS = 5
 
 var base_url: String = DEFAULT_BASE_URL
 var tick_duration: float = DEFAULT_TICK_DURATION
@@ -28,6 +29,9 @@ var _on_open: Array[Callable] = []
 var _pending: Dictionary = {}  # request_id -> {on_complete: Callable, on_error: Callable}
 var _next_request_id: int = 0
 var _registered: Dictionary = {}  # password/player_id from a `registered` frame, merged into login
+var _relogin: Callable = Callable()  # re-runs the last credential login after a dropped socket
+var _reconnect_attempt: int = 0
+var reconnect_delay: float = 2.0  # seconds; multiplied by the attempt number
 
 signal request_started
 signal request_completed
@@ -98,11 +102,11 @@ func _connect_then(callback: Callable) -> void:
 			_handle_close(-1, "connect failed (%d)" % err)
 
 
+## Starts a clean close; _process reports the closed socket through _handle_close.
 func disconnect_from_server() -> void:
+	_welcomed = false
 	if _ws:
 		_ws.close()
-	_ws = null
-	_welcomed = false
 
 
 # --- Sending ---
@@ -274,11 +278,21 @@ func _handle_close(code: int, reason: String) -> void:
 		if not device_code.is_empty():
 			_connect_then(func() -> void: pass)
 		return
-	if was_authenticated:
-		is_authenticated = false
+	if not was_authenticated and _reconnect_attempt == 0:
+		return
+	is_authenticated = false
+	var can_retry := _relogin.is_valid() and code != CLOSE_SESSION_REPLACED and _reconnect_attempt < MAX_RECONNECT_ATTEMPTS
+	if not can_retry:
+		_reconnect_attempt = 0
 		var message := "Logged in from another client." if code == CLOSE_SESSION_REPLACED else "Connection lost (%d)." % code
 		UIManager.show_error(message)
 		session_expired.emit()
+		return
+	_reconnect_attempt += 1
+	UIManager.show_info("Connection lost. Reconnecting (%d/%d)..." % [_reconnect_attempt, MAX_RECONNECT_ATTEMPTS])
+	await get_tree().create_timer(reconnect_delay * _reconnect_attempt).timeout
+	if _reconnect_attempt > 0:
+		_relogin.call()
 
 
 func _handle_error(error: Dictionary) -> void:
@@ -339,6 +353,7 @@ func create_player(username: String, empire: String, on_success: Callable, on_er
 
 
 func select_player(player_id: String, on_success: Callable, on_error: Callable = Callable()) -> void:
+	_relogin = func() -> void: select_player(player_id, Callable(), _on_relogin_failed)
 	_api_post_with_key("/api/player/" + player_id + "/ws-token", {}, func(data: Dictionary) -> void:
 		var token: String = data.get("token", "")
 		if token.is_empty():
@@ -353,6 +368,7 @@ func select_player(player_id: String, on_success: Callable, on_error: Callable =
 
 ## Password login for scripted dev runs (SPACEMOLT_USERNAME / SPACEMOLT_PASSWORD).
 func login_password(username: String, password: String, on_error: Callable = Callable()) -> void:
+	_relogin = func() -> void: login_password(username, password, _on_relogin_failed)
 	_connect_then(func() -> void:
 		_request("spacemolt_auth", "login", {"username": username, "password": password}, Callable(), on_error)
 	)
@@ -402,10 +418,15 @@ func _on_device_link_polled(content: Dictionary) -> void:
 			pass  # Approval arrives as a logged_in frame, handled in _handle_frame.
 
 
+func _on_relogin_failed(_error: Dictionary = {}) -> void:
+	_handle_close(-2, "re-login failed")
+
+
 ## Marks the connection logged in and emits the initial state, with the
 ## password/player_id from a preceding `registered` frame merged in.
 func _finish_login(payload: Dictionary) -> Dictionary:
 	is_authenticated = true
+	_reconnect_attempt = 0
 	device_code = ""
 	(get_node("DeviceLinkTimer") as Timer).stop()
 	var content := payload.duplicate()
@@ -420,6 +441,8 @@ func logout() -> void:
 		_request("spacemolt_auth", "logout", {})
 	is_authenticated = false
 	device_code = ""
+	_relogin = Callable()
+	_reconnect_attempt = 0
 	clear_auth()
 	StateManager.reset()
 	disconnect_from_server()

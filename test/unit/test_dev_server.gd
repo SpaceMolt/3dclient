@@ -66,3 +66,14 @@ func test_nodes_filters_by_pattern() -> void:
 	assert_int(reply["nodes"].size()).is_equal(1)
 	assert_str(reply["nodes"][0]["text"]).is_equal("Probe")
 	button.queue_free()
+
+
+func test_call_invokes_node_method() -> void:
+	var reply := DevServer.handle({"cmd": "call", "node": "/root/NetworkManager", "method": "ws_url", "args": []})
+	assert_bool(reply["ok"]).is_true()
+	assert_str(reply["result"]).ends_with("/ws/v2")
+
+
+func test_call_rejects_missing_node_or_method() -> void:
+	assert_bool(DevServer.handle({"cmd": "call", "node": "/root/Nope", "method": "x"})["ok"]).is_false()
+	assert_bool(DevServer.handle({"cmd": "call", "node": "/root/NetworkManager", "method": "nope"})["ok"]).is_false()

@@ -65,6 +65,7 @@ dev control server (`scripts/autoload/dev_server.gd`), which listens on
    - `devctl.py click X Y` / `devctl.py scroll X Y up 3` / `devctl.py type hello`
    - `devctl.py nodes Button` — visible controls with screen rects, for finding what to click
    - `devctl.py state` or `devctl.py state ship` — StateManager dump
+   - `devctl.py call /root/NetworkManager disconnect_from_server` — call any node method (args as JSON)
    - `devctl.py quit`
 5. `output.log` holds the run log. `SPACEMOLT_SERVER_URL` overrides the server (local gameserver).
 
